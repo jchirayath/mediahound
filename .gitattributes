@@ -1,0 +1,8 @@
+# Normalize line endings to LF in the repo; let Git handle working-tree conversion.
+* text=auto eol=lf
+
+# Treat binary assets as binary (no EOL conversion / diffing)
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.ico binary
