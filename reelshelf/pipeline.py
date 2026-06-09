@@ -70,7 +70,7 @@ _MOCK = [
     dict(title="Serenity", year=2005, format="DVD", genres=["Science Fiction", "Adventure"],
          language="English", rating=7.8, runtime=119, director="Joss Whedon", color=(40, 44, 64),
          actors=["Nathan Fillion", "Gina Torres", "Alan Tudyk", "Summer Glau"],
-         studio="Universal Pictures", stream=["Netflix", "Amazon Prime Video"],
+         studio="Universal Pictures", stream=["Netflix", "Amazon Prime Video"], photos=3,
          intro="Take my love, take my land — one last desperate run to the edge of the 'verse."),
     dict(title="The Princess Bride", year=1987, format="VHS", genres=["Adventure", "Fantasy", "Romance"],
          language="English", rating=8.0, runtime=98, director="Rob Reiner", color=(74, 52, 40),
@@ -80,7 +80,7 @@ _MOCK = [
     dict(title="Blade Runner", year=1982, format="Blu-ray", genres=["Science Fiction", "Thriller"],
          language="English", rating=8.1, runtime=117, director="Ridley Scott", color=(28, 40, 58), gallery=True,
          actors=["Harrison Ford", "Rutger Hauer", "Sean Young"], studio="Warner Bros.",
-         stream=["Amazon Prime Video"],
+         stream=["Amazon Prime Video"], photos=2,
          intro="Neon rain, electric souls, and the question of what makes us human."),
     dict(title="Spirited Away", year=2001, format="DVD", genres=["Animation", "Fantasy", "Family"],
          language="Japanese", rating=8.6, runtime=125, director="Hayao Miyazaki", color=(36, 62, 52),
@@ -103,7 +103,7 @@ _MOCK = [
     dict(title="The Matrix", year=1999, format="Blu-ray", genres=["Science Fiction", "Action"],
          language="English", rating=8.7, runtime=136, director="The Wachowskis", color=(20, 46, 30),
          actors=["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss"], studio="Warner Bros.",
-         stream=["Amazon Prime Video"],
+         stream=["Amazon Prime Video"], photos=2,
          intro="A hacker learns the world is a lie — and that the rules can be bent like rubber."),
     dict(title="Cinema Paradiso", year=1988, format="VHS", genres=["Drama", "Romance"],
          language="Italian", rating=8.5, runtime=155, director="Giuseppe Tornatore", color=(54, 44, 62),
@@ -111,7 +111,7 @@ _MOCK = [
          intro="A boy, a small-town projectionist, and a love letter to the movies themselves."),
     dict(title="Coco", year=2017, format="DVD", genres=["Animation", "Family", "Adventure"],
          language="Spanish", rating=8.4, runtime=105, director="Lee Unkrich", color=(78, 40, 52),
-         actors=["Anthony Gonzalez", "Gael García Bernal"], studio="Pixar", stream=["Netflix", "Hulu"],
+         actors=["Anthony Gonzalez", "Gael García Bernal"], studio="Pixar", stream=["Netflix", "Hulu"], photos=2,
          intro="On the Day of the Dead, a boy crosses into the afterlife to reclaim his family's song."),
 ]
 
@@ -542,13 +542,16 @@ def _build_mock(cfg, store, stats, log) -> Stats:
     for i, mk in enumerate(_MOCK):
         title, year, fmt = mk["title"], mk["year"], mk["format"]
         mid = f"{_slug(title)}-{year}"
-        poster_dest = cfg.posters_dir / f"{mid}.jpg"
-        make_placeholder_poster(title, poster_dest, color=mk.get("color", (40, 44, 64)))
-        images = [f"posters/{poster_dest.name}"]
-        if mk.get("gallery"):  # a second photo to demo the image gallery / arrows
-            alt = cfg.posters_dir / f"{mid}-b.jpg"
-            make_placeholder_poster(title + "  (cover B)", alt, color=(54, 54, 60))
-            images.append(f"posters/{alt.name}")
+        # one or more placeholder "photos" to demo the multi-image gallery (arrows / zoom)
+        n_photos = mk.get("photos", 1)
+        labels = [str(year), "back cover", "spine / sleeve", "alt edition"]
+        colors = [mk.get("color", (40, 44, 64)), (54, 54, 60), (48, 42, 58), (44, 54, 48)]
+        images = []
+        for k in range(n_photos):
+            dest = cfg.posters_dir / (f"{mid}.jpg" if k == 0 else f"{mid}-{k + 1}.jpg")
+            make_placeholder_poster(title, dest, color=colors[k % len(colors)],
+                                    subtitle=labels[k % len(labels)])
+            images.append(f"posters/{dest.name}")
         streaming = None
         if mk.get("stream"):
             streaming = {"checked": True, "justwatch_url": "https://www.justwatch.com/",
