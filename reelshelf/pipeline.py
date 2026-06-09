@@ -407,6 +407,17 @@ def _write_site(cfg: Config, store: Store) -> None:
     bundle = "window.REELSHELF_DATA = " + json.dumps(payload, ensure_ascii=False) + ";"
     (cfg.data_dir / "bundle.js").write_text(bundle, encoding="utf-8")
 
+    # Cache-bust: stamp a content version onto the asset URLs in the HTML so browsers (and
+    # CDNs like GitHub Pages) always fetch the latest data/JS/CSS after a rebuild.
+    ver = hashlib.sha256(bundle.encode("utf-8")).hexdigest()[:10]
+    asset_re = re.compile(r'(href|src)="(assets/[^"?]+\.(?:css|js)|data/bundle\.js)(?:\?v=[0-9a-f]+)?"')
+    for name in ("index.html", "identify.html"):
+        page = cfg.output_dir / name
+        if page.is_file():
+            html = asset_re.sub(lambda m: f'{m.group(1)}="{m.group(2)}?v={ver}"',
+                                page.read_text(encoding="utf-8"))
+            page.write_text(html, encoding="utf-8")
+
 
 def _process_one(cfg, store, img, h, get_ident, metadata, threshold) -> bool:
     queued = store.queued_identity(h)
