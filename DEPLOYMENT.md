@@ -15,6 +15,44 @@ reelshelf build --config mysite/config.toml          # offline rebuild
 
 ---
 
+## Free hosting options
+
+ReelShelf output is **plain static files**, so it runs on every free static host. All of these
+have a free tier that's plenty for a personal catalog:
+
+| Host | Free tier | How |
+|---|---|---|
+| **GitHub Pages** | Unlimited public sites | commit the site folder, enable Pages (this repo's own demo runs here) |
+| **Cloudflare Pages** | Unlimited sites & bandwidth | `npx wrangler pages deploy mysite` |
+| **Netlify** | 100 GB/mo bandwidth | `npx netlify deploy --prod` or drag-and-drop |
+| **Vercel** | Hobby tier | `vercel --prod` |
+| **Render** | Free static sites | connect the repo, publish dir = your site folder |
+| **Surge.sh** | Unlimited free sites | `npx surge mysite` |
+| **Neocities / Bunny / S3 + CloudFront** | Free / pay-per-use | upload the folder |
+
+Pick any one — there's no server, database, or build step to pay for. Details for the common ones below.
+
+---
+
+## Cloudflare Pages (free, generous)
+
+```bash
+cd mysite
+npx wrangler pages deploy . --project-name my-movie-catalog
+```
+
+Or connect your GitHub repo in the Cloudflare dashboard (Pages → Create → Connect to Git), set the
+**build output directory** to your site folder and leave the build command empty.
+
+## Surge.sh (free, one command)
+
+```bash
+cd mysite
+npx surge .            # pick a free *.surge.sh domain (or bring your own)
+```
+
+---
+
 ## Netlify (easiest)
 
 ```bash

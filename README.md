@@ -144,12 +144,18 @@ Useful flags: `--mock` (demo data), `--force` (reprocess everything), `--limit N
 ## Deploy
 
 The generated site folder (`mysite/`) is plain static files (`index.html`, `identify.html`,
-`assets/`, `data/`, `posters/`, `originals/`). Deploy it anywhere. See **[DEPLOYMENT.md](DEPLOYMENT.md)**
-for Netlify, GitHub Pages, Vercel and S3 instructions. Quickest:
+`assets/`, `data/`, `posters/`, `originals/`). It's just static files, so you can **host it free**
+on **GitHub Pages, Cloudflare Pages, Netlify, Vercel, Render, or Surge.sh** — no server, database,
+or build step required. Quickest:
 
 ```bash
-cd mysite && npx netlify deploy --prod    # or: vercel --prod
+cd mysite && npx netlify deploy --prod          # Netlify
+cd mysite && npx wrangler pages deploy .         # Cloudflare Pages
+cd mysite && npx surge .                         # Surge.sh
 ```
+
+See **[DEPLOYMENT.md](DEPLOYMENT.md)** for the full free-hosting comparison plus GitHub Pages, Vercel
+and S3 instructions. The live demo above is itself hosted free on GitHub Pages via a workflow.
 
 It even works by **double-clicking `index.html`** — the build embeds the catalog in `data/bundle.js`
 so it loads without a web server.
