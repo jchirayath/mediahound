@@ -7,7 +7,9 @@ genres, cast, studio, runtime and ratings, writes a short enticing intro, estima
 resale value, checks where it's streaming, and generates a polished static website you can
 search, filter, sort, and curate — with a password-protected admin mode.
 
-![ReelShelf screenshot](docs/screenshot.jpg)
+**▶ [Live demo](https://jchirayath.github.io/reelshelf/)** — explore a sample catalog in your browser (admin password: `changeme`).
+
+[![ReelShelf screenshot](docs/screenshot.jpg)](https://jchirayath.github.io/reelshelf/)
 
 - **Runs for anybody with zero API keys** — open-source OCR + open data by default.
 - **Offline-first** — never contacts the internet unless you explicitly ask (`--online`).
