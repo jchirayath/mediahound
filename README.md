@@ -11,9 +11,10 @@ search, filter, sort, and curate — with a password-protected admin mode.
 
 [![ReelShelf screenshot](docs/screenshot.jpg)](https://jchirayath.github.io/reelshelf/)
 
-> ℹ️ The demo's posters are **generated placeholder art** — no real movie posters are used, to
-> keep the project copyright-clean. Your own catalog pulls real poster art from TMDB / Wikidata,
-> or falls back to your own cover photos.
+> ℹ️ The demo shows **real movie posters** (hotlinked from IMDb/OMDb for illustration) so you can
+> see what a finished catalog looks like — no poster images are stored in this repo. The extra
+> gallery photos are generated placeholders standing in for *your own* cover photos. Your real
+> catalog pulls poster art from TMDB / OMDb / Wikidata, or falls back to the photos you take.
 
 - **Runs for anybody with zero API keys** — open-source OCR + open data by default.
 - **Offline-first** — never contacts the internet unless you explicitly ask (`--online`).

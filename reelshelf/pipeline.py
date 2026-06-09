@@ -67,49 +67,49 @@ def _download_poster(url: str, dest: Path) -> bool:
 _STREAM_URL = {"Netflix": "https://www.netflix.com/", "Hulu": "https://www.hulu.com/",
                "Amazon Prime Video": "https://www.amazon.com/Prime-Video/b?node=2676882011"}
 _MOCK = [
-    dict(title="Serenity", year=2005, format="DVD", genres=["Science Fiction", "Adventure"],
+    dict(title="Serenity", poster_url="https://m.media-amazon.com/images/M/MV5BZWYwN2M1NWItMWI0YS00ZmJjLTk1Y2QtZjIxYmNhNGZkZDcwXkEyXkFqcGc@._V1_SX300.jpg", year=2005, format="DVD", genres=["Science Fiction", "Adventure"],
          language="English", rating=7.8, runtime=119, director="Joss Whedon", color=(40, 44, 64),
          actors=["Nathan Fillion", "Gina Torres", "Alan Tudyk", "Summer Glau"],
          studio="Universal Pictures", stream=["Netflix", "Amazon Prime Video"], photos=3,
          intro="Take my love, take my land — one last desperate run to the edge of the 'verse."),
-    dict(title="The Princess Bride", year=1987, format="VHS", genres=["Adventure", "Fantasy", "Romance"],
+    dict(title="The Princess Bride", poster_url="https://m.media-amazon.com/images/M/MV5BMjFiOTEyNGMtN2E4MC00ZjZlLTk3ZDQtNTU1ZGNiZTA1MzJlXkEyXkFqcGc@._V1_SX300.jpg", year=1987, format="VHS", genres=["Adventure", "Fantasy", "Romance"],
          language="English", rating=8.0, runtime=98, director="Rob Reiner", color=(74, 52, 40),
          actors=["Cary Elwes", "Robin Wright", "Mandy Patinkin", "Wallace Shawn"],
          studio="20th Century Studios", stream=["Hulu"],
          intro="Fencing, fighting, true love, giants — a bedtime story that never grows up."),
-    dict(title="Blade Runner", year=1982, format="Blu-ray", genres=["Science Fiction", "Thriller"],
+    dict(title="Blade Runner", poster_url="https://m.media-amazon.com/images/M/MV5BOWQ4YTBmNTQtMDYxMC00NGFjLTkwOGQtNzdhNmY1Nzc1MzUxXkEyXkFqcGc@._V1_SX300.jpg", year=1982, format="Blu-ray", genres=["Science Fiction", "Thriller"],
          language="English", rating=8.1, runtime=117, director="Ridley Scott", color=(28, 40, 58), gallery=True,
          actors=["Harrison Ford", "Rutger Hauer", "Sean Young"], studio="Warner Bros.",
          stream=["Amazon Prime Video"], photos=2,
          intro="Neon rain, electric souls, and the question of what makes us human."),
-    dict(title="Spirited Away", year=2001, format="DVD", genres=["Animation", "Fantasy", "Family"],
+    dict(title="Spirited Away", poster_url="https://m.media-amazon.com/images/M/MV5BNTEyNmEwOWUtYzkyOC00ZTQ4LTllZmUtMjk0Y2YwOGUzYjRiXkEyXkFqcGc@._V1_QL75_UX380_CR0,0,380,562_.jpg", year=2001, format="DVD", genres=["Animation", "Fantasy", "Family"],
          language="Japanese", rating=8.6, runtime=125, director="Hayao Miyazaki", color=(36, 62, 52),
          actors=["Rumi Hiiragi", "Miyu Irino", "Mari Natsuki"], studio="Studio Ghibli", stream=["Netflix"],
          intro="Step through the tunnel into a bathhouse of spirits where nothing is what it seems."),
-    dict(title="Pulp Fiction", year=1994, format="VHS", genres=["Crime", "Drama"],
+    dict(title="Pulp Fiction", poster_url="https://m.media-amazon.com/images/M/MV5BYTViYTE3ZGQtNDBlMC00ZTAyLTkyODMtZGRiZDg0MjA2YThkXkEyXkFqcGc@._V1_QL75_UY562_CR3,0,380,562_.jpg", year=1994, format="VHS", genres=["Crime", "Drama"],
          language="English", rating=8.5, runtime=154, director="Quentin Tarantino", color=(64, 38, 38),
          actors=["John Travolta", "Samuel L. Jackson", "Uma Thurman", "Bruce Willis"],
          studio="Miramax", stream=[],
          intro="Hitmen, a briefcase, and a diner — time bends and everyone talks too cool to die."),
-    dict(title="Amélie", year=2001, format="DVD", genres=["Comedy", "Romance"],
+    dict(title="Amélie", poster_url="https://m.media-amazon.com/images/M/MV5BOTNmYzY0MWQtZGZmNy00Y2Y4LWFmMDQtMTZjYTdiYzEwZGQ2XkEyXkFqcGc@._V1_QL75_UX380_CR0,4,380,562_.jpg", year=2001, format="DVD", genres=["Comedy", "Romance"],
          language="French", rating=8.3, runtime=122, director="Jean-Pierre Jeunet", color=(64, 56, 26),
          actors=["Audrey Tautou", "Mathieu Kassovitz"], studio="UGC", stream=["Hulu", "Amazon Prime Video"],
          intro="A shy Parisian waitress quietly engineers tiny miracles for everyone but herself."),
-    dict(title="Lagaan", year=2001, format="DVD", genres=["Drama", "Musical", "Sport"],
+    dict(title="Lagaan", poster_url="https://m.media-amazon.com/images/M/MV5BM2FmODM4OTktOTRjOS00ZTIzLWIzZjAtMDBhOGEzYThkNzMzXkEyXkFqcGc@._V1_SX300.jpg", year=2001, format="DVD", genres=["Drama", "Musical", "Sport"],
          language="Hindi", rating=8.1, runtime=224, director="Ashutosh Gowariker", color=(74, 48, 24),
          actors=["Aamir Khan", "Gracy Singh", "Rachel Shelley"], studio="Aamir Khan Productions",
          stream=["Netflix"],
          intro="A drought-struck village stakes everything on one impossible cricket match against the Raj."),
-    dict(title="The Matrix", year=1999, format="Blu-ray", genres=["Science Fiction", "Action"],
+    dict(title="The Matrix", poster_url="https://m.media-amazon.com/images/M/MV5BN2NmN2VhMTQtMDNiOS00NDlhLTliMjgtODE2ZTY0ODQyNDRhXkEyXkFqcGc@._V1_QL75_UX380_CR0,4,380,562_.jpg", year=1999, format="Blu-ray", genres=["Science Fiction", "Action"],
          language="English", rating=8.7, runtime=136, director="The Wachowskis", color=(20, 46, 30),
          actors=["Keanu Reeves", "Laurence Fishburne", "Carrie-Anne Moss"], studio="Warner Bros.",
          stream=["Amazon Prime Video"], photos=2,
          intro="A hacker learns the world is a lie — and that the rules can be bent like rubber."),
-    dict(title="Cinema Paradiso", year=1988, format="VHS", genres=["Drama", "Romance"],
+    dict(title="Cinema Paradiso", poster_url="https://m.media-amazon.com/images/M/MV5BMTljNzc4YWEtYTZlMS00ODMyLWIwMTAtNWQxY2VkMDEwYTk5XkEyXkFqcGc@._V1_QL75_UX380_CR0,0,380,562_.jpg", year=1988, format="VHS", genres=["Drama", "Romance"],
          language="Italian", rating=8.5, runtime=155, director="Giuseppe Tornatore", color=(54, 44, 62),
          actors=["Philippe Noiret", "Salvatore Cascio"], studio="Miramax", stream=[],
          intro="A boy, a small-town projectionist, and a love letter to the movies themselves."),
-    dict(title="Coco", year=2017, format="DVD", genres=["Animation", "Family", "Adventure"],
+    dict(title="Coco", poster_url="https://m.media-amazon.com/images/M/MV5BMDIyM2E2NTAtMzlhNy00ZGUxLWI1NjgtZDY5MzhiMDc5NGU3XkEyXkFqcGc@._V1_QL75_UY562_CR7,0,380,562_.jpg", year=2017, format="DVD", genres=["Animation", "Family", "Adventure"],
          language="Spanish", rating=8.4, runtime=105, director="Lee Unkrich", color=(78, 40, 52),
          actors=["Anthony Gonzalez", "Gael García Bernal"], studio="Pixar", stream=["Netflix", "Hulu"], photos=2,
          intro="On the Day of the Dead, a boy crosses into the afterlife to reclaim his family's song."),
@@ -542,15 +542,22 @@ def _build_mock(cfg, store, stats, log) -> Stats:
     for i, mk in enumerate(_MOCK):
         title, year, fmt = mk["title"], mk["year"], mk["format"]
         mid = f"{_slug(title)}-{year}"
-        # one or more placeholder "photos" to demo the multi-image gallery (arrows / zoom)
+        # The default image is the real movie poster (hotlinked from IMDb/OMDb — no copyrighted
+        # files are stored in the repo). Extra gallery photos are generated placeholders that
+        # stand in for "your own cover photos", to demo the multi-image gallery (arrows / zoom).
         n_photos = mk.get("photos", 1)
-        labels = [str(year), "back cover", "spine / sleeve", "alt edition"]
-        colors = [mk.get("color", (40, 44, 64)), (54, 54, 60), (48, 42, 58), (44, 54, 48)]
         images = []
-        for k in range(n_photos):
-            dest = cfg.posters_dir / (f"{mid}.jpg" if k == 0 else f"{mid}-{k + 1}.jpg")
-            make_placeholder_poster(title, dest, color=colors[k % len(colors)],
-                                    subtitle=labels[k % len(labels)])
+        if mk.get("poster_url"):
+            images.append(mk["poster_url"])
+        else:
+            dest = cfg.posters_dir / f"{mid}.jpg"
+            make_placeholder_poster(title, dest, color=mk.get("color", (40, 44, 64)), subtitle=str(year))
+            images.append(f"posters/{dest.name}")
+        extra_labels = ["your cover photo", "back cover", "spine / sleeve"]
+        for k in range(1, n_photos):
+            dest = cfg.posters_dir / f"{mid}-{k + 1}.jpg"
+            make_placeholder_poster(title, dest, color=(52, 52, 60),
+                                    subtitle=extra_labels[(k - 1) % len(extra_labels)])
             images.append(f"posters/{dest.name}")
         streaming = None
         if mk.get("stream"):
