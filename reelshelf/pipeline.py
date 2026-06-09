@@ -53,6 +53,8 @@ def _movie_id(meta: MovieMeta, ident: Identification, file_hash: str) -> str:
 
 
 def _download_poster(url: str, dest: Path) -> bool:
+    if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
+        return False  # only fetch over http(s)
     try:
         r = requests.get(url, timeout=45, headers={"User-Agent": "ReelShelf/0.1"})
         r.raise_for_status()
@@ -292,9 +294,18 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
         rotations = c.get("rotations") or {}
         if rotations:
             from .imaging import rotate_file
+            base = cfg.output_dir.resolve()
             for rel, deg in list(rotations.items()):
-                if rotate_file(cfg.output_dir / rel, int(deg)):
+                # guard against path traversal — only rotate image files inside the site's
+                # own posters/ or originals/ folders (corrections.json is imported input).
+                target = (cfg.output_dir / rel).resolve()
+                ok = (target.is_file()
+                      and base in target.parents
+                      and target.parent.name in ("posters", "originals"))
+                if ok and rotate_file(target, int(deg)):
                     log(f"  correction: rotated {rel} by {deg}°")
+                elif not ok:
+                    log(f"  correction: skipped unsafe rotation path {rel!r}")
             c["rotations"] = {}      # consumed (baked into the files)
             requery_consumed = True  # triggers corrections.json rewrite below
         if c.get("requery") and meta_provider:

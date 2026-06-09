@@ -186,4 +186,12 @@ Python CLI (`reelshelf/`) builds the data; a dependency-free vanilla-JS frontend
 - If you enable **TMDB**: uses the TMDB API but is not endorsed or certified by TMDB.
 - Where-to-watch data via **JustWatch**; resale links to **eBay** sold listings (estimates are heuristics).
 
+## Security
+
+ReelShelf output is a **static site** — read-only to everyone, with no server to attack. The admin
+password is a convenience gate, **not** an access-control boundary (the published catalog can't be
+changed without rebuilding + redeploying). API keys stay in a gitignored `.env`; only the password
+hash ships. All rendered data is HTML-escaped and links are scheme-restricted. See
+**[SECURITY.md](SECURITY.md)** for the full threat model and reporting instructions.
+
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).

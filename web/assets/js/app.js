@@ -56,6 +56,13 @@
   function load(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch { return fb; } }
   function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
   function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  // only allow http(s) or site-relative URLs in links — blocks javascript:/data: etc. (XSS)
+  function safeUrl(u) {
+    u = String(u ?? "").trim();
+    if (/^https?:\/\//i.test(u)) return u;
+    if (/^[a-z][a-z0-9+.\-]*:/i.test(u)) return "#";   // any other scheme → block
+    return u;                                          // relative path (posters/…, etc.)
+  }
   function trim(s, n) { s = s || ""; return s.length > n ? s.slice(0, n - 1) + "…" : s; }
   function mergeSeen(m) { if (m.id in seen) { m.seen = seen[m.id].seen; m.date_seen = seen[m.id].date_seen; } return m; }
   function applyCorrection(m) {
@@ -215,7 +222,7 @@
     if (fieldOn("resale") && m.resale) {
       foot.insertAdjacentHTML("beforeend",
         `<span class="value">${esc(m.resale.display || "")}` +
-        (m.resale.sold_listings_url ? ` <a class="sell" target="_blank" rel="noopener" href="${esc(m.resale.sold_listings_url)}">↗</a>` : "") + `</span>`);
+        (m.resale.sold_listings_url ? ` <a class="sell" target="_blank" rel="noopener" href="${esc(safeUrl(m.resale.sold_listings_url))}">↗</a>` : "") + `</span>`);
     }
     b.appendChild(foot);
 
@@ -239,7 +246,7 @@
     const p = (m.streaming && m.streaming.providers) || [];
     if (!p.length) return "";
     const short = { "Amazon Prime Video": "Prime", "Netflix": "Netflix", "Hulu": "Hulu" };
-    return p.map((x) => `<a class="watch-pill watch-yes" target="_blank" rel="noopener" href="${esc(x.url)}" title="${esc(x.name)} — ${esc(x.type_label)}">▶ ${esc(short[x.name] || x.name)}</a>`).join("");
+    return p.map((x) => `<a class="watch-pill watch-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="${esc(x.name)} — ${esc(x.type_label)}">▶ ${esc(short[x.name] || x.name)}</a>`).join("");
   }
   function seenToggle(m) {
     const d = lineEl("seentoggle");
@@ -277,7 +284,7 @@
     pw.insertAdjacentHTML("beforeend",
       `<span class="badge-format">${esc(m.format || "—")}</span>` +
       (m.seen ? `<span class="badge-seen">✓</span>` : "") +
-      (provs.length ? `<a class="badge-stream" href="${esc(watchUrl)}" target="_blank" rel="noopener" title="Watch on ${esc(provs.map((p) => p.name).join(", "))}" onclick="event.stopPropagation()">▶</a>` : "") +
+      (provs.length ? `<a class="badge-stream" href="${esc(safeUrl(watchUrl))}" target="_blank" rel="noopener" title="Watch on ${esc(provs.map((p) => p.name).join(", "))}" onclick="event.stopPropagation()">▶</a>` : "") +
       `<span class="zoom-hint" title="Click to zoom">⤢</span>`);
 
     if (gallery.length > 1) {
@@ -347,7 +354,7 @@
     const ed = document.createElement("div"); ed.className = "inline-edit";
     ed.innerHTML =
       `<input id="e_t" type="text" value="${esc(m.title)}" placeholder="Title">` +
-      `<div class="ie-row"><input id="e_y" type="number" value="${m.year || ""}" placeholder="Year">` +
+      `<div class="ie-row"><input id="e_y" type="number" value="${esc(m.year || "")}" placeholder="Year">` +
       `<select id="e_f">${FORMATS.map((f) => `<option ${m.format === f ? "selected" : ""}>${f}</option>`).join("")}</select></div>` +
       `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company">` +
       `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor">` +
