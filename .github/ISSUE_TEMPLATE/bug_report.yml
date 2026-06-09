@@ -1,0 +1,42 @@
+name: Bug report
+description: Report a problem with ReelShelf
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. reelshelf init ...
+        2. reelshelf build ...
+        3. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Build / CLI
+        - Identify provider (tesseract / claude / ollama)
+        - Metadata provider (wikidata / tmdb / omdb)
+        - Web UI (catalog / admin)
+        - Deployment
+        - Other
+  - type: input
+    id: versions
+    attributes:
+      label: Environment
+      placeholder: "reelshelf 0.1.0, Python 3.12, macOS 14, Chrome 125"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant output / logs
+      render: shell
