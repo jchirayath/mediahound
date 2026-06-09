@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Identify covers · Movie Collection</title>
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <span class="brand-mark">?</span>
+        <div>
+          <h1>Manual identification</h1>
+          <p class="subtitle">Name the covers the catalog couldn't read, then export and rebuild.</p>
+        </div>
+      </div>
+      <a class="pill pill-warn" href="index.html" style="text-decoration:none">← Back to collection</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="controls" style="padding-left:0;padding-right:0">
+      <p class="result-count" id="intro">Loading unidentified items…</p>
+      <ol style="padding-left:18px;color:var(--muted);font-size:13px;line-height:1.7">
+        <li>For each cover: type the <strong>title</strong> (and year/format) to identify it, or click <strong>🗑 Discard</strong> to delete it (e.g. a blank tape).</li>
+        <li>Click <strong>Export identify-queue.json</strong> and drop the file into your site's <code>data/</code> folder.</li>
+        <li>Run <code>reelshelf build</code> — named items move into the catalog (with your cover photo); discarded items are removed.</li>
+        <li>Run <code>reelshelf build --online</code> to also <strong>discover</strong> each named title online (poster, genres, cast, studio).</li>
+      </ol>
+      <div class="meta-actions" style="margin-top:12px">
+        <button id="export" class="btn btn-primary" type="button">Export identify-queue.json</button>
+        <span id="filledCount" class="result-count"></span>
+      </div>
+    </div>
+
+    <div id="list" class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))"></div>
+    <div id="none" class="empty" hidden><p>🎉 Nothing to identify — every cover was recognized.</p></div>
+  </main>
+
+  <script src="data/bundle.js"></script>
+  <script src="assets/js/identify.js"></script>
+</body>
+</html>

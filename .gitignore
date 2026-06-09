@@ -1,0 +1,26 @@
+# Secrets & local config
+.env
+*/.env
+config.toml          # real instance config (use config.example.toml as the template)
+
+# Generated catalog output (a user's personal data — never committed to the tool repo)
+RawImages/
+posters/
+originals/
+data/
+mysite/
+demo/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+
+# OS
+.DS_Store

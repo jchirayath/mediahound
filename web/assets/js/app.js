@@ -1,0 +1,538 @@
+/* ReelShelf portal — read-only default view + password-gated admin view.
+   All fields render on the card (aligned); the only overlay is the image zoom. */
+(() => {
+  "use strict";
+
+  const SEEN_KEY = "reelshelf:seen";
+  const CORR_KEY = "reelshelf:corrections";
+  const COLS_KEY = "reelshelf:columns";
+  const ADMIN_KEY = "reelshelf:admin";
+  const $ = (s) => document.querySelector(s);
+  const $$ = (s) => [...document.querySelectorAll(s)];
+
+  const ALL_FIELDS = [
+    ["poster", "Poster / photos"], ["title", "Title & year"],
+    ["meta", "Rating · format · runtime · language"], ["genres", "Genres"],
+    ["people", "Director & cast"], ["studio", "Studio & distributor"],
+    ["watch", "Where to watch"], ["resale", "Resale value"],
+    ["intro", "Intro hook"], ["overview", "Full summary"],
+  ];
+  const DEFAULT_FIELDS = {
+    poster: true, title: true, meta: true, genres: true, people: true,
+    studio: true, watch: true, resale: true, intro: true, overview: false,
+  };
+
+  let movies = [], site = {}, view = { columns: 4, fields: { ...DEFAULT_FIELDS } };
+  let seen = load(SEEN_KEY, {}), corrections = load(CORR_KEY, {});
+  let isAdmin = sessionStorage.getItem(ADMIN_KEY) === "1";
+  const imgIndex = new Map();
+
+  if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
+
+  // ---- boot ---------------------------------------------------------------
+  const loader = window.REELSHELF_DATA
+    ? Promise.resolve(window.REELSHELF_DATA)
+    : Promise.all([j("data/site.json", {}), j("data/collection.json", []),
+                   j("data/unidentified.json", []), j("data/view-config.json", null)])
+        .then(([s, c, u, v]) => ({ site: s, collection: c, unidentified: u, view: v }));
+
+  loader.then((d) => {
+    site = d.site || {};
+    if (d.view) view = Object.assign(view, d.view, { fields: Object.assign({ ...DEFAULT_FIELDS }, d.view.fields || {}) });
+    movies = (d.collection || [])
+      .filter((m) => !(corrections[m.id] && corrections[m.id].delete))
+      .map(applyCorrection).map(mergeSeen);
+    applyLibrary();
+    $("#loading").hidden = true;
+    setupUnidentified(d.unidentified || []);
+    buildFilters(movies);
+    wire();
+    applyAdminUI();
+    render();
+  }).catch((e) => { $("#loading").innerHTML = "<p>Couldn't load the collection.</p>"; console.error(e); });
+
+  // ---- helpers ------------------------------------------------------------
+  function j(url, fb) { return fetch(url, { cache: "no-store" }).then((r) => r.ok ? r.json() : fb).catch(() => fb); }
+  function load(k, fb) { try { return JSON.parse(localStorage.getItem(k)) || fb; } catch { return fb; } }
+  function save(k, v) { localStorage.setItem(k, JSON.stringify(v)); }
+  function esc(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+  function trim(s, n) { s = s || ""; return s.length > n ? s.slice(0, n - 1) + "…" : s; }
+  function mergeSeen(m) { if (m.id in seen) { m.seen = seen[m.id].seen; m.date_seen = seen[m.id].date_seen; } return m; }
+  function applyCorrection(m) {
+    const c = corrections[m.id];
+    if (c) { if (c.title) m.title = c.title; if (c.year) m.year = c.year; if (c.format) m.format = c.format;
+             if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
+             if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery; }
+    return m;
+  }
+  function saveCorrections() { save(CORR_KEY, corrections); }
+  function setCorr(m, patch) { corrections[m.id] = Object.assign({}, corrections[m.id], patch); saveCorrections(); }
+  function galleryOf(m) {
+    const removed = (corrections[m.id] && corrections[m.id].removed_images) || [];
+    const g = [];
+    [m.poster, ...(m.images || [])].forEach((u) => { if (u && !g.includes(u) && !removed.includes(u)) g.push(u); });
+    return g;
+  }
+  function deleteImage(m) {
+    const g = galleryOf(m);
+    if (g.length <= 1) { alert("Can't delete the last image — a title must keep at least one photo."); return; }
+    const cur = g[imgIndex.get(m.id) || 0];
+    if (!confirm("Remove this photo from the gallery?")) return;
+    const c = corrections[m.id] = Object.assign({}, corrections[m.id]);
+    c.removed_images = [...(c.removed_images || []), cur];
+    if (m.poster === cur) { const next = g.find((x) => x !== cur); m.poster = next; c.default_image = next; }
+    saveCorrections();
+    imgIndex.set(m.id, 0);
+    render();
+  }
+  function rotationFor(m, p) { const r = corrections[m.id] && corrections[m.id].rotations; return (r && r[p]) || 0; }
+
+  // ---- columns ------------------------------------------------------------
+  function userCols() { const c = parseInt(localStorage.getItem(COLS_KEY) || "", 10); return c || view.columns || 4; }
+  function effectiveCols() {
+    const w = window.innerWidth, want = userCols();
+    if (w < 480) return 1;
+    if (w < 720) return Math.min(want, 2);
+    if (w < 1100) return Math.min(want, 3);
+    return Math.min(want, 8);
+  }
+  function applyCols() { $("#grid").style.setProperty("--cols", effectiveCols()); $("#colCount").textContent = userCols(); }
+  function setCols(n) { n = Math.max(1, Math.min(8, n)); localStorage.setItem(COLS_KEY, String(n)); applyCols(); }
+
+  // ---- filters ------------------------------------------------------------
+  const uniq = (a) => [...new Set(a.filter(Boolean))].sort();
+  function buildFilters(list) {
+    fill("#filterFormat", uniq(list.map((m) => m.format)));
+    fill("#filterGenre", uniq(list.flatMap((m) => m.genres || [])));
+    fill("#filterStudio", uniq(list.map((m) => m.studio)));
+    fill("#filterLanguage", uniq(list.map((m) => m.language)));
+    fill("#filterCategory", uniq(list.map((m) => m.category)));
+    const provs = uniq(list.flatMap((m) => ((m.streaming && m.streaming.providers) || []).map((p) => p.name)));
+    const ss = $("#filterStream");
+    [["any", "▶ On any service"]].concat(provs.map((p) => [p, "▶ " + p])).concat([["none", "Not streaming"]])
+      .forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; ss.appendChild(o); });
+  }
+  function fill(sel, vals) { const el = $(sel); vals.forEach((v) => { const o = document.createElement("option"); o.value = v; o.textContent = v; el.appendChild(o); }); }
+  function setupUnidentified(u) { const n = u.length, l = $("#unidentifiedLink"); if (n > 0) { l.textContent = `⚠ ${n} unidentified`; l.dataset.has = "1"; } }
+
+  function currentView() {
+    const q = $("#search").value.trim().toLowerCase();
+    const f = $("#filterFormat").value, g = $("#filterGenre").value, st = $("#filterStudio").value;
+    const l = $("#filterLanguage").value, c = $("#filterCategory").value, s = $("#filterSeen").value;
+    const sv = $("#filterStream").value;
+    let v = movies.filter((m) => {
+      if (f && m.format !== f) return false;
+      if (g && !(m.genres || []).includes(g)) return false;
+      if (st && m.studio !== st) return false;
+      if (l && m.language !== l) return false;
+      if (c && m.category !== c) return false;
+      if (sv) {
+        const ps = ((m.streaming && m.streaming.providers) || []).map((p) => p.name);
+        if (sv === "any" && !ps.length) return false;
+        else if (sv === "none" && ps.length) return false;
+        else if (sv !== "any" && sv !== "none" && !ps.includes(sv)) return false;
+      }
+      if (s === "seen" && !m.seen) return false;
+      if (s === "unseen" && m.seen) return false;
+      if (q) { const hay = [m.title, m.intro, m.overview, (m.genres || []).join(" "), m.language,
+        String(m.year), m.director, (m.actors || []).join(" "), m.studio, m.distributor].join(" ").toLowerCase();
+        if (!hay.includes(q)) return false; }
+      return true;
+    });
+    const cmp = {
+      "title": (a, b) => (a.title || "").localeCompare(b.title || ""),
+      "year-desc": (a, b) => (b.year || 0) - (a.year || 0),
+      "year-asc": (a, b) => (a.year || 0) - (b.year || 0),
+      "added": (a, b) => String(b.added_at || "").localeCompare(String(a.added_at || "")),
+      "value-desc": (a, b) => (b.resale?.mid || 0) - (a.resale?.mid || 0),
+      "rating-desc": (a, b) => (b.rating || 0) - (a.rating || 0),
+    }[$("#sort").value];
+    return v.sort(cmp);
+  }
+
+  function render() {
+    const v = currentView();
+    const grid = $("#grid");
+    grid.innerHTML = "";
+    grid.classList.toggle("admin", isAdmin);
+    $("#empty").hidden = v.length !== 0;
+    // apply field-visibility flags as body classes (drives alignment via CSS)
+    ALL_FIELDS.forEach(([k]) => document.body.classList.toggle(`hide-${k}`, !view.fields[k]));
+    v.forEach((m) => grid.appendChild(card(m)));
+    applyCols();
+    $("#resultCount").textContent = `${v.length} of ${movies.length} titles · ${movies.filter((m) => m.seen).length} seen`;
+    const tot = movies.reduce((s, m) => s + (m.resale?.mid || 0), 0);
+    $("#headerStats").innerHTML = `${movies.length} titles<br>est. value ~$${Math.round(tot).toLocaleString()}`;
+  }
+
+  // ---- card (all fields, aligned) ----------------------------------------
+  function fieldOn(k) { return view.fields[k]; }
+
+  function card(m) {
+    const el = document.createElement("article");
+    el.className = "card";
+
+    if (fieldOn("poster")) el.appendChild(posterEl(m));
+
+    const b = document.createElement("div");
+    b.className = "card-body";
+
+    if (fieldOn("title")) {
+      const t = lineEl("title");
+      t.innerHTML = `<span class="ttl">${esc(m.title)}</span>` + (m.year ? ` <span class="yr">${m.year}</span>` : "");
+      if (isAdmin) { const s = t.querySelector(".ttl"); s.style.cursor = "pointer"; s.title = "Click to edit"; s.addEventListener("click", () => editCard(m, el)); }
+      b.appendChild(t);
+    }
+    if (fieldOn("meta")) {
+      const parts = [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language].filter(Boolean);
+      b.appendChild(line("meta", parts.join(" · ")));
+    }
+    if (fieldOn("genres")) {
+      const g = lineEl("genres");
+      (m.genres || []).slice(0, 4).forEach((x) => g.appendChild(chip(x, () => setFilter("#filterGenre", x))));
+      b.appendChild(g);
+    }
+    if (fieldOn("people")) {
+      const p = lineEl("people");
+      if (m.director) p.appendChild(person("🎬 " + m.director, m.director));
+      (m.actors || []).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
+      const full = [m.director ? "Dir: " + m.director : null, (m.actors || []).join(", ") || null].filter(Boolean).join("  ·  ");
+      if (full) p.title = full;
+      b.appendChild(p);
+    }
+    if (fieldOn("studio")) {
+      const s = lineEl("studio");
+      if (m.studio) { const x = person("🏛 " + m.studio, null); x.onclick = () => setFilter("#filterStudio", m.studio); s.appendChild(x); }
+      if (m.distributor) s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
+      b.appendChild(s);
+    }
+    if (fieldOn("intro")) b.appendChild(line("intro", m.intro || "", true));
+    if (fieldOn("overview")) b.appendChild(line("overview", m.overview || "", true));
+
+    // foot: where-to-watch (left) + resale (right) on one line
+    const foot = lineEl("foot");
+    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = watchPills(m); foot.appendChild(w); }
+    if (fieldOn("resale") && m.resale) {
+      foot.insertAdjacentHTML("beforeend",
+        `<span class="value">${esc(m.resale.display || "")}` +
+        (m.resale.sold_listings_url ? ` <a class="sell" target="_blank" rel="noopener" href="${esc(m.resale.sold_listings_url)}">↗</a>` : "") + `</span>`);
+    }
+    b.appendChild(foot);
+
+    if (isAdmin) { b.appendChild(seenToggle(m)); b.appendChild(adminBar(m, el)); }
+    el.appendChild(b);
+    return el;
+  }
+
+  function lineEl(key) { const d = document.createElement("div"); d.className = "f f-" + key; return d; }
+  function line(key, text, clamp) {
+    const d = lineEl(key); if (clamp) d.classList.add("clamp");
+    d.textContent = text; if (clamp && text) d.title = text; return d;
+  }
+  function chip(text, on) { const c = document.createElement("button"); c.className = "chip chip-btn"; c.textContent = text; c.onclick = on; return c; }
+  function person(label, name) {
+    const x = document.createElement("button"); x.className = "person-link"; x.textContent = label;
+    if (name) { x.title = name; x.onclick = () => { $("#filterGenre").value = ""; $("#filterStudio").value = ""; $("#search").value = name; render(); scrollTop(); }; }
+    return x;
+  }
+  function watchPills(m) {
+    const p = (m.streaming && m.streaming.providers) || [];
+    if (!p.length) return "";
+    const short = { "Amazon Prime Video": "Prime", "Netflix": "Netflix", "Hulu": "Hulu" };
+    return p.map((x) => `<a class="watch-pill watch-yes" target="_blank" rel="noopener" href="${esc(x.url)}" title="${esc(x.name)} — ${esc(x.type_label)}">▶ ${esc(short[x.name] || x.name)}</a>`).join("");
+  }
+  function seenToggle(m) {
+    const d = lineEl("seentoggle");
+    const btn = document.createElement("button");
+    btn.className = "btn-seen" + (m.seen ? " is-seen" : "");
+    btn.textContent = m.seen ? `✓ Seen ${m.date_seen || ""}`.trim() : "Mark as seen";
+    btn.onclick = () => toggleSeen(m);
+    d.appendChild(btn);
+    return d;
+  }
+  function setFilter(sel, val) { $("#search").value = ""; $(sel).value = val; render(); scrollTop(); }
+  function scrollTop() { window.scrollTo({ top: 0, behavior: "smooth" }); }
+
+  function toggleSeen(m) {
+    m.seen = !m.seen; m.date_seen = m.seen ? new Date().toISOString().slice(0, 10) : null;
+    seen[m.id] = { seen: m.seen, date_seen: m.date_seen }; save(SEEN_KEY, seen); render();
+  }
+
+  // ---- poster with arrows + zoom -----------------------------------------
+  function posterEl(m) {
+    const gallery = galleryOf(m);
+    const pw = document.createElement("div");
+    pw.className = "poster-wrap";
+    let idx = imgIndex.get(m.id) || 0; if (idx >= gallery.length) idx = 0;
+    const img = gallery.length ? document.createElement("img") : null;
+    if (img) {
+      img.loading = "lazy"; img.src = gallery[idx]; img.alt = m.title; img.className = "rot-" + rotationFor(m, gallery[idx]);
+      img.onerror = () => img.replaceWith(fallbackImg(m));
+      img.addEventListener("click", () => openZoom(m, imgIndex.get(m.id) || 0));
+      pw.appendChild(img);
+    } else { pw.appendChild(fallbackImg(m)); }
+
+    const provs = (m.streaming && m.streaming.providers) || [];
+    const watchUrl = provs[0] ? provs[0].url : (m.streaming && m.streaming.justwatch_url);
+    pw.insertAdjacentHTML("beforeend",
+      `<span class="badge-format">${esc(m.format || "—")}</span>` +
+      (m.seen ? `<span class="badge-seen">✓</span>` : "") +
+      (provs.length ? `<a class="badge-stream" href="${esc(watchUrl)}" target="_blank" rel="noopener" title="Watch on ${esc(provs.map((p) => p.name).join(", "))}" onclick="event.stopPropagation()">▶</a>` : "") +
+      `<span class="zoom-hint" title="Click to zoom">⤢</span>`);
+
+    if (gallery.length > 1) {
+      pw.insertAdjacentHTML("beforeend",
+        `<button class="img-arrow img-prev" aria-label="Previous photo">‹</button>` +
+        `<button class="img-arrow img-next" aria-label="Next photo">›</button>` +
+        `<span class="img-dots">${idx + 1}/${gallery.length}</span>` +
+        (isAdmin ? `<button class="set-default" title="Make this the default image">★</button>` +
+                   `<button class="del-image" title="Delete this photo">🗑</button>` : ""));
+      const step = (dir) => {
+        const ni = ((imgIndex.get(m.id) || 0) + dir + gallery.length) % gallery.length;
+        imgIndex.set(m.id, ni); img.src = gallery[ni]; img.className = "rot-" + rotationFor(m, gallery[ni]);
+        pw.querySelector(".img-dots").textContent = `${ni + 1}/${gallery.length}`;
+      };
+      pw.querySelector(".img-prev").addEventListener("click", (e) => { e.stopPropagation(); step(-1); });
+      pw.querySelector(".img-next").addEventListener("click", (e) => { e.stopPropagation(); step(1); });
+      if (isAdmin) {
+        pw.querySelector(".set-default").addEventListener("click", (e) => {
+          e.stopPropagation(); const cur = gallery[imgIndex.get(m.id) || 0];
+          setCorr(m, { default_image: cur }); m.poster = cur; imgIndex.set(m.id, 0); render();
+        });
+        pw.querySelector(".del-image").addEventListener("click", (e) => { e.stopPropagation(); deleteImage(m); });
+      }
+    }
+    return pw;
+  }
+  function fallbackImg(m) { const d = document.createElement("div"); d.className = "poster-fallback"; d.textContent = m.title; return d; }
+
+  // ---- zoom lightbox ------------------------------------------------------
+  let zoomState = null;
+  function openZoom(m, idx) {
+    const g = galleryOf(m); if (!g.length) return;
+    zoomState = { m, g, idx: idx % g.length };
+    drawZoom();
+    $("#lightbox").hidden = false; document.body.style.overflow = "hidden";
+  }
+  function drawZoom() {
+    const { m, g, idx } = zoomState;
+    const im = $("#lbImg"); im.src = g[idx]; im.className = "lb-img rot-" + rotationFor(m, g[idx]);
+    $("#lbCaption").textContent = `${m.title} — photo ${idx + 1} of ${g.length}`;
+    $("#lbPrev").style.visibility = $("#lbNext").style.visibility = g.length > 1 ? "visible" : "hidden";
+  }
+  function zoomStep(d) { zoomState.idx = (zoomState.idx + d + zoomState.g.length) % zoomState.g.length; drawZoom(); }
+  function closeZoom() { $("#lightbox").hidden = true; document.body.style.overflow = ""; zoomState = null; }
+
+  // ---- admin: inline edit + toolbar --------------------------------------
+  function adminBar(m, el) {
+    const bar = document.createElement("div"); bar.className = "admin-bar";
+    bar.innerHTML = `<button class="btn-mini" data-a="edit">✎ Edit</button>` +
+                    `<button class="btn-mini" data-a="rotate">⟳ Rotate</button>` +
+                    `<button class="btn-mini btn-danger" data-a="del">🗑 Delete</button>`;
+    bar.querySelector('[data-a="edit"]').onclick = () => editCard(m, el);
+    bar.querySelector('[data-a="del"]').onclick = () => { if (confirm(`Remove “${m.title}”?`)) { setCorr(m, { delete: true }); movies = movies.filter((x) => x.id !== m.id); render(); } };
+    bar.querySelector('[data-a="rotate"]').onclick = () => {
+      const g = galleryOf(m), p = g[imgIndex.get(m.id) || 0]; if (!p) return;
+      const cur = rotationFor(m, p), next = (cur + 90) % 360;
+      const c = corrections[m.id] = Object.assign({}, corrections[m.id]);
+      c.rotations = Object.assign({}, c.rotations, { [p]: next }); if (next === 0) delete c.rotations[p];
+      saveCorrections(); render();
+    };
+    return bar;
+  }
+  function editCard(m, el) {
+    const b = el.querySelector(".card-body");
+    if (b.querySelector(".inline-edit")) return;
+    const FORMATS = ["DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"];
+    const ed = document.createElement("div"); ed.className = "inline-edit";
+    ed.innerHTML =
+      `<input id="e_t" type="text" value="${esc(m.title)}" placeholder="Title">` +
+      `<div class="ie-row"><input id="e_y" type="number" value="${m.year || ""}" placeholder="Year">` +
+      `<select id="e_f">${FORMATS.map((f) => `<option ${m.format === f ? "selected" : ""}>${f}</option>`).join("")}</select></div>` +
+      `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company">` +
+      `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor">` +
+      `<label class="ie-check"><input id="e_r" type="checkbox"> Re-query internet on next online rebuild</label>` +
+      `<div class="ie-row"><button class="btn-mini btn-primary" id="e_save">Save</button><button class="btn-mini" id="e_cancel">Cancel</button></div>`;
+    b.appendChild(ed);
+    ed.querySelector("#e_t").focus();
+    ed.querySelector("#e_save").onclick = () => {
+      const title = ed.querySelector("#e_t").value.trim(); if (!title) return;
+      setCorr(m, { title, year: ed.querySelector("#e_y").value ? Number(ed.querySelector("#e_y").value) : null,
+        format: ed.querySelector("#e_f").value, studio: ed.querySelector("#e_s").value.trim(),
+        distributor: ed.querySelector("#e_d").value.trim(), requery: ed.querySelector("#e_r").checked });
+      applyCorrection(m); render();
+    };
+    ed.querySelector("#e_cancel").onclick = () => render();
+  }
+
+  // ---- auth ---------------------------------------------------------------
+  async function sha256(s) {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(buf)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  function applyLibrary() {
+    const t = view.site_title || site.title || "Movie Collection";
+    const s = (view.site_subtitle != null ? view.site_subtitle : site.subtitle) || "";
+    $("#siteTitle").textContent = t; document.title = t;
+    $("#siteSubtitle").textContent = s;
+    const bi = $("#brandImg"), bm = $("#brandMark");
+    if (view.site_image) { bi.src = view.site_image; bi.hidden = false; bm.hidden = true; }
+    else { bi.hidden = true; bm.hidden = false; }
+  }
+  function applyAdminUI() {
+    document.body.classList.toggle("is-admin", isAdmin);
+    $$(".admin-only").forEach((e) => { e.hidden = !isAdmin; if (e.id === "unidentifiedLink" && !e.dataset.has) e.hidden = true; });
+    $("#adminBtn").textContent = isAdmin ? "🔓 Exit admin" : "🔒 Admin";
+    $("#adminBtn").classList.toggle("active", isAdmin);
+    $("#adminBadge").hidden = !isAdmin;
+  }
+  function openLogin() { $("#loginErr").hidden = true; $("#loginPw").value = ""; $("#loginDialog").hidden = false; setTimeout(() => $("#loginPw").focus(), 30); }
+  async function tryLogin() {
+    const h = await sha256($("#loginPw").value);
+    if (h === site.admin_password_sha256) { isAdmin = true; sessionStorage.setItem(ADMIN_KEY, "1"); $("#loginDialog").hidden = true; applyAdminUI(); render(); }
+    else $("#loginErr").hidden = false;
+  }
+  function exitAdmin() { isAdmin = false; sessionStorage.removeItem(ADMIN_KEY); applyAdminUI(); render(); }
+
+  // ---- admin settings (library + field visibility + columns + password) --
+  const STOCK_ICONS = [
+    ["Play", '<rect width="40" height="40" rx="9" fill="#ff5252"/><path d="M16 13l12 7-12 7z" fill="#fff"/>'],
+    ["Film reel", '<rect width="40" height="40" rx="9" fill="#1f2937"/><circle cx="20" cy="20" r="11" fill="none" stroke="#fff" stroke-width="2.5"/><circle cx="20" cy="20" r="2.6" fill="#fff"/><circle cx="20" cy="12.5" r="1.9" fill="#fff"/><circle cx="20" cy="27.5" r="1.9" fill="#fff"/><circle cx="12.5" cy="20" r="1.9" fill="#fff"/><circle cx="27.5" cy="20" r="1.9" fill="#fff"/>'],
+    ["Clapperboard", '<rect width="40" height="40" rx="9" fill="#0ea5e9"/><rect x="9" y="18" width="22" height="13" rx="2" fill="#fff"/><path d="M9 13.5l21.6-2.2 0.6 4.9-21.6 2.2z" fill="#111827"/><path d="M13 12.6l-1.4 4M18 12l-1.4 4M23 11.5l-1.4 4M28 11l-1.4 4" stroke="#fff" stroke-width="1.5"/>'],
+    ["VHS tape", '<rect width="40" height="40" rx="9" fill="#6d28d9"/><rect x="8" y="13" width="24" height="14" rx="2.5" fill="#fff"/><circle cx="16" cy="20" r="3.2" fill="#6d28d9"/><circle cx="24" cy="20" r="3.2" fill="#6d28d9"/>'],
+    ["DVD disc", '<rect width="40" height="40" rx="9" fill="#111827"/><circle cx="20" cy="20" r="11" fill="#aeb4c2"/><circle cx="20" cy="20" r="11" fill="none" stroke="#54c7ec" stroke-width="1"/><circle cx="20" cy="20" r="3.2" fill="#111827"/>'],
+    ["Popcorn", '<rect width="40" height="40" rx="9" fill="#f2c14e"/><path d="M13.5 17h13l-1.6 14H15.1z" fill="#fff"/><path d="M13.5 17h13l-.5 4H14z" fill="#ff5252"/><circle cx="15.5" cy="14.5" r="2.8" fill="#fff"/><circle cx="20" cy="12.6" r="3.2" fill="#fff"/><circle cx="24.5" cy="14.5" r="2.8" fill="#fff"/>'],
+    ["Camera", '<rect width="40" height="40" rx="9" fill="#0f766e"/><rect x="9" y="16" width="16" height="11" rx="2" fill="#fff"/><path d="M25 19l6-3v9l-6-3z" fill="#fff"/><circle cx="14" cy="13" r="3" fill="#fff"/><circle cx="20" cy="13" r="3" fill="#fff"/>'],
+    ["Heart", '<rect width="40" height="40" rx="9" fill="#be123c"/><path d="M20 29s-9-5.6-9-11.5C11 14 13.4 12 16 12c1.8 0 3.3 1 4 2.3.7-1.3 2.2-2.3 4-2.3 2.6 0 5 2 5 5.5C29 23.4 20 29 20 29z" fill="#fff"/>'],
+  ];
+  function stockDataURL(inner) {
+    return "data:image/svg+xml;utf8," + encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="84" height="84">' + inner + "</svg>");
+  }
+  function populateStock() {
+    const wrap = $("#stockIcons");
+    if (!wrap || wrap.childElementCount) return; // build once
+    STOCK_ICONS.forEach(([name, inner]) => {
+      const url = stockDataURL(inner);
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "stock-icon"; b.title = name;
+      b.innerHTML = `<img src="${url}" alt="${esc(name)}">`;
+      b.onclick = () => {
+        pendingImage = url;
+        const p = $("#setImagePreview"); p.src = url; p.hidden = false; $("#clearImage").hidden = false;
+      };
+      wrap.appendChild(b);
+    });
+  }
+
+  let pendingImage; // undefined = unchanged, "" = remove, dataURL = new logo
+  function openSettings() {
+    pendingImage = undefined;
+    populateStock();
+    $("#setTitle").value = view.site_title || site.title || "";
+    $("#setSubtitle").value = (view.site_subtitle != null ? view.site_subtitle : site.subtitle) || "";
+    const prev = $("#setImagePreview");
+    if (view.site_image) { prev.src = view.site_image; prev.hidden = false; $("#clearImage").hidden = false; }
+    else { prev.hidden = true; $("#clearImage").hidden = true; }
+    const wrap = $("#fieldToggles"); wrap.innerHTML = "";
+    ALL_FIELDS.forEach(([k, label]) => {
+      const id = "fld_" + k;
+      wrap.insertAdjacentHTML("beforeend",
+        `<label class="fld-toggle"><input type="checkbox" id="${id}" ${view.fields[k] ? "checked" : ""}${k === "title" || k === "poster" ? " disabled" : ""}> ${esc(label)}</label>`);
+    });
+    $("#setColumns").value = view.columns || 4;
+    $("#setPassword").value = "";
+    $("#settingsPwNote").hidden = true;
+    $("#settingsDialog").hidden = false;
+  }
+  async function saveSettings() {
+    view.site_title = $("#setTitle").value.trim() || null;
+    view.site_subtitle = $("#setSubtitle").value.trim();
+    if (pendingImage !== undefined) { view.site_image = pendingImage || null; pendingImage = undefined; }
+    ALL_FIELDS.forEach(([k]) => { const c = $("#fld_" + k); if (c) view.fields[k] = c.checked; });
+    view.fields.title = true; view.fields.poster = true;
+    view.columns = Math.max(1, Math.min(8, parseInt($("#setColumns").value, 10) || 4));
+    localStorage.removeItem(COLS_KEY); // let new default take effect
+    if ($("#setPassword").value.trim()) {
+      view._password_sha256 = await sha256($("#setPassword").value.trim());
+      site.admin_password_sha256 = view._password_sha256;
+      $("#settingsPwNote").textContent = "Password updated locally — included in the exported view-config.json.";
+      $("#settingsPwNote").hidden = false;
+    }
+    applyLibrary(); applyCols(); render();
+  }
+  function exportSettings() {
+    const out = { columns: view.columns, fields: view.fields };
+    if (view.site_title) out.site_title = view.site_title;
+    if (view.site_subtitle != null) out.site_subtitle = view.site_subtitle;
+    if (view.site_image) out.site_image = view.site_image;
+    if (view._password_sha256) out.admin_password_sha256 = view._password_sha256;
+    download("view-config.json", JSON.stringify(out, null, 2));
+    alert("Downloaded view-config.json.\nDrop it into the site's data/ folder so everyone gets these settings (library name, logo, description, fields, columns).");
+  }
+  function fileToDataURL(file, maxEdge, cb) {
+    const r = new FileReader();
+    r.onload = () => {
+      const im = new Image();
+      im.onload = () => {
+        const scale = Math.min(1, maxEdge / Math.max(im.width, im.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(im.width * scale); c.height = Math.round(im.height * scale);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        cb(c.toDataURL("image/png"));
+      };
+      im.src = r.result;
+    };
+    r.readAsDataURL(file);
+  }
+
+  // ---- exports ------------------------------------------------------------
+  function exportCorrections() {
+    if (!Object.keys(corrections).length) { alert("No edits yet."); return; }
+    download("corrections.json", JSON.stringify(corrections, null, 2));
+    alert("Downloaded corrections.json → drop into data/ and run `reelshelf build` to apply.");
+  }
+  function exportSeen() {
+    const out = {}; movies.forEach((m) => { if (m.seen) out[m.id] = { seen: true, date_seen: m.date_seen || null }; });
+    Object.assign(out, seen); Object.keys(out).forEach((k) => { if (out[k] && !out[k].seen) delete out[k]; });
+    download("seen-overrides.json", JSON.stringify(out, null, 2));
+    alert("Downloaded seen-overrides.json → drop into data/ and rebuild to make permanent.");
+  }
+  function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "application/json" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
+
+  // ---- wiring -------------------------------------------------------------
+  function wire() {
+    ["#search", "#sort", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen"]
+      .forEach((s) => $(s).addEventListener("input", render));
+    $("#clearFilters").onclick = () => { ["#search", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen"].forEach((s) => $(s).value = ""); $("#sort").value = "title"; render(); };
+    $("#colMinus").onclick = () => setCols(userCols() - 1);
+    $("#colPlus").onclick = () => setCols(userCols() + 1);
+    $("#adminBtn").onclick = () => isAdmin ? exitAdmin() : openLogin();
+    $("#exitAdmin").onclick = exitAdmin;
+    $("#settingsBtn").onclick = openSettings;
+    $("#settingsSave").onclick = saveSettings;
+    $("#settingsExport").onclick = exportSettings;
+    $("#setImage").addEventListener("change", (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      fileToDataURL(f, 200, (url) => {
+        pendingImage = url;
+        const p = $("#setImagePreview"); p.src = url; p.hidden = false; $("#clearImage").hidden = false;
+      });
+    });
+    $("#clearImage").onclick = () => { pendingImage = ""; $("#setImagePreview").hidden = true; $("#clearImage").hidden = true; };
+    $("#exportChanges").onclick = exportCorrections;
+    $("#exportSeen").onclick = exportSeen;
+    $("#loginGo").onclick = tryLogin;
+    $("#loginPw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
+    $("#lbPrev").onclick = () => zoomStep(-1);
+    $("#lbNext").onclick = () => zoomStep(1);
+    // dialog + lightbox close
+    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; }));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; }
+      if (zoomState && e.key === "ArrowLeft") zoomStep(-1);
+      if (zoomState && e.key === "ArrowRight") zoomStep(1);
+    });
+    window.addEventListener("resize", applyCols);
+  }
+})();

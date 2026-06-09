@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Movie Collection</title>
+  <meta name="description" content="A searchable catalog of a DVD & VHS collection." />
+  <link rel="stylesheet" href="assets/css/styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div class="brand">
+        <img id="brandImg" class="brand-img" alt="" hidden />
+        <span class="brand-mark" id="brandMark">▶</span>
+        <div>
+          <h1 id="siteTitle">Movie Collection</h1>
+          <p id="siteSubtitle" class="subtitle">DVD &amp; VHS — photographed, catalogued, searchable</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <span id="adminBadge" class="admin-badge" hidden>● ADMIN MODE</span>
+        <div class="header-stats" id="headerStats"></div>
+        <button id="settingsBtn" class="btn-ghost admin-only" type="button" hidden>⚙ Settings</button>
+        <button id="adminBtn" class="btn-ghost" type="button">🔒 Admin</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="controls wrap" id="controls">
+    <div class="search-row">
+      <input type="search" id="search" placeholder="Search title, genre, cast, studio…" autocomplete="off" />
+      <select id="sort" title="Sort by">
+        <option value="title">Title A–Z</option>
+        <option value="year-desc">Year (newest)</option>
+        <option value="year-asc">Year (oldest)</option>
+        <option value="added">Recently added</option>
+        <option value="value-desc">Est. value (high)</option>
+        <option value="rating-desc">Rating (high)</option>
+      </select>
+    </div>
+    <div class="filter-row" id="filters">
+      <select id="filterFormat"><option value="">All formats</option></select>
+      <select id="filterGenre"><option value="">All genres</option></select>
+      <select id="filterStudio"><option value="">All studios</option></select>
+      <select id="filterStream"><option value="">Any streaming</option></select>
+      <select id="filterLanguage"><option value="">All languages</option></select>
+      <select id="filterCategory"><option value="">All categories</option></select>
+      <select id="filterSeen">
+        <option value="">Seen &amp; unseen</option>
+        <option value="seen">Seen</option>
+        <option value="unseen">Unseen</option>
+      </select>
+      <button id="clearFilters" class="btn-ghost" type="button">Clear</button>
+    </div>
+    <div class="meta-row">
+      <span id="resultCount" class="result-count"></span>
+      <span class="meta-actions">
+        <span class="cols-control">
+          <span class="cols-label">Per row</span>
+          <button id="colMinus" class="cols-btn" type="button" aria-label="fewer columns">−</button>
+          <span id="colCount" class="cols-count">4</span>
+          <button id="colPlus" class="cols-btn" type="button" aria-label="more columns">+</button>
+        </span>
+        <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
+        <button id="exportChanges" class="btn-ghost admin-only" type="button" hidden>Export changes</button>
+        <button id="exportSeen" class="btn-ghost admin-only" type="button" hidden>Export seen</button>
+        <button id="exitAdmin" class="btn-ghost admin-only" type="button" hidden>Exit admin</button>
+      </span>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div id="grid" class="grid" aria-live="polite"></div>
+    <div id="empty" class="empty" hidden><p>No titles match your filters.</p></div>
+    <div id="loading" class="empty"><p>Loading collection…</p></div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p>Built with <a href="https://github.com/jchirayath/reelshelf">ReelShelf</a> ·
+         resale links to eBay sold listings · where-to-watch via JustWatch.</p>
+    </div>
+  </footer>
+
+  <!-- Image zoom lightbox (the only overlay; all data fields live on the card) -->
+  <div class="lightbox" id="lightbox" hidden>
+    <div class="lb-backdrop" data-close></div>
+    <button class="lb-close" data-close aria-label="Close">×</button>
+    <button class="lb-arrow lb-prev" id="lbPrev" aria-label="Previous">‹</button>
+    <img class="lb-img" id="lbImg" alt="" />
+    <button class="lb-arrow lb-next" id="lbNext" aria-label="Next">›</button>
+    <div class="lb-caption" id="lbCaption"></div>
+  </div>
+
+  <!-- Admin login -->
+  <div class="dialog" id="loginDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card">
+      <h2>Admin sign-in</h2>
+      <p class="dialog-sub">Enter the admin password to edit the catalog and configure the view.</p>
+      <input type="password" id="loginPw" placeholder="Password" />
+      <div class="dialog-actions">
+        <button class="btn btn-primary" id="loginGo">Unlock</button>
+        <button class="btn" data-close>Cancel</button>
+      </div>
+      <p class="login-err" id="loginErr" hidden>Incorrect password.</p>
+    </div>
+  </div>
+
+  <!-- Admin settings: which fields show + default columns + password -->
+  <div class="dialog" id="settingsDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card dialog-wide">
+      <h2>Library &amp; default-view settings</h2>
+      <p class="dialog-sub">Edit the library name, description and logo, choose which fields everyone sees, and the default movies-per-row.</p>
+
+      <div class="settings-block">
+        <div class="settings-row">
+          <label>Library name<input type="text" id="setTitle" placeholder="My Movie Collection" /></label>
+        </div>
+        <label style="display:block">Description<input type="text" id="setSubtitle" placeholder="DVD &amp; VHS — photographed, catalogued, searchable" /></label>
+        <div class="settings-row" style="align-items:center">
+          <label>Logo image<input type="file" id="setImage" accept="image/*" /></label>
+          <img id="setImagePreview" class="logo-preview" alt="" hidden />
+          <button class="btn-mini" id="clearImage" type="button" hidden>Remove logo</button>
+        </div>
+        <div class="stock-row">
+          <span class="stock-label">…or pick a stock icon:</span>
+          <div id="stockIcons" class="stock-icons"></div>
+        </div>
+      </div>
+
+      <h3 class="settings-h3">Fields shown on each card</h3>
+      <div class="field-toggles" id="fieldToggles"></div>
+      <div class="settings-row">
+        <label>Default per row
+          <input type="number" id="setColumns" min="1" max="8" />
+        </label>
+        <label>Change admin password
+          <input type="text" id="setPassword" placeholder="leave blank to keep" />
+        </label>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" id="settingsSave">Apply</button>
+        <button class="btn btn-gold" id="settingsExport">Export view-config.json</button>
+        <button class="btn" data-close>Close</button>
+      </div>
+      <p class="dialog-sub" id="settingsPwNote" hidden></p>
+    </div>
+  </div>
+
+  <script src="data/bundle.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# Core runtime dependencies (all permissive open-source licenses).
+requests>=2.28      # Apache-2.0 — HTTP for metadata providers & poster downloads
+Pillow>=9.0         # HPND — image loading / downscaling / thumbnails
+
+# Optional, only needed for the default zero-key identifier (OCR).
+# Requires the Tesseract engine installed separately (see README).
+pytesseract>=0.3.10 # Apache-2.0

@@ -1,0 +1,71 @@
+# ReelShelf configuration. Copy to `config.toml` and edit.
+# Paths are resolved relative to THIS file's location.
+
+[site]
+title    = "My Movie Collection"
+subtitle = "DVD & VHS — photographed, catalogued, and searchable"
+
+[paths]
+input  = "RawImages"   # folder of cover photos (add new photos here; only new ones are processed)
+output = "."           # site folder; generated data/ and posters/ are written under here
+
+# ----------------------------------------------------------------------------
+# IDENTIFY — read the movie's title/year/format from each cover photo.
+#   provider = "tesseract"  (default) Open-source OCR, NO API key. Works anywhere.
+#   provider = "claude"     Anthropic vision — best accuracy, also writes the intro. Needs a key.
+#   provider = "ollama"     Local open vision model (e.g. llava). NO cloud, NO key.
+# ----------------------------------------------------------------------------
+[identify]
+provider             = "tesseract"
+confidence_threshold = 0.55          # below this → goes to the "unidentified" group
+
+[identify.claude]
+model = "claude-haiku-4-5"           # vision-capable; set ANTHROPIC_API_KEY in env or .env
+
+[identify.ollama]
+model = "llava"
+host  = "http://localhost:11434"
+
+# ----------------------------------------------------------------------------
+# METADATA — official poster + genres/language/runtime/rating/tagline.
+#   provider = "wikidata"  (default) Open data (Wikidata CC0 + Wikipedia + Wikimedia). NO key.
+#   provider = "tmdb"      The Movie Database — best posters/metadata. Free key required.
+#   provider = "omdb"      OMDb API. Free key required.
+# ----------------------------------------------------------------------------
+[metadata]
+provider = "wikidata"
+
+[metadata.tmdb]
+language = "en-US"                    # set TMDB_API_KEY in env or .env
+
+# ----------------------------------------------------------------------------
+# RESALE — estimated used value + a link to live sold listings.
+# ----------------------------------------------------------------------------
+[resale]
+ebay_tld = "com"                     # com | co.uk | de | ca | com.au ...
+
+# ----------------------------------------------------------------------------
+# STREAMING — "where to watch" via JustWatch (no key). Reports whether each title
+# is on Netflix / Amazon Prime Video / Hulu (region-specific) with a direct link.
+# ----------------------------------------------------------------------------
+[streaming]
+enabled = true
+country = "US"                       # JustWatch region: US | GB | CA | AU | IN ...
+
+# ----------------------------------------------------------------------------
+# ADMIN — the read-only "default" view is public; the "Admin" view (read/write,
+# field-visibility, columns) is unlocked with this password. Only a SHA-256 hash
+# is written into the site; the plaintext stays in this gitignored config.
+# ----------------------------------------------------------------------------
+[admin]
+password = "changeme"                # CHANGE THIS, then rebuild
+
+[view]
+columns = 5                          # default movies-per-row (viewers can change it)
+
+# ============================================================================
+# Premium path (best results): set
+#   [identify]  provider = "claude"
+#   [metadata]  provider = "tmdb"   (or "omdb")
+# with ANTHROPIC_API_KEY + TMDB_API_KEY (or OMDB_API_KEY) in a gitignored .env next to this file.
+# ============================================================================
