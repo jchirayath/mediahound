@@ -99,6 +99,27 @@ Add more photos to `RawImages/` anytime and re-run `build` — only the **new** 
 
 ---
 
+## How it compares
+
+Most movie-collection tools add items by **barcode scan or manual entry** and keep your catalog in
+**their cloud** or a dated desktop app. ReelShelf is the only one that identifies titles from
+**photos of the covers** and generates a **modern static website you own and host for free** —
+offline-first and open-source. It's also one of the few that handles **VHS** (which usually has no
+scannable barcode in the disc databases others rely on).
+
+| | ReelShelf | CLZ / Libib | Tellico / GCstar | Plex / Jellyfin |
+|---|---|---|---|---|
+| Add by **photo of cover** | ✅ OCR/AI | ❌ barcode/manual | ❌ search/manual | ❌ scans video files |
+| Modern **website you host free** | ✅ | ❌ their cloud | ◻︎ dated HTML export | ❌ private server |
+| Open-source / offline / no account | ✅ | ❌ | ✅ desktop | ✅ (Jellyfin) |
+| For a **physical** shelf | ✅ | ✅ | ✅ | ❌ digital files |
+
+See **[COMPARISON.md](COMPARISON.md)** for the full, honest analysis — including when a barcode app
+(CLZ/Libib), an OSS desktop cataloger (Tellico/Data Crow), or a media server (Plex/Jellyfin) is the
+better choice.
+
+---
+
 ## Providers (how titles get identified & enriched)
 
 Both paths are first-class — pick them per-site in `config.toml`. The default needs **zero keys**.
