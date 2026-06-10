@@ -20,10 +20,22 @@ Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **mult
 - **Frontend** — a **🎬 Movies / 🎵 Music** segmented filter, per-media-type cards (artist / label /
   tracklist / ♫ listen for music), and music-aware search.
 - Provider factory now routes by media type: `get_metadata_provider(cfg, media_type)`.
+- **`mediahound serve`** — preview the generated site over http (no more file:// fetch limits).
+- **`mediahound serve --admin`** — a localhost-only write API so admin-portal edits save **straight
+  into `data/corrections.json`** (and `seen-overrides.json`) as you make them. No "Export changes →
+  drop file in" step; edits persist immediately and **survive every future build** (the long-standing
+  cause of "my manual title fix reverted on rebuild"). Cross-origin writes are refused; a **↻ Rebuild**
+  button re-bakes the catalog in place. See `mediahound/serve.py` and
+  [docs/EDITING.md](docs/EDITING.md).
 
 ### Changed
 - Rebrand across package, CLI (`mediahound`), JS data global, `localStorage` keys, branding and docs.
 - Default site title/subtitle are media-generic.
+
+### Fixed
+- **“Export changes” now merges** with the site's existing `data/corrections.json` before downloading,
+  so exporting can never silently drop a previously-saved correction (which would make that title
+  revert on the next build).
 
 ## [0.1.0] — 2026-06-09
 
