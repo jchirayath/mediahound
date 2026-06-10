@@ -4,8 +4,8 @@
   const $ = (s) => document.querySelector(s);
   const queue = {}; // hash -> { title, year, format }
 
-  const source = window.REELSHELF_DATA
-    ? Promise.resolve(window.REELSHELF_DATA.unidentified || [])
+  const source = window.MEDIAHOUND_DATA
+    ? Promise.resolve(window.MEDIAHOUND_DATA.unidentified || [])
     : fetch("data/unidentified.json", { cache: "no-store" }).then((r) => (r.ok ? r.json() : []));
 
   source
@@ -108,7 +108,7 @@
     a.href = URL.createObjectURL(new Blob([JSON.stringify(queue, null, 2)], { type: "application/json" }));
     a.download = "identify-queue.json"; a.click(); URL.revokeObjectURL(a.href);
     alert("Downloaded identify-queue.json — drop it into the site's data/ folder, then:\n" +
-          "• `reelshelf build` → named items become catalog entries (with your cover photo); discarded items are removed.\n" +
-          "• `reelshelf build --online` → also runs DISCOVERY: fetches poster, genres, cast & studio for the names you gave.");
+          "• `mediahound build` → named items become catalog entries (with your cover photo); discarded items are removed.\n" +
+          "• `mediahound build --online` → also runs DISCOVERY: fetches poster, genres, cast & studio for the names you gave.");
   });
 })();

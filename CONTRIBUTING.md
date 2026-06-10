@@ -1,21 +1,21 @@
-# Contributing to ReelShelf
+# Contributing to MediaHound
 
-Thanks for helping out! ReelShelf is intentionally small and dependency-light.
+Thanks for helping out! MediaHound is intentionally small and dependency-light.
 
 ## Dev setup
 
 ```bash
 pip install -e ".[ocr,dev]"
-reelshelf build --config demo/config.toml --mock   # quick smoke test
+mediahound build --config demo/config.toml --mock   # quick smoke test
 ```
 
 ## Architecture
 
-- `reelshelf/pipeline.py` — orchestration (scan → identify → enrich → intro → resale → write).
-- `reelshelf/identify/` — **Identifier** providers (read title/year/format from a cover).
-- `reelshelf/metadata/` — **MetadataProvider** providers (poster + canonical fields).
-- `reelshelf/store.py` — the incremental manifest and the JSON the website reads.
-- `reelshelf/web/` — the static site template copied by `reelshelf init`.
+- `mediahound/pipeline.py` — orchestration (scan → identify → enrich → intro → resale → write).
+- `mediahound/identify/` — **Identifier** providers (read title/year/format from a cover).
+- `mediahound/metadata/` — **MetadataProvider** providers (poster + canonical fields).
+- `mediahound/store.py` — the incremental manifest and the JSON the website reads.
+- `mediahound/web/` — the static site template copied by `mediahound init`.
 
 ## Adding a provider
 

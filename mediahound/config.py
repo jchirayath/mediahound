@@ -6,10 +6,11 @@ import tomllib
 from pathlib import Path
 
 DEFAULTS = {
-    "site": {"title": "My Movie Collection", "subtitle": ""},
+    "site": {"title": "My Media Collection", "subtitle": ""},
     "paths": {"input": "RawImages", "output": "."},
     "identify": {"provider": "tesseract", "confidence_threshold": 0.55},
-    "metadata": {"provider": "wikidata"},
+    "metadata": {"provider": "wikidata"},          # movie metadata
+    "music": {"metadata": {"provider": "musicbrainz"}},  # music metadata (zero-key default)
     "resale": {"ebay_tld": "com"},
     "streaming": {"enabled": True, "country": "US"},
     "admin": {"password": "changeme"},

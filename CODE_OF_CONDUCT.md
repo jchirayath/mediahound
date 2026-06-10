@@ -24,7 +24,7 @@ considered inappropriate in a professional setting.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the project
-maintainer by opening a private [security advisory](https://github.com/jchirayath/reelshelf/security/advisories/new)
+maintainer by opening a private [security advisory](https://github.com/jchirayath/mediahound/security/advisories/new)
 or contacting [@jchirayath](https://github.com/jchirayath). All complaints will be reviewed and
 investigated promptly and fairly. Maintainers are obligated to respect the privacy and security of
 the reporter of any incident.

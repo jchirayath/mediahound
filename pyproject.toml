@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "reelshelf"
-version = "0.1.0"
-description = "Turn photos of your DVD/VHS collection into a sleek, searchable web catalog."
+name = "mediahound"
+version = "0.2.0"
+description = "Turn photos of your movie & music collection into a sleek, searchable web catalog."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -32,21 +32,21 @@ ocr = ["pytesseract>=0.3.10"]   # zero-key default identifier
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.4"]
 
 [project.urls]
-Homepage = "https://github.com/jchirayath/reelshelf"
-Source = "https://github.com/jchirayath/reelshelf"
-Demo = "https://jchirayath.github.io/reelshelf/"
-Issues = "https://github.com/jchirayath/reelshelf/issues"
-Changelog = "https://github.com/jchirayath/reelshelf/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/jchirayath/mediahound"
+Source = "https://github.com/jchirayath/mediahound"
+Demo = "https://jchirayath.github.io/mediahound/"
+Issues = "https://github.com/jchirayath/mediahound/issues"
+Changelog = "https://github.com/jchirayath/mediahound/blob/main/CHANGELOG.md"
 
 [project.scripts]
-reelshelf = "reelshelf.cli:main"
+mediahound = "mediahound.cli:main"
 
 [tool.setuptools]
-packages = ["reelshelf", "reelshelf.identify", "reelshelf.metadata"]
+packages = ["mediahound", "mediahound.identify", "mediahound.metadata"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-reelshelf = ["web/**/*", "config.example.toml"]
+mediahound = ["web/**/*", "config.example.toml"]
 
 [tool.ruff]
 line-length = 110

@@ -1,9 +1,9 @@
-# ReelShelf configuration. Copy to `config.toml` and edit.
+# MediaHound configuration. Copy to `config.toml` and edit.
 # Paths are resolved relative to THIS file's location.
 
 [site]
-title    = "My Movie Collection"
-subtitle = "DVD & VHS — photographed, catalogued, and searchable"
+title    = "My Media Collection"
+subtitle = "Movies & music — photographed, catalogued, and searchable"
 
 [paths]
 input  = "RawImages"   # folder of cover photos (add new photos here; only new ones are processed)

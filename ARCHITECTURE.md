@@ -1,14 +1,14 @@
-# ReelShelf — Architecture
+# MediaHound — Architecture
 
-ReelShelf is two halves that meet at a folder of JSON files:
+MediaHound is two halves that meet at a folder of JSON files:
 
-1. A **Python CLI** (`reelshelf/`) that reads cover photos and writes a catalog.
-2. A **static, dependency-free web app** (`reelshelf/web/`) that renders that catalog.
+1. A **Python CLI** (`mediahound/`) that reads cover photos and writes a catalog.
+2. A **static, dependency-free web app** (`mediahound/web/`) that renders that catalog.
 
 They never talk at runtime — the CLI produces files; the site reads them.
 
 ```
-┌─────────────────────────── reelshelf build ───────────────────────────┐
+┌─────────────────────────── mediahound build ───────────────────────────┐
 │                                                                        │
 │  RawImages/*.jpg                                                       │
 │      │  sha256 → data/manifest.json   (incremental: skip already-done) │
@@ -34,11 +34,11 @@ They never talk at runtime — the CLI produces files; the site reads them.
             web/index.html + assets/js/app.js  (vanilla JS, no build step)
 ```
 
-## Python package (`reelshelf/`)
+## Python package (`mediahound/`)
 
 | Module | Responsibility |
 |---|---|
-| `cli.py` | `reelshelf init <dir>` and `reelshelf build` (argparse). |
+| `cli.py` | `mediahound init <dir>` and `mediahound build` (argparse). |
 | `config.py` | Loads `config.toml`, merges defaults, loads `.env` secrets, resolves paths. |
 | `pipeline.py` | Orchestration: scan → identify → enrich → intro/resale/streaming → write. Also `--mock`, corrections, offline/online gating, and the metadata cache + plausibility guard. |
 | `store.py` | The incremental `manifest.json` and the JSON the website reads (collection / unidentified). Merges duplicate photos into one gallery; applies seen/corrections. |
@@ -63,7 +63,7 @@ Generated (the site reads these):
 - `manifest.json` — `sha256 → {file, status, movie_id}`; drives incremental builds.
 - `site.json` — title, subtitle, counts, admin password **hash** (never the plaintext).
 - `view-config.json` — admin-owned: fields shown, default columns, library name/logo/description.
-- `bundle.js` — all of the above embedded as `window.REELSHELF_DATA` so `index.html` works from `file://`.
+- `bundle.js` — all of the above embedded as `window.MEDIAHOUND_DATA` so `index.html` works from `file://`.
 
 Round-trip files (exported by the admin UI, dropped back into `data/`, applied on next build):
 - `corrections.json` — renames, format/studio edits, deletes, rotations, default-image, re-query flags.
@@ -72,7 +72,7 @@ Round-trip files (exported by the admin UI, dropped back into `data/`, applied o
 
 Posters live in `posters/` (downloaded art or cover-photo fallbacks); full cover photos in `originals/`.
 
-## The web app (`reelshelf/web/`)
+## The web app (`mediahound/web/`)
 
 Vanilla JS + CSS, **no framework, no build step**:
 - `index.html` + `assets/js/app.js` — the catalog, filters, image gallery/zoom, and the admin tools.

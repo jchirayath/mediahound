@@ -1,12 +1,12 @@
 # Security
 
-ReelShelf builds a **static website** — there is no server, database, or backend at runtime. That
+MediaHound builds a **static website** — there is no server, database, or backend at runtime. That
 shapes the whole threat model: a published catalog is **read-only to everyone**, and there's no
 live service to attack, no session to hijack, and no server-side data to leak.
 
 ## Reporting a vulnerability
 
-Please open a [GitHub Security Advisory](https://github.com/jchirayath/reelshelf/security/advisories/new)
+Please open a [GitHub Security Advisory](https://github.com/jchirayath/mediahound/security/advisories/new)
 (preferred) or a regular issue. We'll respond as quickly as we can.
 
 ## The admin password is a convenience gate, **not** an access-control boundary
@@ -17,7 +17,7 @@ site (`data/site.json`). Understand what this does and doesn't protect:
 - **It does not protect the published catalog.** Admin mode only enables *client-side* editing tools
   whose changes are saved to the visitor's **own browser** (`localStorage`) and can be *exported* as
   JSON. Nothing a visitor does in admin mode affects the live site or anyone else. Changing the
-  published catalog requires running `reelshelf build` and re-deploying — i.e. access to your repo /
+  published catalog requires running `mediahound build` and re-deploying — i.e. access to your repo /
   host, which is the real security boundary.
 - **The hash is public and unsalted**, so it is brute-forceable. Therefore:
   - Use a **strong, unique** admin password that you don't reuse anywhere else.

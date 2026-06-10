@@ -1,16 +1,16 @@
 """Pure helpers + security guards in the pipeline (no network)."""
 from PIL import Image
 
-from reelshelf import pipeline
-from reelshelf.config import DEFAULTS, Config, _deep_merge
-from reelshelf.pipeline import (
+from mediahound import pipeline
+from mediahound.config import DEFAULTS, Config, _deep_merge
+from mediahound.pipeline import (
     _download_poster,
     _NullMetadata,
     _plausible_title,
     _sig_tokens,
     _slug,
 )
-from reelshelf.store import Store
+from mediahound.store import Store
 from tests.conftest import make_image
 
 

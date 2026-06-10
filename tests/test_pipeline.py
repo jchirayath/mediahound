@@ -2,12 +2,12 @@
 import json
 from pathlib import Path
 
-from reelshelf import pipeline
-from reelshelf.config import DEFAULTS, Config, _deep_merge
-from reelshelf.identify.base import Identification
-from reelshelf.intro import make_intro
-from reelshelf.metadata.base import MovieMeta
-from reelshelf.resale import estimate
+from mediahound import pipeline
+from mediahound.config import DEFAULTS, Config, _deep_merge
+from mediahound.identify.base import Identification
+from mediahound.intro import make_intro
+from mediahound.metadata.base import MovieMeta
+from mediahound.resale import estimate
 
 
 def _cfg(tmp_path: Path) -> Config:

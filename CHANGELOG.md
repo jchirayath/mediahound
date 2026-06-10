@@ -4,12 +4,31 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — unreleased — "MediaHound"
+
+Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog
+(movies *and* music).
+
+### Added
+- **Music support** — catalog CDs, vinyl and cassettes. New `media_type` discriminator and a
+  `MusicMeta` model; **MusicBrainz + Cover Art Archive** metadata provider (open, zero-key); keyless
+  **Spotify / Apple Music / YouTube Music** "where-to-listen" links.
+- **CSV import/export** — `mediahound import catalog.csv` bulk-adds movies & music (no photos
+  needed), optionally enriched online; `mediahound export -o catalog.csv` backs up the catalog.
+- **Frontend** — a **🎬 Movies / 🎵 Music** segmented filter, per-media-type cards (artist / label /
+  tracklist / ♫ listen for music), and music-aware search.
+- Provider factory now routes by media type: `get_metadata_provider(cfg, media_type)`.
+
+### Changed
+- Rebrand across package, CLI (`mediahound`), JS data global, `localStorage` keys, branding and docs.
+- Default site title/subtitle are media-generic.
+
 ## [0.1.0] — 2026-06-09
 
 First public release.
 
 ### Added
-- **CLI** — `reelshelf init <dir>` scaffolds a site; `reelshelf build` turns a folder of cover
+- **CLI** — `mediahound init <dir>` scaffolds a site; `mediahound build` turns a folder of cover
   photos into a static catalog. Incremental (only new photos are processed, tracked by sha256).
 - **Offline-first** — builds never touch the network unless `--online` is passed.
 - **Pluggable providers**
@@ -42,4 +61,4 @@ First public release.
 - Secrets live only in a gitignored `.env`; only the admin password **hash** is published. The admin
   gate is a convenience control, not server-side auth (see [SECURITY.md](SECURITY.md)).
 
-[0.1.0]: https://github.com/jchirayath/reelshelf/releases/tag/v0.1.0
+[0.1.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.1.0

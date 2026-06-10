@@ -1,4 +1,4 @@
-"""Command-line entry point: `reelshelf init <dir>` and `reelshelf build`."""
+"""Command-line entry point: `mediahound init <dir>` and `mediahound build`."""
 from __future__ import annotations
 
 import argparse
@@ -9,7 +9,7 @@ from pathlib import Path
 from . import __version__
 from .config import load_config
 
-# Template assets are bundled inside the package so `pip install reelshelf` is self-contained.
+# Template assets are bundled inside the package so `pip install mediahound` is self-contained.
 _PKG_DIR = Path(__file__).resolve().parent
 _WEB_TEMPLATE = _PKG_DIR / "web"
 _CONFIG_EXAMPLE = _PKG_DIR / "config.example.toml"
@@ -48,11 +48,11 @@ def cmd_init(args) -> int:
         netlify.write_text(_NETLIFY_TOML, encoding="utf-8")
         print("  + netlify.toml")
 
-    print(f"\nInitialized ReelShelf site at {dest}")
+    print(f"\nInitialized MediaHound site at {dest}")
     print("Next:")
     print(f"  1. Add cover photos to {dest / 'RawImages'}")
     print(f"  2. (optional) edit {cfg_target} to pick providers / add a .env with keys")
-    print(f"  3. reelshelf build --config {cfg_target}")
+    print(f"  3. mediahound build --config {cfg_target}")
     return 0
 
 
@@ -60,7 +60,7 @@ def cmd_build(args) -> int:
     from . import pipeline  # lazy: avoids importing requests/PIL for `init`
     config_path = Path(args.config).resolve()
     if not config_path.is_file():
-        print(f"Config not found: {config_path}\nRun `reelshelf init <dir>` first.", file=sys.stderr)
+        print(f"Config not found: {config_path}\nRun `mediahound init <dir>` first.", file=sys.stderr)
         return 2
     cfg = load_config(config_path)
     pipeline.build(cfg, mock=args.mock, force=args.force,
@@ -70,10 +70,46 @@ def cmd_build(args) -> int:
     return 0
 
 
+def _load_or_die(config_arg: str):
+    config_path = Path(config_arg).resolve()
+    if not config_path.is_file():
+        print(f"Config not found: {config_path}\nRun `mediahound init <dir>` first.", file=sys.stderr)
+        sys.exit(2)
+    return load_config(config_path)
+
+
+def cmd_import(args) -> int:
+    from . import pipeline
+    from .csvio import import_csv
+    from .store import Store
+    cfg = _load_or_die(args.config)
+    csv_path = Path(args.file).resolve()
+    if not csv_path.is_file():
+        print(f"CSV not found: {csv_path}", file=sys.stderr)
+        return 2
+    store = Store(cfg.data_dir)
+    import_csv(cfg, store, csv_path, online=args.online, log=print)
+    store.save()
+    pipeline._write_site(cfg, store)
+    print(f"Done. Catalog written to {cfg.data_dir}")
+    return 0
+
+
+def cmd_export(args) -> int:
+    from .csvio import export_csv
+    from .store import Store
+    cfg = _load_or_die(args.config)
+    store = Store(cfg.data_dir)
+    out = Path(args.output).resolve()
+    n = export_csv(store, out)
+    print(f"Exported {n} item(s) → {out}")
+    return 0
+
+
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="reelshelf",
-                                description="Catalog a DVD/VHS collection from cover photos.")
-    p.add_argument("--version", action="version", version=f"reelshelf {__version__}")
+    p = argparse.ArgumentParser(prog="mediahound",
+                                description="Catalog a movie & music collection from cover photos or CSV.")
+    p.add_argument("--version", action="version", version=f"mediahound {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     pi = sub.add_parser("init", help="scaffold a new site folder (template + config).")
@@ -93,6 +129,18 @@ def main(argv=None) -> int:
     pb.add_argument("--refresh-streaming", action="store_true",
                     help="re-check where-to-watch for every title (implies --online)")
     pb.set_defaults(func=cmd_build)
+
+    pm = sub.add_parser("import", help="bulk-add items from a CSV (no photos needed).")
+    pm.add_argument("file", help="path to the CSV file")
+    pm.add_argument("--config", default="config.toml", help="path to config.toml")
+    pm.add_argument("--online", action="store_true",
+                    help="enrich each row (cover art + missing fields) via the metadata providers")
+    pm.set_defaults(func=cmd_import)
+
+    pe = sub.add_parser("export", help="write the whole catalog to a CSV (backup/migration).")
+    pe.add_argument("--config", default="config.toml", help="path to config.toml")
+    pe.add_argument("-o", "--output", default="catalog.csv", help="output CSV path")
+    pe.set_defaults(func=cmd_export)
 
     args = p.parse_args(argv)
     return args.func(args)
