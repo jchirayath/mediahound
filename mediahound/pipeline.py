@@ -477,11 +477,11 @@ def _write_site(cfg: Config, store: Store) -> None:
 
 def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
     """Enrich an audio cover (CD/vinyl/cassette) via the music provider and write a music record."""
-    meta = provider.lookup(ident.title)
+    meta = provider.lookup(ident.title, artist=ident.artist)
     if not getattr(meta, "matched", False) and not is_manual:
         return _record_unidentified(cfg, store, img, h, ident, reason="no music match")
     if not getattr(meta, "matched", False):
-        meta = MusicMeta(True, source="manual", title=ident.title)
+        meta = MusicMeta(True, source="manual", title=ident.title, artist=ident.artist)
 
     title = meta.title or ident.title
     artist = meta.artist
@@ -550,7 +550,7 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
         ident = Identification(
             True, queued.get("title"), queued.get("year"),
             queued.get("format", "Unknown"), queued.get("language"),
-            0.99, queued.get("intro"))
+            0.99, queued.get("intro"), queued.get("artist"))
     else:
         jpeg = prepared_jpeg(img)
         ident = get_ident().identify(img, jpeg)

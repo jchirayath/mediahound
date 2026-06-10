@@ -14,6 +14,7 @@ class Identification:
     language: str | None = None
     confidence: float = 0.0          # 0..1
     intro: str | None = None         # some identifiers (e.g. Claude) also write the hook
+    artist: str | None = None        # music: the performing artist (sharpens the lookup query)
     raw: dict = field(default_factory=dict)
 
 
