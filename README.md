@@ -21,10 +21,11 @@ Cover Art Archive** (open, zero-key) with keyless Spotify / Apple Music / YouTub
 
 [![MediaHound screenshot](docs/screenshot.jpg)](https://jchirayath.github.io/mediahound/)
 
-> ℹ️ The demo shows **real movie posters** (hotlinked from IMDb/OMDb for illustration) so you can
-> see what a finished catalog looks like — no poster images are stored in this repo. The extra
-> gallery photos are generated placeholders standing in for *your own* cover photos. Your real
-> catalog pulls poster art from TMDB / OMDb / Wikidata, or falls back to the photos you take.
+> ℹ️ The demo shows **real movie posters and album covers** (hotlinked from IMDb/OMDb and Cover Art
+> Archive / Apple) so you can see what a finished catalog looks like — no cover images are stored in
+> this repo. Extra gallery photos are generated placeholders standing in for *your own* photos. Your
+> real catalog pulls art from TMDB / OMDb / Wikidata (movies) and MusicBrainz / Cover Art Archive
+> (music), or falls back to the photos you take.
 
 - **Runs for anybody with zero API keys** — open-source OCR + open data by default.
 - **Offline-first** — never contacts the internet unless you explicitly ask (`--online`).

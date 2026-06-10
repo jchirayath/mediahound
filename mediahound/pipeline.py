@@ -120,31 +120,31 @@ _MOCK = [
 
 # Sample music releases for --mock (curated; generated placeholder art, no copyrighted sleeves).
 _MOCK_MUSIC = [
-    dict(title="The Dark Side of the Moon", artist="Pink Floyd", year=1973, format="Vinyl",
+    dict(title="The Dark Side of the Moon", cover_url="https://coverartarchive.org/release-group/f5093c06-23e3-404f-aeaa-40f72885ee3a/front", artist="Pink Floyd", year=1973, format="Vinyl",
          label="Harvest", genres=["Progressive Rock"], rating=9.2, color=(18, 18, 22),
          tracklist=["Speak to Me", "Breathe (In the Air)", "On the Run", "Time", "Money",
                     "Us and Them", "Brain Damage", "Eclipse"],
          intro="A seamless suite on madness and time — heard best on vinyl, end to end."),
-    dict(title="Rumours", artist="Fleetwood Mac", year=1977, format="Vinyl",
+    dict(title="Rumours", cover_url="https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/4d/13/ba/4d13bac3-d3d5-7581-2c74-034219eadf2b/081227970949.jpg/600x600bb.jpg", artist="Fleetwood Mac", year=1977, format="Vinyl",
          label="Warner Bros.", genres=["Soft Rock", "Pop Rock"], rating=8.9, color=(74, 54, 32),
          tracklist=["Second Hand News", "Dreams", "Never Going Back Again", "Go Your Own Way",
                     "The Chain", "Gold Dust Woman"],
          intro="Heartbreak turned into immaculate harmonies — a band falling apart, beautifully."),
-    dict(title="Thriller", artist="Michael Jackson", year=1982, format="Cassette",
+    dict(title="Thriller", cover_url="https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/32/4f/fd/324ffda2-9e51-8f6a-0c2d-c6fd2b41ac55/074643811224.jpg/600x600bb.jpg", artist="Michael Jackson", year=1982, format="Cassette",
          label="Epic", genres=["Pop", "Funk", "R&B"], rating=9.0, color=(40, 20, 24),
          tracklist=["Wanna Be Startin' Somethin'", "Thriller", "Beat It", "Billie Jean",
                     "Human Nature", "P.Y.T."],
          intro="The best-selling album ever made — pop, funk and a werewolf, on one tape."),
-    dict(title="Kind of Blue", artist="Miles Davis", year=1959, format="Vinyl",
+    dict(title="Kind of Blue", cover_url="https://is1-ssl.mzstatic.com/image/thumb/Music/7f/9f/d6/mzi.vtnaewef.jpg/600x600bb.jpg", artist="Miles Davis", year=1959, format="Vinyl",
          label="Columbia", genres=["Jazz", "Modal Jazz"], rating=9.4, color=(20, 32, 52),
          tracklist=["So What", "Freddie Freeloader", "Blue in Green", "All Blues", "Flamenco Sketches"],
          intro="Modal jazz at its most serene — the record almost every collection starts with."),
-    dict(title="Nevermind", artist="Nirvana", year=1991, format="CD",
+    dict(title="Nevermind", cover_url="https://coverartarchive.org/release-group/1b022e01-4da6-387b-8658-8678046e4cef/front", artist="Nirvana", year=1991, format="CD",
          label="DGC", genres=["Grunge", "Alternative Rock"], rating=8.7, color=(20, 48, 60),
          tracklist=["Smells Like Teen Spirit", "In Bloom", "Come as You Are", "Lithium",
                     "Polly", "Drain You"],
          intro="The CD that dragged the underground overground — louder, quieter, louder."),
-    dict(title="The Miseducation of Lauryn Hill", artist="Lauryn Hill", year=1998, format="CD",
+    dict(title="The Miseducation of Lauryn Hill", cover_url="https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/09/6b/55/096b55c4-ee8f-23bd-df8f-0ca0821f3028/886446727189.jpg/600x600bb.jpg", artist="Lauryn Hill", year=1998, format="CD",
          label="Ruffhouse / Columbia", genres=["Neo Soul", "Hip Hop", "R&B"], rating=9.1,
          color=(34, 52, 30),
          tracklist=["Lost Ones", "Ex-Factor", "To Zion", "Doo Wop (That Thing)",
@@ -719,10 +719,15 @@ def _build_mock(cfg, store, stats, log) -> Stats:
     for i, mk in enumerate(_MOCK_MUSIC):
         title, artist, year, fmt = mk["title"], mk["artist"], mk["year"], mk["format"]
         mid = f"{_slug(artist)}-{_slug(title)}-{year}"
-        cover = cfg.posters_dir / f"{mid}.jpg"
-        make_placeholder_poster(f"{artist} — {title}", cover, color=mk.get("color", (30, 30, 36)),
-                                subtitle=fmt, shape="square")
-        images = [f"posters/{cover.name}"]
+        # real album art hotlinked from Cover Art Archive (no copyrighted files in the repo);
+        # falls back to a generated square placeholder if a cover_url isn't set.
+        if mk.get("cover_url"):
+            images = [mk["cover_url"]]
+        else:
+            cover = cfg.posters_dir / f"{mid}.jpg"
+            make_placeholder_poster(f"{artist} — {title}", cover, color=mk.get("color", (30, 30, 36)),
+                                    subtitle=fmt, shape="square")
+            images = [f"posters/{cover.name}"]
         played = (i % 3 == 0)
         item = {
             "id": mid, "media_type": "music", "title": title, "artist": artist,
