@@ -14,9 +14,9 @@ from .imaging import make_placeholder_poster, prepared_jpeg, save_thumbnail
 from .intro import make_intro
 from .links import listen_links as _listen_links
 from .metadata import get_metadata_provider
-from .metadata.base import MovieMeta
+from .metadata.base import MovieMeta, MusicMeta
 from .resale import estimate
-from .store import Store, list_images, sha256_file
+from .store import Store, list_media_images, sha256_file
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _STOP = {"the", "a", "an", "of", "and", "vol", "volume", "part", "complete", "season",
@@ -223,17 +223,22 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
         store._collection_by_id = {}
         store.unidentified = []
 
-    images = list_images(cfg.input_dir)
+    images = list_media_images(cfg.input_dir)
     stats.scanned = len(images)
-    log(f"Scanning {cfg.input_dir} → {len(images)} image(s)")
+    n_audio = sum(1 for _, mt in images if mt == "music")
+    log(f"Scanning {cfg.input_dir} → {len(images)} image(s) "
+        f"({len(images) - n_audio} video, {n_audio} audio)")
 
-    metadata = None
+    providers = None
     if images:
         if online:
-            metadata = _CachedMetadata(get_metadata_provider(cfg), cfg.data_dir / ".metadata-cache.json")
-            log(f"Metadata: {metadata.name} (online, cached)")
+            movie_meta = _CachedMetadata(get_metadata_provider(cfg), cfg.data_dir / ".metadata-cache.json")
+            providers = {"movie": movie_meta,
+                         "music": get_metadata_provider(cfg, "music") if n_audio else _NullMetadata()}
+            log(f"Metadata: {movie_meta.name} (movies) + "
+                f"{providers['music'].name if n_audio else 'none'} (music), online + cached")
         else:
-            metadata = _NullMetadata()
+            providers = {"movie": _NullMetadata(), "music": _NullMetadata()}
             log("OFFLINE mode — not contacting any online databases (use --online to enable).")
 
     # The identifier is built lazily — only when a NON-queued image actually needs it.
@@ -249,7 +254,7 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
 
     threshold = float(cfg.identify.get("confidence_threshold", 0.55))
     processed = 0
-    for idx, img in enumerate(images, 1):
+    for idx, (img, mtype) in enumerate(images, 1):
         if limit and processed >= limit:
             break
         h = sha256_file(img)
@@ -268,7 +273,7 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
         processed += 1
         log(f"[{idx}/{len(images)}] {img.name} …")
         try:
-            ok = _process_one(cfg, store, img, h, get_ident, metadata, threshold)
+            ok = _process_one(cfg, store, img, h, get_ident, providers, threshold, mtype)
             if ok is None:
                 pass  # discarded
             elif ok:
@@ -283,8 +288,8 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
     if online:
         _enrich_streaming(cfg, store, log, refresh=refresh_streaming)
 
-    if metadata is not None:
-        metadata.save()
+    if providers and hasattr(providers["movie"], "save"):
+        providers["movie"].save()         # persist the movie metadata cache
     store.save()
     _write_site(cfg, store)
     log(f"Done. {stats}")
@@ -470,7 +475,67 @@ def _write_site(cfg: Config, store: Store) -> None:
             page.write_text(html, encoding="utf-8")
 
 
-def _process_one(cfg, store, img, h, get_ident, metadata, threshold) -> bool:
+def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
+    """Enrich an audio cover (CD/vinyl/cassette) via the music provider and write a music record."""
+    meta = provider.lookup(ident.title)
+    if not getattr(meta, "matched", False) and not is_manual:
+        return _record_unidentified(cfg, store, img, h, ident, reason="no music match")
+    if not getattr(meta, "matched", False):
+        meta = MusicMeta(True, source="manual", title=ident.title)
+
+    title = meta.title or ident.title
+    artist = meta.artist
+    mid = _slug(f"{artist or ''}-{title}-{meta.year or ident.year or h[:6]}")
+
+    poster_rel = None
+    poster_dest = cfg.posters_dir / f"{mid}.jpg"
+    if meta.cover_url and _download_poster(meta.cover_url, poster_dest):   # Cover Art Archive
+        poster_rel = f"posters/{poster_dest.name}"
+    else:
+        try:
+            save_thumbnail(img, poster_dest, max_edge=600)                 # fall back to the photo
+            poster_rel = f"posters/{poster_dest.name}"
+        except Exception:
+            pass
+
+    original_rel = None
+    original_dest = cfg.output_dir / "originals" / f"{mid}-{h[:8]}.jpg"
+    try:
+        save_thumbnail(img, original_dest, max_edge=900)
+        original_rel = f"originals/{original_dest.name}"
+    except Exception:
+        pass
+
+    fmt = ident.format if ident.format and ident.format != "Unknown" else (meta.format or "CD")
+    images = [poster_rel] if poster_rel else []
+    if original_rel and original_rel not in images:
+        images.append(original_rel)
+    year = meta.year or ident.year
+    genre = meta.genres[0].lower() if meta.genres else None
+    intro = (f"A {year // 10 * 10}s {genre} record worth spinning." if (year and genre)
+             else (f"{artist} — {title}." if artist else title))
+
+    item = {
+        "id": mid, "media_type": "music", "title": title, "artist": artist,
+        "year": year, "format": fmt, "label": meta.label, "genres": meta.genres,
+        "rating": meta.rating, "tracklist": meta.tracklist, "disc_count": meta.disc_count,
+        "barcode": meta.barcode, "catalog_no": meta.catalog_no, "intro": intro,
+        "overview": meta.overview, "poster": poster_rel, "images": images,
+        "listen": _listen_links(artist or "", title),
+        "source": {"name": meta.source, "url": meta.source_url},
+        "resale": estimate(f"{artist or ''} {title}".strip(), year, fmt, meta.rating,
+                           cfg.resale.get("ebay_tld", "com")),
+        "source_image": img.name, "confidence": round(ident.confidence, 3),
+        "seen": False, "date_seen": None, "added_at": _now(),
+    }
+    store.upsert_movie(item)
+    if is_manual:
+        store.remove_unidentified_by_hash(h)
+    store.record(h, img.name, "identified", mid, _now())
+    return True
+
+
+def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type="movie") -> bool:
     queued = store.queued_identity(h)
     # discard: the user deleted this item in manual identification
     if queued and queued.get("delete"):
@@ -493,6 +558,10 @@ def _process_one(cfg, store, img, h, get_ident, metadata, threshold) -> bool:
     if not ident.identified or ident.confidence < threshold:
         return _record_unidentified(cfg, store, img, h, ident)
 
+    if media_type == "music":
+        return _process_music(cfg, store, img, h, ident, providers["music"], is_manual)
+
+    metadata = providers["movie"]
     meta = metadata.lookup(ident.title, ident.year)
     # Reject a fuzzy mis-match: if the provider returned a different film, don't let it
     # overwrite the name/poster/data we trust from identification.

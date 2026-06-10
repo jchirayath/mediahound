@@ -9,29 +9,25 @@ They never talk at runtime — the CLI produces files; the site reads them.
 
 ```
 ┌─────────────────────────── mediahound build ───────────────────────────┐
-│                                                                        │
-│  RawImages/*.jpg                                                       │
-│      │  sha256 → data/manifest.json   (incremental: skip already-done) │
-│      ▼                                                                  │
-│  identify  ──────────────►  Identification(title, year, format, …)     │
-│  (tesseract | claude | ollama)                                         │
-│      │                                                                  │
-│      ▼ confidence ≥ threshold?                                         │
-│   ┌──┴───────────────┐ no → data/unidentified.json → identify.html     │
-│   │ yes                                                                 │
-│   ▼                                                                     │
-│  enrich  ───────────────►  MovieMeta(poster, genres, cast, studio, …)  │
-│  (wikidata | tmdb | omdb)   + plausible-title guard + on-disk cache    │
-│      │                                                                  │
-│      ▼                                                                  │
-│  intro (hook) + resale (eBay) + where-to-watch (JustWatch)             │
-│      │                                                                  │
-│      ▼                                                                  │
-│  data/collection.json   posters/   originals/   data/bundle.js         │
-└────────────────────────────────────────────────────────────────────────┘
+│  RawImages/video/*.jpg → movie     RawImages/audio/*.jpg → music        │
+│      │  sha256 → data/manifest.json   (incremental: skip already-done)  │
+│      ▼                                                                   │
+│  identify  ──────────────►  Identification(title, year, format, …)      │
+│  (tesseract | claude | ollama)                                          │
+│      │  confidence ≥ threshold?  no → data/unidentified.json            │
+│      ▼  route by media_type                                             │
+│   ┌──────────────┴───────────────┐                                      │
+│   ▼ movie                         ▼ music                               │
+│  enrich (wikidata|tmdb|omdb)     enrich (musicbrainz + Cover Art Archive)│
+│  MovieMeta(poster,cast,studio)   MusicMeta(cover,artist,label,tracklist) │
+│   │  + plausible-title guard      │  + keyless listen links             │
+│   └──────────────┬───────────────┘                                      │
+│      ▼  intro (hook) + resale (eBay / Discogs)                          │
+│  data/collection.json   posters/   originals/   data/bundle.js          │
+└─────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
-            web/index.html + assets/js/app.js  (vanilla JS, no build step)
+            web/index.html + assets/js/app.js  (🎬 Movies / 🎵 Music tabs)
 ```
 
 ## Python package (`mediahound/`)

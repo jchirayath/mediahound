@@ -69,3 +69,16 @@ def test_list_images_filters_and_sorts(tmp_path):
     names = [p.name for p in list_images(tmp_path)]
     assert names == ["a.jpg", "b.png"]
     assert list_images(tmp_path / "missing") == []
+
+
+def test_list_media_images_routes_by_subfolder(tmp_path):
+    from mediahound.store import list_media_images
+    raw = tmp_path / "RawImages"
+    (raw / "video").mkdir(parents=True)
+    (raw / "audio").mkdir(parents=True)
+    (raw / "root.jpg").write_bytes(b"x")          # root → default (movie)
+    (raw / "video" / "m.jpg").write_bytes(b"x")    # video → movie
+    (raw / "audio" / "a.png").write_bytes(b"x")    # audio → music
+    (raw / "audio" / "notes.txt").write_bytes(b"x")  # non-image ignored
+    got = {p.name: mt for p, mt in list_media_images(raw)}
+    assert got == {"root.jpg": "movie", "m.jpg": "movie", "a.png": "music"}

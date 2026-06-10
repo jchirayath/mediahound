@@ -62,14 +62,28 @@ pip install -e ".[ocr]"     # adds the default OCR identifier
 #   macOS:  brew install tesseract
 #   Debian: sudo apt-get install tesseract-ocr
 
-mediahound init mysite                 # scaffolds mysite/ (RawImages/, config.toml, web template)
-cp ~/Pictures/covers/*.jpg mysite/RawImages/
+mediahound init mysite      # scaffolds mysite/ (RawImages/{video,audio}/, config.toml, web template)
+
+# Sort your cover photos by media type:
+cp ~/Pictures/dvd-covers/*.jpg   mysite/RawImages/video/    # 🎬 movies (DVD/VHS/Blu-ray/LaserDisc)
+cp ~/Pictures/album-covers/*.jpg mysite/RawImages/audio/    # 🎵 music  (CD/vinyl/cassette)
+
 mediahound build --config mysite/config.toml --online   # identify + enrich (see Providers below)
 cd mysite && python3 -m http.server 8000
 ```
 
-Add more photos to `RawImages/` anytime and re-run `build` — only the **new** ones are processed
-(state is tracked by content hash in `data/manifest.json`).
+#### Raw-image folder convention
+
+Photos are sorted into **media-type subfolders** so MediaHound knows how to identify each item:
+
+| Folder | Media type | Identified/enriched via |
+|---|---|---|
+| `RawImages/video/` | 🎬 movies | TMDB / OMDb / Wikidata + JustWatch |
+| `RawImages/audio/` | 🎵 music | MusicBrainz + Cover Art Archive + listen links |
+| `RawImages/` (root) | defaults to movies | — |
+
+(`movies/` and `music/` are accepted aliases.) Add more photos anytime and re-run `build` — only the
+**new** ones are processed (state is tracked by content hash in `data/manifest.json`).
 
 ### Or import from a CSV (no photos)
 

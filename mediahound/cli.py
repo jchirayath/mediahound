@@ -24,7 +24,16 @@ _NETLIFY_TOML = """# Deploy this folder as a static site.
 def cmd_init(args) -> int:
     dest = Path(args.directory).resolve()
     dest.mkdir(parents=True, exist_ok=True)
+    # Raw-image folders, split by media type: video → movies, audio → music.
     (dest / "RawImages").mkdir(exist_ok=True)
+    for sub in ("video", "audio"):
+        (dest / "RawImages" / sub).mkdir(exist_ok=True)
+    (dest / "RawImages" / "README.txt").write_text(
+        "Put cover photos here, sorted by media type:\n"
+        "  RawImages/video/  → movies (DVD, VHS, Blu-ray, LaserDisc)\n"
+        "  RawImages/audio/  → music  (CD, vinyl, cassette)\n"
+        "Photos left directly in RawImages/ are treated as video (movies).\n",
+        encoding="utf-8")
 
     # Copy the static site template.
     for item in _WEB_TEMPLATE.iterdir():
@@ -50,9 +59,10 @@ def cmd_init(args) -> int:
 
     print(f"\nInitialized MediaHound site at {dest}")
     print("Next:")
-    print(f"  1. Add cover photos to {dest / 'RawImages'}")
+    print(f"  1. Add cover photos: movies → {dest / 'RawImages' / 'video'}, "
+          f"music → {dest / 'RawImages' / 'audio'}")
     print(f"  2. (optional) edit {cfg_target} to pick providers / add a .env with keys")
-    print(f"  3. mediahound build --config {cfg_target}")
+    print(f"  3. mediahound build --config {cfg_target} --online")
     return 0
 
 

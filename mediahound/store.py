@@ -25,6 +25,37 @@ def list_images(input_dir: Path) -> list[Path]:
     )
 
 
+# Raw-image folder convention: put cover photos under a media-type subfolder. `video` →
+# movies (DVD/VHS/Blu-ray/LaserDisc); `audio` → music (CD/vinyl/cassette). `movies`/`music`
+# are accepted aliases. Photos left in the input root take the default media type.
+MEDIA_FOLDERS = {"video": "movie", "movies": "movie", "movie": "movie",
+                 "audio": "music", "music": "music"}
+
+
+def _images_in(folder: Path) -> list[Path]:
+    return sorted(
+        p for p in folder.iterdir()
+        if p.is_file() and p.suffix.lower() in IMAGE_EXTS and not p.name.startswith(".")
+    )
+
+
+def list_media_images(input_dir: Path, default_type: str = "movie") -> list[tuple[Path, str]]:
+    """Scan the input dir + its media subfolders → [(path, media_type)].
+
+    Photos in `<input>/video/` are movies, `<input>/audio/` are music; photos directly in
+    `<input>/` use `default_type` (back-compat with the old flat layout).
+    """
+    if not input_dir.is_dir():
+        return []
+    out: list[tuple[Path, str]] = [(p, default_type) for p in _images_in(input_dir)]
+    for sub in sorted(input_dir.iterdir()):
+        if sub.is_dir() and not sub.name.startswith("."):
+            mt = MEDIA_FOLDERS.get(sub.name.lower())
+            if mt:
+                out += [(p, mt) for p in _images_in(sub)]
+    return out
+
+
 def _read_json(path: Path, default):
     if path.is_file():
         try:

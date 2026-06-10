@@ -13,6 +13,8 @@ Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **mult
 - **Music support** — catalog CDs, vinyl and cassettes. New `media_type` discriminator and a
   `MusicMeta` model; **MusicBrainz + Cover Art Archive** metadata provider (open, zero-key); keyless
   **Spotify / Apple Music / YouTube Music** "where-to-listen" links.
+- **Raw-image folder convention** — `RawImages/video/` → movies, `RawImages/audio/` → music; the
+  build routes each photo to the right identify/enrich path by its subfolder, and `init` scaffolds both.
 - **CSV import/export** — `mediahound import catalog.csv` bulk-adds movies & music (no photos
   needed), optionally enriched online; `mediahound export -o catalog.csv` backs up the catalog.
 - **Frontend** — a **🎬 Movies / 🎵 Music** segmented filter, per-media-type cards (artist / label /

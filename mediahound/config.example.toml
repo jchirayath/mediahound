@@ -6,7 +6,9 @@ title    = "My Media Collection"
 subtitle = "Movies & music — photographed, catalogued, and searchable"
 
 [paths]
-input  = "RawImages"   # folder of cover photos (add new photos here; only new ones are processed)
+# Cover photos, sorted by media type: RawImages/video/ → movies, RawImages/audio/ → music.
+# (Photos left in the RawImages/ root default to movies.) Only new photos are processed.
+input  = "RawImages"
 output = "."           # site folder; generated data/ and posters/ are written under here
 
 # ----------------------------------------------------------------------------
