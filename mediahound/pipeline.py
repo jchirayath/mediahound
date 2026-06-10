@@ -66,6 +66,48 @@ def _download_poster(url: str, dest: Path) -> bool:
         return False
 
 
+def _find_raw_image(input_dir: Path, name: str) -> Path | None:
+    """Locate a source cover photo by basename under RawImages (root or a media subfolder)."""
+    if not name:
+        return None
+    for cand in (input_dir / name, input_dir / "video" / name, input_dir / "audio" / name,
+                 input_dir / "movies" / name, input_dir / "music" / name):
+        if cand.is_file():
+            return cand
+    return None
+
+
+def _sync_source_folder(cfg: Config, store: Store, m: dict, new_type: str, log) -> None:
+    """Keep an item's source cover photo(s) in the RawImages subfolder that matches its media
+    type (video → movies, audio → music). Idempotent: a photo already in place is left alone, so
+    a reclassified title is correct *at the source* too — it won't snap back if corrections.json
+    is ever cleared. Only moves files that stay inside RawImages."""
+    sub = "audio" if new_type == "music" else "video"
+    dest_dir = (cfg.input_dir / sub).resolve()
+    names = set()
+    if m.get("source_image"):
+        names.add(m["source_image"])
+    for rec in store.manifest.values():
+        if rec.get("movie_id") == m["id"] and rec.get("file"):
+            names.add(rec["file"])
+    for name in names:
+        if "/" in name or "\\" in name:          # basenames only — never traverse
+            continue
+        cur = _find_raw_image(cfg.input_dir, name)
+        if cur is None or cur.resolve().parent == dest_dir:
+            continue
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        target = dest_dir / name
+        if target.exists():
+            log(f"  correction: source photo {name} already in RawImages/{sub}/ (kept)")
+            continue
+        try:
+            cur.rename(target)
+            log(f"  correction: moved source photo {name} → RawImages/{sub}/")
+        except OSError as exc:
+            log(f"  correction: could not move {name}: {exc}")
+
+
 # Sample data used only by --mock so the site can be demoed with no providers/keys.
 _STREAM_URL = {"Netflix": "https://www.netflix.com/", "Hulu": "https://www.hulu.com/",
                "Amazon Prime Video": "https://www.amazon.com/Prime-Video/b?node=2676882011"}
@@ -335,12 +377,15 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
         if c.get("format"):
             m["format"] = c["format"]
         # move a title between Movies and Music (clears the other type's stale fields)
-        if c.get("media_type") in ("movie", "music") and c["media_type"] != m.get("media_type", "movie"):
+        if c.get("media_type") in ("movie", "music"):
             new = c["media_type"]
-            m["media_type"] = new
-            for f in (_MOVIE_ONLY if new == "music" else _MUSIC_ONLY):
-                m.pop(f, None)
-            log(f"  correction: moved {mid} → {new}")
+            if new != m.get("media_type", "movie"):
+                m["media_type"] = new
+                for f in (_MOVIE_ONLY if new == "music" else _MUSIC_ONLY):
+                    m.pop(f, None)
+                log(f"  correction: moved {mid} → {new}")
+            # keep the source photo in the matching RawImages/<video|audio> folder (idempotent)
+            _sync_source_folder(cfg, store, m, new, log)
         if "artist" in c:
             m["artist"] = c["artist"] or None
         if "label" in c:

@@ -32,6 +32,9 @@ Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **mult
   Switching type sets a `media_type` correction, clears the previous type's exclusive fields, and
   auto-ticks re-query so the next `--online` build re-enriches with the correct provider
   (movie ↔ music). New `_apply_meta_to_music()`; `_apply_corrections` is now media-type-aware.
+  On the next build the move also **relocates the source cover photo** into the matching
+  `RawImages/video` or `RawImages/audio` folder (idempotent, path-traversal-guarded), so a
+  reclassified title is correct at the source and won't revert if `corrections.json` is cleared.
 
 ### Changed
 - Rebrand across package, CLI (`mediahound`), JS data global, `localStorage` keys, branding and docs.

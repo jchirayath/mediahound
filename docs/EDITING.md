@@ -104,6 +104,12 @@ Behind the scenes the move sets a `media_type` correction and **clears the previ
 exclusive fields** (a movie's director/cast/studio, or a music item's artist/label/tracklist) so the
 record stays clean. Until you run an online re-query, music-specific fields stay empty.
 
+On the next `mediahound build` (e.g. **↻ Rebuild** under `serve --admin`), the move also **relocates
+the source cover photo** into the matching `RawImages/` subfolder (`video/` for movies, `audio/` for
+music) so the item is correct *at the source* too — it won't snap back to the old type even if
+`corrections.json` is ever cleared. This is idempotent (a photo already in place is left alone) and
+only ever moves files **inside** `RawImages/`.
+
 ## Re-query vs. manual title
 
 - A **manual title** you set always wins and is kept verbatim.

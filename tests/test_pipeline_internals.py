@@ -98,6 +98,35 @@ def test_media_type_move_movie_to_music_clears_movie_fields(tmp_path):
         assert gone not in m                       # movie-only fields cleared
 
 
+def test_media_type_move_relocates_source_photo(tmp_path):
+    cfg = _cfg(tmp_path)
+    (cfg.input_dir / "video").mkdir(parents=True)
+    make_image(cfg.input_dir / "video" / "concert.jpg", 40, 40)   # mis-filed under video/
+    store = Store(cfg.output_dir / "data")
+    store.upsert_movie({"id": "m1", "media_type": "movie", "title": "Concert",
+                        "source_image": "concert.jpg", "images": ["x"]})
+    store.record("hash1", "concert.jpg", "identified", "m1", "now")
+    store.corrections = {"m1": {"media_type": "music"}}
+    pipeline._apply_corrections(cfg, store, lambda *_: None, online=False)
+    assert not (cfg.input_dir / "video" / "concert.jpg").exists()
+    assert (cfg.input_dir / "audio" / "concert.jpg").is_file()    # moved to audio/
+    # idempotent: running again doesn't error or move it back
+    pipeline._apply_corrections(cfg, store, lambda *_: None, online=False)
+    assert (cfg.input_dir / "audio" / "concert.jpg").is_file()
+
+
+def test_sync_source_folder_ignores_path_traversal_names(tmp_path):
+    cfg = _cfg(tmp_path)
+    outside = make_image(tmp_path / "evil.jpg", 10, 10)
+    before = outside.read_bytes()
+    store = Store(cfg.output_dir / "data")
+    store.upsert_movie({"id": "m1", "media_type": "movie", "title": "X",
+                        "source_image": "../../evil.jpg", "images": ["x"]})
+    store.corrections = {"m1": {"media_type": "music"}}
+    pipeline._apply_corrections(cfg, store, lambda *_: None, online=False)
+    assert outside.read_bytes() == before                          # untouched
+
+
 def test_media_type_move_music_to_movie_clears_music_fields(tmp_path):
     cfg = _cfg(tmp_path)
     store = Store(cfg.output_dir / "data")
