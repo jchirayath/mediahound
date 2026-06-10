@@ -14,8 +14,8 @@
         <img id="brandImg" class="brand-img" alt="" hidden />
         <span class="brand-mark" id="brandMark">▶</span>
         <div>
-          <h1 id="siteTitle">Movie Collection</h1>
-          <p id="siteSubtitle" class="subtitle">DVD &amp; VHS — photographed, catalogued, searchable</p>
+          <h1 id="siteTitle">Media Collection</h1>
+          <p id="siteSubtitle" class="subtitle">Movies &amp; music — photographed, catalogued, searchable</p>
         </div>
       </div>
       <div class="header-right">
@@ -28,8 +28,13 @@
   </header>
 
   <div class="controls wrap" id="controls">
+    <div class="media-tabs" id="mediaTabs">
+      <button class="mt-btn is-on" type="button" data-mt="all">All</button>
+      <button class="mt-btn" type="button" data-mt="movie">🎬 Movies</button>
+      <button class="mt-btn" type="button" data-mt="music">🎵 Music</button>
+    </div>
     <div class="search-row">
-      <input type="search" id="search" placeholder="Search title, genre, cast, studio…" autocomplete="off" />
+      <input type="search" id="search" placeholder="Search title, artist, genre, cast, label…" autocomplete="off" />
       <select id="sort" title="Sort by">
         <option value="title">Title A–Z</option>
         <option value="year-desc">Year (newest)</option>

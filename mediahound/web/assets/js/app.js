@@ -25,7 +25,9 @@
   let movies = [], site = {}, view = { columns: 4, fields: { ...DEFAULT_FIELDS } };
   let seen = load(SEEN_KEY, {}), corrections = load(CORR_KEY, {});
   let isAdmin = sessionStorage.getItem(ADMIN_KEY) === "1";
+  let mediaType = "all";                 // "all" | "movie" | "music"
   const imgIndex = new Map();
+  const isMusic = (m) => (m.media_type || "movie") === "music";
 
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
@@ -128,9 +130,10 @@
     const l = $("#filterLanguage").value, c = $("#filterCategory").value, s = $("#filterSeen").value;
     const sv = $("#filterStream").value;
     let v = movies.filter((m) => {
+      if (mediaType !== "all" && (m.media_type || "movie") !== mediaType) return false;
       if (f && m.format !== f) return false;
       if (g && !(m.genres || []).includes(g)) return false;
-      if (st && m.studio !== st) return false;
+      if (st && m.studio !== st && m.label !== st) return false;   // studio (movie) or label (music)
       if (l && m.language !== l) return false;
       if (c && m.category !== c) return false;
       if (sv) {
@@ -142,7 +145,8 @@
       if (s === "seen" && !m.seen) return false;
       if (s === "unseen" && m.seen) return false;
       if (q) { const hay = [m.title, m.intro, m.overview, (m.genres || []).join(" "), m.language,
-        String(m.year), m.director, (m.actors || []).join(" "), m.studio, m.distributor].join(" ").toLowerCase();
+        String(m.year), m.director, (m.actors || []).join(" "), m.studio, m.distributor,
+        m.artist, m.label, (m.tracklist || []).join(" ")].join(" ").toLowerCase();
         if (!hay.includes(q)) return false; }
       return true;
     });
@@ -191,7 +195,9 @@
       b.appendChild(t);
     }
     if (fieldOn("meta")) {
-      const parts = [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language].filter(Boolean);
+      const parts = isMusic(m)
+        ? [m.rating ? "★ " + m.rating : null, m.format, (m.tracklist && m.tracklist.length) ? m.tracklist.length + " tracks" : null].filter(Boolean)
+        : [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language].filter(Boolean);
       b.appendChild(line("meta", parts.join(" · ")));
     }
     if (fieldOn("genres")) {
@@ -201,16 +207,25 @@
     }
     if (fieldOn("people")) {
       const p = lineEl("people");
-      if (m.director) p.appendChild(person("🎬 " + m.director, m.director));
-      (m.actors || []).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
-      const full = [m.director ? "Dir: " + m.director : null, (m.actors || []).join(", ") || null].filter(Boolean).join("  ·  ");
-      if (full) p.title = full;
+      if (isMusic(m)) {
+        if (m.artist) p.appendChild(person("🎤 " + m.artist, m.artist));
+        if (m.tracklist && m.tracklist.length) p.title = m.tracklist.join("  ·  ");
+      } else {
+        if (m.director) p.appendChild(person("🎬 " + m.director, m.director));
+        (m.actors || []).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
+        const full = [m.director ? "Dir: " + m.director : null, (m.actors || []).join(", ") || null].filter(Boolean).join("  ·  ");
+        if (full) p.title = full;
+      }
       b.appendChild(p);
     }
     if (fieldOn("studio")) {
       const s = lineEl("studio");
-      if (m.studio) { const x = person("🏛 " + m.studio, null); x.onclick = () => setFilter("#filterStudio", m.studio); s.appendChild(x); }
-      if (m.distributor) s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
+      if (isMusic(m)) {
+        if (m.label) { const x = person("🏷 " + m.label, null); x.onclick = () => setFilter("#filterStudio", m.label); s.appendChild(x); }
+      } else {
+        if (m.studio) { const x = person("🏛 " + m.studio, null); x.onclick = () => setFilter("#filterStudio", m.studio); s.appendChild(x); }
+        if (m.distributor) s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
+      }
       b.appendChild(s);
     }
     if (fieldOn("intro")) b.appendChild(line("intro", m.intro || "", true));
@@ -218,7 +233,7 @@
 
     // foot: where-to-watch (left) + resale (right) on one line
     const foot = lineEl("foot");
-    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = watchPills(m); foot.appendChild(w); }
+    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = isMusic(m) ? listenPills(m) : watchPills(m); foot.appendChild(w); }
     if (fieldOn("resale") && m.resale) {
       foot.insertAdjacentHTML("beforeend",
         `<span class="value">${esc(m.resale.display || "")}` +
@@ -247,6 +262,12 @@
     if (!p.length) return "";
     const short = { "Amazon Prime Video": "Prime", "Netflix": "Netflix", "Hulu": "Hulu" };
     return p.map((x) => `<a class="watch-pill watch-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="${esc(x.name)} — ${esc(x.type_label)}">▶ ${esc(short[x.name] || x.name)}</a>`).join("");
+  }
+  function listenPills(m) {
+    const p = (m.listen && m.listen.providers) || [];
+    if (!p.length) return "";
+    const short = { "Apple Music": "Apple", "YouTube Music": "YouTube" };
+    return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Listen on ${esc(x.name)}">♫ ${esc(short[x.name] || x.name)}</a>`).join("");
   }
   function seenToggle(m) {
     const d = lineEl("seentoggle");
@@ -511,6 +532,13 @@
   function wire() {
     ["#search", "#sort", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen"]
       .forEach((s) => $(s).addEventListener("input", render));
+    $$("#mediaTabs .mt-btn").forEach((btn) => btn.addEventListener("click", () => {
+      mediaType = btn.dataset.mt;
+      $$("#mediaTabs .mt-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+      render();
+    }));
+    // only show the Movies/Music switch when the catalog actually mixes media types
+    if (new Set(movies.map((m) => m.media_type || "movie")).size < 2) $("#mediaTabs").hidden = true;
     $("#clearFilters").onclick = () => { ["#search", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen"].forEach((s) => $(s).value = ""); $("#sort").value = "title"; render(); };
     $("#colMinus").onclick = () => setCols(userCols() - 1);
     $("#colPlus").onclick = () => setCols(userCols() + 1);
