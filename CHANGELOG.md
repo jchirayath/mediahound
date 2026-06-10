@@ -27,6 +27,11 @@ Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **mult
   cause of "my manual title fix reverted on rebuild"). Cross-origin writes are refused; a **↻ Rebuild**
   button re-bakes the catalog in place. See `mediahound/serve.py` and
   [docs/EDITING.md](docs/EDITING.md).
+- **Move a title between Movies & Music from the admin screen** — the inline editor now has a
+  🎬 Movie / 🎵 Music selector (with an Artist field and CD/Vinyl/Cassette formats for music).
+  Switching type sets a `media_type` correction, clears the previous type's exclusive fields, and
+  auto-ticks re-query so the next `--online` build re-enriches with the correct provider
+  (movie ↔ music). New `_apply_meta_to_music()`; `_apply_corrections` is now media-type-aware.
 
 ### Changed
 - Rebrand across package, CLI (`mediahound`), JS data global, `localStorage` keys, branding and docs.

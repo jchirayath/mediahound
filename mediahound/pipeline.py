@@ -305,7 +305,17 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
     if not corr:
         return
     need_meta = online and any(c.get("requery") for c in corr.values())
-    meta_provider = get_metadata_provider(cfg) if need_meta else None
+    _providers: dict = {}
+
+    def _meta_provider(mt: str):
+        if mt not in _providers:
+            _providers[mt] = get_metadata_provider(cfg, mt)
+        return _providers[mt]
+
+    # movie-only / music-only fields, cleared when an item switches type
+    _MOVIE_ONLY = ("director", "actors", "runtime", "studio", "distributor", "tagline",
+                   "spoken_languages", "streaming")
+    _MUSIC_ONLY = ("artist", "label", "tracklist", "disc_count", "barcode", "catalog_no", "listen")
     tld = cfg.resale.get("ebay_tld", "com")
     requery_consumed = False
 
@@ -324,6 +334,17 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             m["year"] = c["year"]
         if c.get("format"):
             m["format"] = c["format"]
+        # move a title between Movies and Music (clears the other type's stale fields)
+        if c.get("media_type") in ("movie", "music") and c["media_type"] != m.get("media_type", "movie"):
+            new = c["media_type"]
+            m["media_type"] = new
+            for f in (_MOVIE_ONLY if new == "music" else _MUSIC_ONLY):
+                m.pop(f, None)
+            log(f"  correction: moved {mid} → {new}")
+        if "artist" in c:
+            m["artist"] = c["artist"] or None
+        if "label" in c:
+            m["label"] = c["label"] or None
         removed = set(c.get("removed_images") or [])
         if removed:
             m["images"] = [im for im in m.get("images", []) if im not in removed]
@@ -348,26 +369,30 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
                     log(f"  correction: skipped unsafe rotation path {rel!r}")
             c["rotations"] = {}      # consumed (baked into the files)
             requery_consumed = True  # triggers corrections.json rewrite below
-        if c.get("requery") and meta_provider:
+        if c.get("requery") and need_meta:
+            mt = m.get("media_type", "movie")
+            prov = _meta_provider(mt)
             try:
-                nm = meta_provider.lookup(m["title"], m.get("year"))
+                nm = (prov.lookup(m["title"], artist=m.get("artist")) if mt == "music"
+                      else prov.lookup(m["title"], m.get("year")))
             except Exception as exc:
                 log(f"  correction: re-query failed for {mid}: {exc}")
                 nm = None
-            if nm and nm.matched and _plausible_title(m["title"], nm.title):
-                _apply_meta_to_movie(cfg, m, nm)
+            if nm and getattr(nm, "matched", False) and _plausible_title(m["title"], nm.title):
+                (_apply_meta_to_music if mt == "music" else _apply_meta_to_movie)(cfg, m, nm)
                 c["requery"] = False  # consumed → don't re-query every build
                 requery_consumed = True
-                log(f"  correction: re-queried {mid} → {nm.title} ({nm.source})")
-            elif nm and nm.matched:
-                # a different film came back — keep the trusted title/data, don't corrupt it
+                log(f"  correction: re-queried {mid} ({mt}) → {nm.title} ({nm.source})")
+            elif nm and getattr(nm, "matched", False):
+                # a different title came back — keep the trusted data, don't corrupt it
                 c["requery"] = False
                 requery_consumed = True
                 log(f"  correction: re-query for {mid} kept existing data (implausible: {nm.title!r})")
-        # manual studio/distributor edits win over any re-query
-        for fld in ("studio", "distributor"):
-            if fld in c and c[fld] is not None:
-                m[fld] = c[fld] or None
+        # manual studio/distributor edits win over any re-query (movies only)
+        if m.get("media_type", "movie") == "movie":
+            for fld in ("studio", "distributor"):
+                if fld in c and c[fld] is not None:
+                    m[fld] = c[fld] or None
         # keep the resale link in sync with the (possibly) new title/year/format
         m["resale"] = estimate(m["title"], m.get("year"), m.get("format", "DVD"),
                                m.get("rating"), tld)
@@ -397,6 +422,27 @@ def _apply_meta_to_movie(cfg: Config, m: dict, meta: MovieMeta) -> None:
     if meta.poster_url:
         dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
         if _download_poster(meta.poster_url, dest):
+            m["poster"] = f"posters/{dest.name}"
+
+
+def _apply_meta_to_music(cfg: Config, m: dict, meta: MusicMeta) -> None:
+    """Overwrite a music item's enrichment fields from a fresh music lookup."""
+    m["title"] = meta.title or m["title"]
+    m["artist"] = meta.artist or m.get("artist")
+    m["year"] = meta.year or m.get("year")
+    m["label"] = meta.label
+    m["genres"] = meta.genres
+    m["rating"] = meta.rating
+    m["tracklist"] = meta.tracklist
+    m["disc_count"] = meta.disc_count
+    m["barcode"] = meta.barcode
+    m["catalog_no"] = meta.catalog_no
+    m["overview"] = meta.overview
+    m["listen"] = _listen_links(m.get("artist") or "", m["title"])
+    m["source"] = {"name": meta.source, "url": meta.source_url}
+    if meta.cover_url:
+        dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
+        if _download_poster(meta.cover_url, dest):
             m["poster"] = f"posters/{dest.name}"
 
 
