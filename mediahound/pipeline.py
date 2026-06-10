@@ -354,11 +354,16 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             except Exception as exc:
                 log(f"  correction: re-query failed for {mid}: {exc}")
                 nm = None
-            if nm and nm.matched:
+            if nm and nm.matched and _plausible_title(m["title"], nm.title):
                 _apply_meta_to_movie(cfg, m, nm)
                 c["requery"] = False  # consumed → don't re-query every build
                 requery_consumed = True
                 log(f"  correction: re-queried {mid} → {nm.title} ({nm.source})")
+            elif nm and nm.matched:
+                # a different film came back — keep the trusted title/data, don't corrupt it
+                c["requery"] = False
+                requery_consumed = True
+                log(f"  correction: re-query for {mid} kept existing data (implausible: {nm.title!r})")
         # manual studio/distributor edits win over any re-query
         for fld in ("studio", "distributor"):
             if fld in c and c[fld] is not None:
