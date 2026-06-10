@@ -9,7 +9,7 @@ All notable changes to this project are documented here. The format is based on
 First public release.
 
 ### Added
-- **CLI** — `reelshelf init <dir>` scaffolds a site; `reelshelf build` turns a folder of cover
+- **CLI** — `mediahound init <dir>` scaffolds a site; `mediahound build` turns a folder of cover
   photos into a static catalog. Incremental (only new photos are processed, tracked by sha256).
 - **Offline-first** — builds never touch the network unless `--online` is passed.
 - **Pluggable providers**
@@ -42,4 +42,4 @@ First public release.
 - Secrets live only in a gitignored `.env`; only the admin password **hash** is published. The admin
   gate is a convenience control, not server-side auth (see [SECURITY.md](SECURITY.md)).
 
-[0.1.0]: https://github.com/jchirayath/reelshelf/releases/tag/v0.1.0
+[0.1.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.1.0

@@ -1,4 +1,4 @@
-# Deploying a ReelShelf site
+# Deploying a MediaHound site
 
 A built site (e.g. `mysite/`) is **plain static files** — `index.html`, `identify.html`, `assets/`,
 `data/`, `posters/`, `originals/`. Host it on anything that serves static files.
@@ -6,7 +6,7 @@ A built site (e.g. `mysite/`) is **plain static files** — `index.html`, `ident
 Build it first:
 
 ```bash
-reelshelf build --config mysite/config.toml          # offline rebuild
+mediahound build --config mysite/config.toml          # offline rebuild
 # (or --online to identify/enrich, see the README)
 ```
 
@@ -17,7 +17,7 @@ reelshelf build --config mysite/config.toml          # offline rebuild
 
 ## Free hosting options
 
-ReelShelf output is **plain static files**, so it runs on every free static host. All of these
+MediaHound output is **plain static files**, so it runs on every free static host. All of these
 have a free tier that's plenty for a personal catalog:
 
 | Host | Free tier | How |
@@ -61,7 +61,7 @@ npx netlify deploy --prod        # follow the prompt to create/link a site; publ
 ```
 
 Or drag-and-drop the `mysite/` folder onto https://app.netlify.com/drop. A `netlify.toml`
-(`publish = "."`, no build command) is created by `reelshelf init`. To use a custom domain,
+(`publish = "."`, no build command) is created by `mediahound init`. To use a custom domain,
 add it in **Site settings → Domain management** and point your DNS at Netlify.
 
 ## Vercel
@@ -82,7 +82,7 @@ gh repo create my-movie-site --public --source=. --push
 gh api -X POST repos/<you>/my-movie-site/pages -f "source[branch]=main" -f "source[path]=/"
 ```
 
-Then open `https://<you>.github.io/my-movie-site/`. (Paths in ReelShelf are relative, so a project
+Then open `https://<you>.github.io/my-movie-site/`. (Paths in MediaHound are relative, so a project
 subpath works.)
 
 ## Amazon S3 + CloudFront
@@ -113,12 +113,12 @@ movies.example.com {
 
 **Never publish**: `config.toml` and `.env` (your provider keys + admin password plaintext).
 Only the password **hash** is written into `data/site.json`, which is safe to ship. If you commit
-your site folder to git, add `.env` and `config.toml` to its `.gitignore` (a `reelshelf init` site
+your site folder to git, add `.env` and `config.toml` to its `.gitignore` (a `mediahound init` site
 keeps them out of `web/` already; just don't add them by hand).
 
 ## Updating a deployed site
 
 1. Add new photos to `RawImages/` (and/or drop exported `corrections.json` / `seen-overrides.json` /
    `identify-queue.json` into `data/`).
-2. `reelshelf build --config mysite/config.toml` (add `--online` to look up new titles).
+2. `mediahound build --config mysite/config.toml` (add `--online` to look up new titles).
 3. Re-deploy with the same command you used above.

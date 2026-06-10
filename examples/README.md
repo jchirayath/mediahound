@@ -1,10 +1,10 @@
 # Examples
 
-The fastest way to see ReelShelf without any photos or API keys:
+The fastest way to see MediaHound without any photos or API keys:
 
 ```bash
-reelshelf init demo
-reelshelf build --config demo/config.toml --mock
+mediahound init demo
+mediahound build --config demo/config.toml --mock
 cd demo && python3 -m http.server 8080
 ```
 
@@ -13,4 +13,4 @@ with generated placeholder posters, so every part of the UI — search, filters,
 modal, mark-as-seen, the export round-trips, and the identify page — is demoable offline.
 
 To try the real **zero-key** pipeline, drop a few cover photos into `demo/RawImages/` and run
-`reelshelf build --config demo/config.toml` (uses Tesseract OCR + Wikidata).
+`mediahound build --config demo/config.toml` (uses Tesseract OCR + Wikidata).

@@ -1,8 +1,8 @@
-# MediaHound — design (multi-media evolution of ReelShelf)
+# MediaHound — design (multi-media evolution of MediaHound)
 
 Status: **accepted** · Supersedes the movie-only scope · Target: v0.2
 
-MediaHound generalizes ReelShelf from a DVD/VHS movie catalog into a **multi-media** physical-
+MediaHound generalizes MediaHound from a DVD/VHS movie catalog into a **multi-media** physical-
 collection catalog covering **movies** (DVD/VHS/Blu-ray/LaserDisc) and **music** (CD/Vinyl/Cassette),
 from photos of the covers **or** a CSV import, identified via public data sources, with where-to-watch
 / where-to-listen links.
@@ -69,7 +69,7 @@ filters become type-aware. The admin view-config becomes two field sets keyed by
 
 ## Phases
 
-0. Rebrand reelshelf → mediahound (mechanical).
+0. Rebrand mediahound → mediahound (mechanical).
 1. Generalize core (`media_type` + `MediaMeta`); movies keep working.
 2. Music providers (MusicBrainz + Cover Art Archive → Discogs → listen links → price).
 3. Routing + CSV import/export.

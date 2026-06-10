@@ -1,7 +1,7 @@
 """Where-to-watch (JustWatch) parsing + ranking + graceful failure (mocked HTTP)."""
 import requests
 
-import reelshelf.streaming as sx
+import mediahound.streaming as sx
 from tests.conftest import FakeResp
 
 

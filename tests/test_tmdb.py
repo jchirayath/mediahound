@@ -1,8 +1,8 @@
 """TMDB provider: two-call lookup parsing + graceful no-match (mocked HTTP)."""
 import pytest
 
-import reelshelf.metadata.tmdb as tmod
-from reelshelf.metadata.tmdb import TMDBProvider
+import mediahound.metadata.tmdb as tmod
+from mediahound.metadata.tmdb import TMDBProvider
 from tests.conftest import FakeResp
 
 _SEARCH = {"results": [{"id": 603, "title": "The Matrix"}]}

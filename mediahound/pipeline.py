@@ -56,7 +56,7 @@ def _download_poster(url: str, dest: Path) -> bool:
     if not isinstance(url, str) or not url.lower().startswith(("http://", "https://")):
         return False  # only fetch over http(s)
     try:
-        r = requests.get(url, timeout=45, headers={"User-Agent": "ReelShelf/0.1"})
+        r = requests.get(url, timeout=45, headers={"User-Agent": "MediaHound/0.1"})
         r.raise_for_status()
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(r.content)
@@ -420,7 +420,7 @@ def _write_site(cfg: Config, store: Store) -> None:
     view = json.loads((cfg.data_dir / "view-config.json").read_text(encoding="utf-8"))
     payload = {"site": site, "collection": store.collection,
                "unidentified": store.unidentified, "view": view}
-    bundle = "window.REELSHELF_DATA = " + json.dumps(payload, ensure_ascii=False) + ";"
+    bundle = "window.MEDIAHOUND_DATA = " + json.dumps(payload, ensure_ascii=False) + ";"
     (cfg.data_dir / "bundle.js").write_text(bundle, encoding="utf-8")
 
     # Cache-bust: stamp a content version onto the asset URLs in the HTML so browsers (and

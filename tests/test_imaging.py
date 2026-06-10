@@ -1,7 +1,7 @@
 """Image helpers: rotation, portrait thumbnails, placeholder posters, prepared JPEG."""
 from PIL import Image
 
-from reelshelf.imaging import (
+from mediahound.imaging import (
     make_placeholder_poster,
     prepared_jpeg,
     rotate_file,

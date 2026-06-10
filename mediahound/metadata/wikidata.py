@@ -20,7 +20,7 @@ _COMMONS_FILE = "https://commons.wikimedia.org/wiki/Special:FilePath/{}?width=50
 _FILM_QIDS = {"Q11424", "Q24862", "Q229390", "Q506240", "Q202866"}  # film / short / TV film / anim
 _TV_QIDS = {"Q5398426", "Q1259759", "Q581714"}                       # tv series / miniseries
 
-_HEADERS = {"User-Agent": "ReelShelf/0.1 (open-source movie catalog; +https://github.com/)"}
+_HEADERS = {"User-Agent": "MediaHound/0.1 (open-source movie catalog; +https://github.com/)"}
 
 
 class WikidataProvider(MetadataProvider):

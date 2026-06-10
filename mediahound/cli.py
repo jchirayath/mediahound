@@ -1,4 +1,4 @@
-"""Command-line entry point: `reelshelf init <dir>` and `reelshelf build`."""
+"""Command-line entry point: `mediahound init <dir>` and `mediahound build`."""
 from __future__ import annotations
 
 import argparse
@@ -9,7 +9,7 @@ from pathlib import Path
 from . import __version__
 from .config import load_config
 
-# Template assets are bundled inside the package so `pip install reelshelf` is self-contained.
+# Template assets are bundled inside the package so `pip install mediahound` is self-contained.
 _PKG_DIR = Path(__file__).resolve().parent
 _WEB_TEMPLATE = _PKG_DIR / "web"
 _CONFIG_EXAMPLE = _PKG_DIR / "config.example.toml"
@@ -48,11 +48,11 @@ def cmd_init(args) -> int:
         netlify.write_text(_NETLIFY_TOML, encoding="utf-8")
         print("  + netlify.toml")
 
-    print(f"\nInitialized ReelShelf site at {dest}")
+    print(f"\nInitialized MediaHound site at {dest}")
     print("Next:")
     print(f"  1. Add cover photos to {dest / 'RawImages'}")
     print(f"  2. (optional) edit {cfg_target} to pick providers / add a .env with keys")
-    print(f"  3. reelshelf build --config {cfg_target}")
+    print(f"  3. mediahound build --config {cfg_target}")
     return 0
 
 
@@ -60,7 +60,7 @@ def cmd_build(args) -> int:
     from . import pipeline  # lazy: avoids importing requests/PIL for `init`
     config_path = Path(args.config).resolve()
     if not config_path.is_file():
-        print(f"Config not found: {config_path}\nRun `reelshelf init <dir>` first.", file=sys.stderr)
+        print(f"Config not found: {config_path}\nRun `mediahound init <dir>` first.", file=sys.stderr)
         return 2
     cfg = load_config(config_path)
     pipeline.build(cfg, mock=args.mock, force=args.force,
@@ -71,9 +71,9 @@ def cmd_build(args) -> int:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="reelshelf",
+    p = argparse.ArgumentParser(prog="mediahound",
                                 description="Catalog a DVD/VHS collection from cover photos.")
-    p.add_argument("--version", action="version", version=f"reelshelf {__version__}")
+    p.add_argument("--version", action="version", version=f"mediahound {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
     pi = sub.add_parser("init", help="scaffold a new site folder (template + config).")

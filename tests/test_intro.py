@@ -1,7 +1,7 @@
 """Intro hook priority: identifier hook → tagline → genre template → overview → default."""
-from reelshelf.identify.base import Identification
-from reelshelf.intro import make_intro
-from reelshelf.metadata.base import MovieMeta
+from mediahound.identify.base import Identification
+from mediahound.intro import make_intro
+from mediahound.metadata.base import MovieMeta
 
 _ID = Identification(True, "Film", 1999, "DVD")
 

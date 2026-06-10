@@ -1,7 +1,7 @@
 """CLI end-to-end: init scaffolds a site, build --mock generates the catalog."""
 import pytest
 
-from reelshelf import cli
+from mediahound import cli
 
 
 def test_init_then_mock_build(tmp_path):
@@ -25,4 +25,4 @@ def test_version_flag_exits_zero(capsys):
     with pytest.raises(SystemExit) as e:
         cli.main(["--version"])
     assert e.value.code == 0
-    assert "reelshelf" in capsys.readouterr().out
+    assert "mediahound" in capsys.readouterr().out

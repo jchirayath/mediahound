@@ -1,4 +1,4 @@
-# ReelShelf configuration. Copy to `config.toml` and edit.
+# MediaHound configuration. Copy to `config.toml` and edit.
 # Paths are resolved relative to THIS file's location.
 
 [site]

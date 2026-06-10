@@ -34,11 +34,11 @@ jobs:
       - name: Install
         run: pip install -e ".[dev]"
       - name: Run tests with coverage (offline, no keys)
-        run: pytest --cov=reelshelf --cov-report=term-missing --cov-fail-under=50
+        run: pytest --cov=mediahound --cov-report=term-missing --cov-fail-under=50
       - name: Smoke-test the mock build end-to-end
         run: |
-          reelshelf init /tmp/demo
-          reelshelf build --config /tmp/demo/config.toml --mock
+          mediahound init /tmp/demo
+          mediahound build --config /tmp/demo/config.toml --mock
           test -f /tmp/demo/data/collection.json
           test -f /tmp/demo/data/bundle.js
           echo "Mock catalog built OK"

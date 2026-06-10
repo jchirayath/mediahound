@@ -2,8 +2,8 @@
 import pytest
 import requests
 
-import reelshelf.metadata.omdb as omod
-from reelshelf.metadata.omdb import OMDBProvider
+import mediahound.metadata.omdb as omod
+from mediahound.metadata.omdb import OMDBProvider
 from tests.conftest import FakeResp
 
 _PAYLOAD = {

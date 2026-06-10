@@ -1,7 +1,7 @@
 """Store: manifest, image-gallery dedup, seen overrides, delete, unidentified, save."""
 import json
 
-from reelshelf.store import Store, list_images
+from mediahound.store import Store, list_images
 
 
 def test_upsert_merges_image_gallery_without_dupes(tmp_path):

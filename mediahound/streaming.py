@@ -9,7 +9,7 @@ from __future__ import annotations
 import requests
 
 _API = "https://apis.justwatch.com/graphql"
-_HEADERS = {"content-type": "application/json", "user-agent": "Mozilla/5.0 ReelShelf/0.1"}
+_HEADERS = {"content-type": "application/json", "user-agent": "Mozilla/5.0 MediaHound/0.1"}
 
 # Default services to report on (display name -> JustWatch clearName match).
 DEFAULT_TARGETS = {

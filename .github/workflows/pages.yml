@@ -25,8 +25,8 @@ jobs:
       - run: pip install -e .
       - name: Build the mock demo site
         run: |
-          reelshelf init site
-          reelshelf build --config site/config.toml --mock
+          mediahound init site
+          mediahound build --config site/config.toml --mock
           rm -f site/config.toml          # don't publish the (demo) config
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

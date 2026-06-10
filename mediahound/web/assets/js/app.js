@@ -1,12 +1,12 @@
-/* ReelShelf portal — read-only default view + password-gated admin view.
+/* MediaHound portal — read-only default view + password-gated admin view.
    All fields render on the card (aligned); the only overlay is the image zoom. */
 (() => {
   "use strict";
 
-  const SEEN_KEY = "reelshelf:seen";
-  const CORR_KEY = "reelshelf:corrections";
-  const COLS_KEY = "reelshelf:columns";
-  const ADMIN_KEY = "reelshelf:admin";
+  const SEEN_KEY = "mediahound:seen";
+  const CORR_KEY = "mediahound:corrections";
+  const COLS_KEY = "mediahound:columns";
+  const ADMIN_KEY = "mediahound:admin";
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
 
@@ -30,8 +30,8 @@
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
   // ---- boot ---------------------------------------------------------------
-  const loader = window.REELSHELF_DATA
-    ? Promise.resolve(window.REELSHELF_DATA)
+  const loader = window.MEDIAHOUND_DATA
+    ? Promise.resolve(window.MEDIAHOUND_DATA)
     : Promise.all([j("data/site.json", {}), j("data/collection.json", []),
                    j("data/unidentified.json", []), j("data/view-config.json", null)])
         .then(([s, c, u, v]) => ({ site: s, collection: c, unidentified: u, view: v }));
@@ -497,7 +497,7 @@
   function exportCorrections() {
     if (!Object.keys(corrections).length) { alert("No edits yet."); return; }
     download("corrections.json", JSON.stringify(corrections, null, 2));
-    alert("Downloaded corrections.json → drop into data/ and run `reelshelf build` to apply.");
+    alert("Downloaded corrections.json → drop into data/ and run `mediahound build` to apply.");
   }
   function exportSeen() {
     const out = {}; movies.forEach((m) => { if (m.seen) out[m.id] = { seen: true, date_seen: m.date_seen || null }; });
