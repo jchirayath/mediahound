@@ -3,7 +3,7 @@
 ReelShelf is two halves that meet at a folder of JSON files:
 
 1. A **Python CLI** (`reelshelf/`) that reads cover photos and writes a catalog.
-2. A **static, dependency-free web app** (`web/`) that renders that catalog.
+2. A **static, dependency-free web app** (`reelshelf/web/`) that renders that catalog.
 
 They never talk at runtime — the CLI produces files; the site reads them.
 
@@ -72,7 +72,7 @@ Round-trip files (exported by the admin UI, dropped back into `data/`, applied o
 
 Posters live in `posters/` (downloaded art or cover-photo fallbacks); full cover photos in `originals/`.
 
-## The web app (`web/`)
+## The web app (`reelshelf/web/`)
 
 Vanilla JS + CSS, **no framework, no build step**:
 - `index.html` + `assets/js/app.js` — the catalog, filters, image gallery/zoom, and the admin tools.

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import requests
@@ -38,7 +38,7 @@ def _plausible_title(claude: str, provider: str) -> bool:
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return datetime.now(UTC).isoformat(timespec="seconds")
 
 
 def _slug(text: str) -> str:
@@ -363,8 +363,9 @@ def _enrich_streaming(cfg: Config, store: Store, log, refresh: bool = False) -> 
     pending = [m for m in store.collection if refresh or not m.get("streaming")]
     if not pending:
         return
-    from . import streaming as sx
     import requests
+
+    from . import streaming as sx
     country = cfg.streaming.get("country", "US")
     log(f"Where-to-watch: checking {len(pending)} title(s) via JustWatch ({country})…")
     session = requests.Session()

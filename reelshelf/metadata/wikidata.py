@@ -9,7 +9,7 @@ import time
 
 import requests
 
-from .base import MovieMeta, MetadataProvider
+from .base import MetadataProvider, MovieMeta
 
 _WP = "https://en.wikipedia.org/w/api.php"
 _WP_SUMMARY = "https://en.wikipedia.org/api/rest_v1/page/summary/"

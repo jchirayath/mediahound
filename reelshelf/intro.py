@@ -41,7 +41,6 @@ def make_intro(ident: Identification, meta: MovieMeta) -> str:
         gtxt = (meta.genres[0].lower() if meta.genres else "classic")
         bits.append(f"a {era} {gtxt}")
     if lead:
-        title = meta.title or ident.title or "this one"
         tail = f" — {bits[0]} worth revisiting." if bits else "."
         return f"{lead}{tail}"
     # last-ditch: trim the overview to one sentence (still a hook, not the full plot)

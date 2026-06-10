@@ -202,7 +202,7 @@ RawImages/*.jpg ─▶ identify (OCR / vision) ─▶ enrich (poster, genres, ca
    + intro + resale + where-to-watch ─▶ data/collection.json ─▶ static site (index.html)
 ```
 
-Python CLI (`reelshelf/`) builds the data; a dependency-free vanilla-JS frontend (`web/`) renders it.
+Python CLI (`reelshelf/`) builds the data; a dependency-free vanilla-JS frontend (`reelshelf/web/`) renders it.
 
 ---
 

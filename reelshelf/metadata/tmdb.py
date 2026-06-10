@@ -9,7 +9,7 @@ import os
 
 import requests
 
-from .base import MovieMeta, MetadataProvider
+from .base import MetadataProvider, MovieMeta
 
 _BASE = "https://api.themoviedb.org/3"
 _IMG = "https://image.tmdb.org/t/p"

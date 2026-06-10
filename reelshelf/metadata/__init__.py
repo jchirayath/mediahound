@@ -1,7 +1,7 @@
 """Metadata providers: enrich an identified title with poster + canonical fields."""
 from __future__ import annotations
 
-from .base import MovieMeta, MetadataProvider
+from .base import MetadataProvider, MovieMeta
 
 
 def get_metadata_provider(cfg) -> MetadataProvider:

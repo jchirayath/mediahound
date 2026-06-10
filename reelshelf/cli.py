@@ -9,9 +9,10 @@ from pathlib import Path
 from . import __version__
 from .config import load_config
 
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-_WEB_TEMPLATE = _REPO_ROOT / "web"
-_CONFIG_EXAMPLE = _REPO_ROOT / "config.example.toml"
+# Template assets are bundled inside the package so `pip install reelshelf` is self-contained.
+_PKG_DIR = Path(__file__).resolve().parent
+_WEB_TEMPLATE = _PKG_DIR / "web"
+_CONFIG_EXAMPLE = _PKG_DIR / "config.example.toml"
 
 _NETLIFY_TOML = """# Deploy this folder as a static site.
 [build]

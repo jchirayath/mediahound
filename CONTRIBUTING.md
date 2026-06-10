@@ -15,7 +15,7 @@ reelshelf build --config demo/config.toml --mock   # quick smoke test
 - `reelshelf/identify/` — **Identifier** providers (read title/year/format from a cover).
 - `reelshelf/metadata/` — **MetadataProvider** providers (poster + canonical fields).
 - `reelshelf/store.py` — the incremental manifest and the JSON the website reads.
-- `web/` — the static site template copied by `reelshelf init`.
+- `reelshelf/web/` — the static site template copied by `reelshelf init`.
 
 ## Adding a provider
 

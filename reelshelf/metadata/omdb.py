@@ -8,7 +8,7 @@ import os
 
 import requests
 
-from .base import MovieMeta, MetadataProvider
+from .base import MetadataProvider, MovieMeta
 
 _BASE = "https://www.omdbapi.com/"
 
@@ -63,7 +63,7 @@ class OMDBProvider(MetadataProvider):
             year=int(d["Year"][:4]) if d.get("Year", "")[:4].isdigit() else year,
             genres=[g.strip() for g in (d.get("Genre") or "").split(",") if g.strip()],
             language=(d.get("Language") or "").split(",")[0].strip() or None,
-            spoken_languages=[l.strip() for l in (d.get("Language") or "").split(",") if l.strip()],
+            spoken_languages=[s.strip() for s in (d.get("Language") or "").split(",") if s.strip()],
             runtime=runtime,
             rating=rating,
             director=director,

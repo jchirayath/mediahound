@@ -5,7 +5,6 @@ import os
 import tomllib
 from pathlib import Path
 
-
 DEFAULTS = {
     "site": {"title": "My Movie Collection", "subtitle": ""},
     "paths": {"input": "RawImages", "output": "."},

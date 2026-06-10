@@ -2,12 +2,12 @@
 import json
 from pathlib import Path
 
-from reelshelf.config import Config, DEFAULTS, _deep_merge
 from reelshelf import pipeline
-from reelshelf.resale import estimate
-from reelshelf.intro import make_intro
+from reelshelf.config import DEFAULTS, Config, _deep_merge
 from reelshelf.identify.base import Identification
+from reelshelf.intro import make_intro
 from reelshelf.metadata.base import MovieMeta
+from reelshelf.resale import estimate
 
 
 def _cfg(tmp_path: Path) -> Config:
