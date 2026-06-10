@@ -116,6 +116,13 @@ def cmd_export(args) -> int:
     return 0
 
 
+def cmd_serve(args) -> int:
+    from . import serve as serve_mod
+    cfg = _load_or_die(args.config)
+    return serve_mod.serve(cfg, host=args.host, port=args.port, admin=args.admin,
+                           open_browser=not args.no_open)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mediahound",
                                 description="Catalog a movie & music collection from cover photos or CSV.")
@@ -151,6 +158,17 @@ def main(argv=None) -> int:
     pe.add_argument("--config", default="config.toml", help="path to config.toml")
     pe.add_argument("-o", "--output", default="catalog.csv", help="output CSV path")
     pe.set_defaults(func=cmd_export)
+
+    ps = sub.add_parser("serve", help="preview the site locally; --admin saves edits straight to data/.")
+    ps.add_argument("--config", default="config.toml", help="path to config.toml")
+    ps.add_argument("--admin", action="store_true",
+                    help="enable the localhost write API: portal edits persist to "
+                         "data/corrections.json automatically (survive every rebuild).")
+    ps.add_argument("--port", type=int, default=8765, help="port (default 8765)")
+    ps.add_argument("--host", default="127.0.0.1",
+                    help="bind address (default 127.0.0.1; admin writes should stay localhost)")
+    ps.add_argument("--no-open", action="store_true", help="don't open a browser window")
+    ps.set_defaults(func=cmd_serve)
 
     args = p.parse_args(argv)
     return args.func(args)

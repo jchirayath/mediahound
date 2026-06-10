@@ -51,6 +51,7 @@
     wire();
     applyAdminUI();
     render();
+    pingServer().then(() => applyAdminUI());   // detect `serve --admin` → enable auto-save UI
   }).catch((e) => { $("#loading").innerHTML = "<p>Couldn't load the collection.</p>"; console.error(e); });
 
   // ---- helpers ------------------------------------------------------------
@@ -74,8 +75,36 @@
              if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery; }
     return m;
   }
-  function saveCorrections() { save(CORR_KEY, corrections); }
+  function saveCorrections() { save(CORR_KEY, corrections); persist("api/corrections", corrections); }
   function setCorr(m, patch) { corrections[m.id] = Object.assign({}, corrections[m.id], patch); saveCorrections(); }
+
+  // ---- admin-server persistence (mediahound serve --admin) ----------------
+  // When the site is served by the local admin server, every edit is written
+  // straight into data/ — so it survives the next `mediahound build` with no
+  // "Export changes → drop file in" step. Falls back to localStorage-only.
+  let serverAdmin = false;
+  function pingServer() {
+    return j("api/ping", null).then((r) => { serverAdmin = !!(r && r.admin); return serverAdmin; });
+  }
+  function persist(endpoint, payload) {
+    if (!serverAdmin) return;
+    fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+      .then((r) => r.json()).then((r) => { if (r && r.ok) flashSaved(); })
+      .catch(() => {/* offline export still available */});
+  }
+  function flashSaved() {
+    const el = $("#saveState"); if (!el) return;
+    el.textContent = "✓ Saved to disk"; el.hidden = false;
+    clearTimeout(flashSaved._t); flashSaved._t = setTimeout(() => { el.hidden = true; }, 1600);
+  }
+  function rebuildSite() {
+    const el = $("#saveState"); if (el) { el.textContent = "↻ Rebuilding…"; el.hidden = false; }
+    fetch("api/rebuild", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then((r) => r.json()).then((r) => {
+        if (r && r.ok) { if (el) el.textContent = "✓ Rebuilt — reloading"; location.reload(); }
+        else alert("Rebuild failed: " + ((r && r.error) || "unknown"));
+      }).catch((e) => alert("Rebuild failed: " + e));
+  }
   function galleryOf(m) {
     const removed = (corrections[m.id] && corrections[m.id].removed_images) || [];
     const g = [];
@@ -283,7 +312,8 @@
 
   function toggleSeen(m) {
     m.seen = !m.seen; m.date_seen = m.seen ? new Date().toISOString().slice(0, 10) : null;
-    seen[m.id] = { seen: m.seen, date_seen: m.date_seen }; save(SEEN_KEY, seen); render();
+    seen[m.id] = { seen: m.seen, date_seen: m.date_seen }; save(SEEN_KEY, seen);
+    persist("api/seen", seen); render();
   }
 
   // ---- poster with arrows + zoom -----------------------------------------
@@ -413,6 +443,17 @@
     $("#adminBtn").textContent = isAdmin ? "🔓 Exit admin" : "🔒 Admin";
     $("#adminBtn").classList.toggle("active", isAdmin);
     $("#adminBadge").hidden = !isAdmin;
+    // serve --admin: edits auto-save to disk, so the manual export buttons become optional
+    // and a one-click Rebuild appears. Static hosting (no server) keeps the export flow.
+    const live = isAdmin && serverAdmin;
+    document.body.classList.toggle("server-admin", live);
+    const rb = $("#rebuildBtn"); if (rb) rb.hidden = !live;
+    if (live) {
+      $("#adminBadge").textContent = "● ADMIN — saving to disk";
+      const ex = $("#exportChanges"); if (ex) ex.title = "Optional — your edits are already saved to data/ by the server";
+    } else {
+      $("#adminBadge").textContent = "● ADMIN MODE";
+    }
   }
   function openLogin() { $("#loginErr").hidden = true; $("#loginPw").value = ""; $("#loginDialog").hidden = false; setTimeout(() => $("#loginPw").focus(), 30); }
   async function tryLogin() {
@@ -515,10 +556,22 @@
   }
 
   // ---- exports ------------------------------------------------------------
-  function exportCorrections() {
+  async function exportCorrections() {
     if (!Object.keys(corrections).length) { alert("No edits yet."); return; }
-    download("corrections.json", JSON.stringify(corrections, null, 2));
-    alert("Downloaded corrections.json → drop into data/ and run `mediahound build` to apply.");
+    // Merge with the corrections already baked into the site so an export can NEVER
+    // silently drop a previously-saved fix (which would make it revert on the next build).
+    // Local (this browser's) edits win over the server copy for any shared key.
+    const server = await j("data/corrections.json", {});
+    const merged = {};
+    for (const [k, v] of Object.entries(server)) merged[k] = Object.assign({}, v);
+    for (const [k, v] of Object.entries(corrections)) merged[k] = Object.assign({}, merged[k], v);
+    download("corrections.json", JSON.stringify(merged, null, 2));
+    const n = Object.keys(corrections).length, total = Object.keys(merged).length;
+    alert(`Downloaded corrections.json — ${n} edit(s) from this browser, merged with the site's existing ${total - n} so nothing is lost.\n\n` +
+          "To make them permanent:\n" +
+          "1. Save this file into the site's data/ folder (replace the old corrections.json).\n" +
+          "2. Run `mediahound build` and redeploy.\n\n" +
+          "Your fixes are now baked into the catalog and survive every future rebuild.");
   }
   function exportSeen() {
     const out = {}; movies.forEach((m) => { if (m.seen) out[m.id] = { seen: true, date_seen: m.date_seen || null }; });
@@ -556,6 +609,7 @@
     });
     $("#clearImage").onclick = () => { pendingImage = ""; $("#setImagePreview").hidden = true; $("#clearImage").hidden = true; };
     $("#exportChanges").onclick = exportCorrections;
+    if ($("#rebuildBtn")) $("#rebuildBtn").onclick = rebuildSite;
     $("#exportSeen").onclick = exportSeen;
     $("#loginGo").onclick = tryLogin;
     $("#loginPw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });

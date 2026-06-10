@@ -405,3 +405,8 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 /* where-to-listen pills use the secondary accent to read distinct from watch pills */
 .watch-pill.listen-yes { border-color: var(--accent-2); color: var(--accent-2); }
 .watch-pill.listen-yes:hover { background: var(--accent-2); color: #06121a; }
+
+/* serve --admin: auto-save indicator */
+.save-state { font-size: .82rem; color: #1a7f4b; background: #e6f6ec; border: 1px solid #b7e3c8;
+  padding: 2px 9px; border-radius: 999px; white-space: nowrap; align-self: center; }
+body.server-admin #exportChanges, body.server-admin #exportSeen { opacity: .6; }

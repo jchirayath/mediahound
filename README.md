@@ -125,8 +125,34 @@ label, studio, genres, rating, barcode, cover_url, intro`. `media_type` is infer
 - **Admin view** — password-protected, read/write. Edit a title's name, year, format, studio &
   distributor; mark seen; rotate / set-default / delete a photo; delete a title; and configure
   the **library name, description, logo, which fields are shown, and default columns**.
-- All edits are saved in the browser and **exported as small JSON files** (`corrections.json`,
-  `seen-overrides.json`, `view-config.json`) that you drop into `data/` and rebuild to persist.
+
+### Editing & persisting your changes
+
+Your edits are recorded as small **corrections** (keyed by title id). There are two ways to make
+them permanent so they **survive every future `mediahound build`** — pick one:
+
+**A. Live admin server (recommended — zero manual steps)**
+
+```bash
+mediahound serve --admin          # serves the site at http://127.0.0.1:8765
+```
+
+Open the site, unlock admin, and edit. Every change is written **straight into
+`data/corrections.json`** (and `seen-overrides.json`) as you go — the badge shows
+*“✓ Saved to disk.”* Click **↻ Rebuild** to re-bake the catalog and reload. Because the edit is
+already in `data/`, the next `mediahound build` (and any re-query) keeps it — **edits never revert.**
+The write API is **localhost-only** and refuses cross-origin requests; never expose it publicly.
+
+**B. Static export (for read-only/CDN hosting like Netlify or GitHub Pages)**
+
+When the site is served as plain files (no admin server), edits live in your browser. Click
+**Export changes** / **Export seen** — the download is **merged with the site's existing
+`data/corrections.json`** so nothing already saved is lost — then drop the file into `data/` and run
+`mediahound build`.
+
+> Either way the source of truth is `data/corrections.json`. A title you fix only in the browser
+> (without server-admin or an export) shows locally but **reverts on the next rebuild**, because the
+> build regenerates the catalog from `data/`.
 
 ### Manual identification
 - Covers that couldn't be read are grouped on `identify.html`, where you **name** them (queued for
