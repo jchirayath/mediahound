@@ -95,8 +95,14 @@ mediahound export --config mysite/config.toml -o backup.csv        # dump the wh
 ```
 
 Columns (case-insensitive; extras ignored): `media_type, title, artist, director, year, format,
-label, studio, genres, rating, barcode, cover_url, intro`. `media_type` is inferred (`music` if an
-`artist` is given, else `movie`). See [`examples/sample-import.csv`](examples/sample-import.csv).
+label, studio, genres, rating, barcode, cover_url, intro`. **Only `title` is required** — any missing
+fields are left blank (or filled by `--online`); even a one-column list of titles works. `media_type`
+is inferred (`music` if an `artist` is given, else `movie`). See
+[`examples/sample-import.csv`](examples/sample-import.csv).
+
+Prefer a UI? Under **`mediahound serve --admin`** the admin screen has an **⬆ Import list** button —
+paste or upload the same CSV, optionally tick *enrich online*, and the titles are added and the site
+rebuilt in place.
 
 ---
 

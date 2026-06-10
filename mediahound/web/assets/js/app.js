@@ -47,7 +47,7 @@
     applyLibrary();
     $("#loading").hidden = true;
     setupUnidentified(d.unidentified || []);
-    buildFilters(movies);
+    buildFilters();
     wire();
     applyAdminUI();
     render();
@@ -106,6 +106,28 @@
         else alert("Rebuild failed: " + ((r && r.error) || "unknown"));
       }).catch((e) => alert("Rebuild failed: " + e));
   }
+  function openImport() {
+    if (!serverAdmin) {
+      alert("Bulk import needs the local admin server.\n\nRun:  mediahound serve --admin\n" +
+            "…then use this button — or from a terminal:  mediahound import yourlist.csv [--online]");
+      return;
+    }
+    $("#importNote").hidden = true; $("#importDialog").hidden = false;
+    setTimeout(() => $("#importCsv").focus(), 30);
+  }
+  function doImport() {
+    const csv = $("#importCsv").value.trim();
+    const note = $("#importNote"); note.hidden = false;
+    if (!csv) { note.textContent = "Paste or load a CSV first."; return; }
+    const online = $("#importOnline").checked;
+    note.textContent = online ? "Importing & enriching online — this can take a moment…" : "Importing…";
+    fetch("api/import", { method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ csv, online }) })
+      .then((r) => r.json()).then((r) => {
+        if (r && r.ok) { note.textContent = `✓ Added ${r.added}${r.enriched ? `, enriched ${r.enriched}` : ""} — reloading`; location.reload(); }
+        else { note.textContent = "Import failed: " + ((r && r.error) || "unknown"); }
+      }).catch((e) => { note.textContent = "Import failed: " + e; });
+  }
   function galleryOf(m) {
     const removed = (corrections[m.id] && corrections[m.id].removed_images) || [];
     const g = [];
@@ -140,18 +162,25 @@
 
   // ---- filters ------------------------------------------------------------
   const uniq = (a) => [...new Set(a.filter(Boolean))].sort();
-  function buildFilters(list) {
+  // Filter options reflect the ACTIVE media tab — pick 🎵 Music and the format/genre/label
+  // dropdowns narrow to what's in your music (and vice-versa); "All" shows everything.
+  function buildFilters() {
+    const list = mediaType === "all" ? movies : movies.filter((m) => (m.media_type || "movie") === mediaType);
     fill("#filterFormat", uniq(list.map((m) => m.format)));
     fill("#filterGenre", uniq(list.flatMap((m) => m.genres || [])));
-    fill("#filterStudio", uniq(list.map((m) => m.studio)));
+    fill("#filterStudio", uniq([...list.map((m) => m.studio), ...list.map((m) => m.label)]));  // studio (movie) or label (music)
     fill("#filterLanguage", uniq(list.map((m) => m.language)));
     fill("#filterCategory", uniq(list.map((m) => m.category)));
     const provs = uniq(list.flatMap((m) => ((m.streaming && m.streaming.providers) || []).map((p) => p.name)));
-    const ss = $("#filterStream");
+    const ss = clearOptions($("#filterStream"));
     [["any", "▶ On any service"]].concat(provs.map((p) => [p, "▶ " + p])).concat([["none", "Not streaming"]])
       .forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; ss.appendChild(o); });
   }
-  function fill(sel, vals) { const el = $(sel); vals.forEach((v) => { const o = document.createElement("option"); o.value = v; o.textContent = v; el.appendChild(o); }); }
+  function clearOptions(el) { while (el.options.length > 1) el.remove(1); return el; }  // keep the "All …" placeholder
+  function fill(sel, vals) {
+    const el = clearOptions($(sel));
+    vals.forEach((v) => { const o = document.createElement("option"); o.value = v; o.textContent = v; el.appendChild(o); });
+  }
   function setupUnidentified(u) { const n = u.length, l = $("#unidentifiedLink"); if (n > 0) { l.textContent = `⚠ ${n} unidentified`; l.dataset.has = "1"; } }
 
   function currentView() {
@@ -484,6 +513,7 @@
     const live = isAdmin && serverAdmin;
     document.body.classList.toggle("server-admin", live);
     const rb = $("#rebuildBtn"); if (rb) rb.hidden = !live;
+    const ib = $("#importBtn"); if (ib) ib.hidden = !live;
     if (live) {
       $("#adminBadge").textContent = "● ADMIN — saving to disk";
       const ex = $("#exportChanges"); if (ex) ex.title = "Optional — your edits are already saved to data/ by the server";
@@ -624,6 +654,9 @@
     $$("#mediaTabs .mt-btn").forEach((btn) => btn.addEventListener("click", () => {
       mediaType = btn.dataset.mt;
       $$("#mediaTabs .mt-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+      // narrow the filter dropdowns to the chosen type, resetting any now-irrelevant selection
+      ["#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory"].forEach((s) => ($(s).value = ""));
+      buildFilters();
       render();
     }));
     // only show the Movies/Music switch when the catalog actually mixes media types
@@ -646,15 +679,21 @@
     $("#clearImage").onclick = () => { pendingImage = ""; $("#setImagePreview").hidden = true; $("#clearImage").hidden = true; };
     $("#exportChanges").onclick = exportCorrections;
     if ($("#rebuildBtn")) $("#rebuildBtn").onclick = rebuildSite;
+    if ($("#importBtn")) $("#importBtn").onclick = openImport;
+    if ($("#importGo")) $("#importGo").onclick = doImport;
+    if ($("#importFile")) $("#importFile").addEventListener("change", (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      const rd = new FileReader(); rd.onload = () => { $("#importCsv").value = rd.result; }; rd.readAsText(f);
+    });
     $("#exportSeen").onclick = exportSeen;
     $("#loginGo").onclick = tryLogin;
     $("#loginPw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
     $("#lbPrev").onclick = () => zoomStep(-1);
     $("#lbNext").onclick = () => zoomStep(1);
     // dialog + lightbox close
-    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; }));
+    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; }));
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; }
+      if (e.key === "Escape") { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; }
       if (zoomState && e.key === "ArrowLeft") zoomStep(-1);
       if (zoomState && e.key === "ArrowRight") zoomStep(1);
     });

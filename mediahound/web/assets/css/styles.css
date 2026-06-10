@@ -410,3 +410,8 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 .save-state { font-size: .82rem; color: #1a7f4b; background: #e6f6ec; border: 1px solid #b7e3c8;
   padding: 2px 9px; border-radius: 999px; white-space: nowrap; align-self: center; }
 body.server-admin #exportChanges, body.server-admin #exportSeen { opacity: .6; }
+
+/* import-from-list dialog */
+#importCsv { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace;
+  font-size: .82rem; margin-top: 10px; padding: 10px; border: 1px solid #cfd6e0; border-radius: 8px; resize: vertical; }
+#importNote { margin-top: 8px; }

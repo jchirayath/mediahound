@@ -113,6 +113,8 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._merge_file("identify-queue.json", "identify queue")
         if route == "/api/rebuild":
             return self._rebuild()
+        if route == "/api/import":
+            return self._import()
         return self._send_json({"ok": False, "error": "unknown endpoint"}, 404)
 
     # -- handlers ---------------------------------------------------------
@@ -141,6 +143,37 @@ class _Handler(SimpleHTTPRequestHandler):
         except Exception as exc:                       # noqa: BLE001 - report to client
             self.log_fn(f"  rebuild failed: {exc}")
             return self._send_json({"ok": False, "error": str(exc)}, 500)
+
+    def _import(self):
+        """Bulk-add titles from a pasted/uploaded CSV, then regenerate the site."""
+        import os
+        import tempfile
+        body = self._read_json_body()
+        if not isinstance(body, dict) or not isinstance(body.get("csv"), str) or not body["csv"].strip():
+            return self._send_json({"ok": False, "error": "expected {csv: <text>}"}, 400)
+        online = bool(body.get("online"))
+        tmp = None
+        try:
+            from . import pipeline
+            from .csvio import import_csv
+            from .store import Store
+            store = Store(self.cfg.data_dir)
+            fd, tmp = tempfile.mkstemp(suffix=".csv")
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(body["csv"])
+            added, enriched = import_csv(self.cfg, store, Path(tmp), online, self.log_fn)
+            store.save()
+            pipeline._write_site(self.cfg, store)
+            return self._send_json({"ok": True, "added": added, "enriched": enriched})
+        except Exception as exc:                       # noqa: BLE001 - report to client
+            self.log_fn(f"  import failed: {exc}")
+            return self._send_json({"ok": False, "error": str(exc)}, 500)
+        finally:
+            if tmp:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
 
 
 def make_handler(cfg: Config, admin: bool, origins: set, log_fn):
