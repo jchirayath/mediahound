@@ -123,8 +123,9 @@ label, studio, genres, rating, barcode, cover_url, intro`. `media_type` is infer
 ### Two views
 - **Default view** — public, read-only.
 - **Admin view** — password-protected, read/write. Edit a title's name, year, format, studio &
-  distributor; mark seen; rotate / set-default / delete a photo; delete a title; and configure
-  the **library name, description, logo, which fields are shown, and default columns**.
+  distributor; **move a title between 🎬 Movies and 🎵 Music**; mark seen; rotate / set-default /
+  delete a photo; delete a title; and configure the **library name, description, logo, which fields
+  are shown, and default columns**.
 
 ### Editing & persisting your changes
 

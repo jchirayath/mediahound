@@ -84,6 +84,32 @@ edits live in your browser until you export them:
 
 ---
 
+## Moving a title between Movies and Music
+
+Sometimes a disc is catalogued under the wrong type — e.g. a concert DVD that's really a
+**music** release, or a spoken-word CD that belongs under **movies**. To move it:
+
+1. In admin view, click the title to open the inline editor.
+2. Change the **🎬 Movie / 🎵 Music** dropdown.
+   - Switching to **Music** reveals an **Artist** field; the format list changes to CD / Vinyl /
+     Cassette.
+   - Switching to **Movie** shows the Studio / Distributor fields and DVD / VHS / … formats.
+3. **Re-query** is auto-ticked when you change the type — so the next `mediahound build --online`
+   re-enriches the item with the **correct provider** (MusicBrainz + Cover Art Archive for music,
+   TMDB / Wikidata / OMDb for movies): artist, label, tracklist & cover art, or director, cast & poster.
+4. Save. The card immediately moves to the right tab; the change persists like any other correction
+   (via `serve --admin` or **Export changes**).
+
+Behind the scenes the move sets a `media_type` correction and **clears the previous type's
+exclusive fields** (a movie's director/cast/studio, or a music item's artist/label/tracklist) so the
+record stays clean. Until you run an online re-query, music-specific fields stay empty.
+
+On the next `mediahound build` (e.g. **↻ Rebuild** under `serve --admin`), the move also **relocates
+the source cover photo** into the matching `RawImages/` subfolder (`video/` for movies, `audio/` for
+music) so the item is correct *at the source* too — it won't snap back to the old type even if
+`corrections.json` is ever cleared. This is idempotent (a photo already in place is left alone) and
+only ever moves files **inside** `RawImages/`.
+
 ## Re-query vs. manual title
 
 - A **manual title** you set always wins and is kept verbatim.

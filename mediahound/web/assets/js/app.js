@@ -71,6 +71,7 @@
   function applyCorrection(m) {
     const c = corrections[m.id];
     if (c) { if (c.title) m.title = c.title; if (c.year) m.year = c.year; if (c.format) m.format = c.format;
+             if (c.media_type) m.media_type = c.media_type; if ("artist" in c) m.artist = c.artist || null;
              if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
              if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery; }
     return m;
@@ -191,6 +192,8 @@
   }
 
   function render() {
+    // show the 🎬/🎵 switch only when the catalog actually mixes types (recomputed after edits)
+    $("#mediaTabs").hidden = new Set(movies.map((m) => m.media_type || "movie")).size < 2;
     const v = currentView();
     const grid = $("#grid");
     grid.innerHTML = "";
@@ -398,26 +401,59 @@
     };
     return bar;
   }
+  const FORMATS_BY_TYPE = {
+    movie: ["DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"],
+    music: ["CD", "Vinyl", "Cassette", "Unknown"],
+  };
+  function fmtOptions(type, current) {
+    return (FORMATS_BY_TYPE[type] || FORMATS_BY_TYPE.movie)
+      .map((f) => `<option ${current === f ? "selected" : ""}>${f}</option>`).join("");
+  }
   function editCard(m, el) {
     const b = el.querySelector(".card-body");
     if (b.querySelector(".inline-edit")) return;
-    const FORMATS = ["DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"];
+    const startType = (m.media_type || "movie");
     const ed = document.createElement("div"); ed.className = "inline-edit";
     ed.innerHTML =
       `<input id="e_t" type="text" value="${esc(m.title)}" placeholder="Title">` +
-      `<div class="ie-row"><input id="e_y" type="number" value="${esc(m.year || "")}" placeholder="Year">` +
-      `<select id="e_f">${FORMATS.map((f) => `<option ${m.format === f ? "selected" : ""}>${f}</option>`).join("")}</select></div>` +
-      `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company">` +
-      `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor">` +
+      `<div class="ie-row">` +
+        `<select id="e_mt" title="Media type">` +
+          `<option value="movie" ${startType === "movie" ? "selected" : ""}>🎬 Movie</option>` +
+          `<option value="music" ${startType === "music" ? "selected" : ""}>🎵 Music</option>` +
+        `</select>` +
+        `<input id="e_y" type="number" value="${esc(m.year || "")}" placeholder="Year">` +
+        `<select id="e_f">${fmtOptions(startType, m.format)}</select>` +
+      `</div>` +
+      `<input id="e_artist" type="text" value="${esc(m.artist || "")}" placeholder="Artist (for music)" ${startType === "music" ? "" : "hidden"}>` +
+      `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company" ${startType === "music" ? "hidden" : ""}>` +
+      `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor" ${startType === "music" ? "hidden" : ""}>` +
       `<label class="ie-check"><input id="e_r" type="checkbox"> Re-query internet on next online rebuild</label>` +
       `<div class="ie-row"><button class="btn-mini btn-primary" id="e_save">Save</button><button class="btn-mini" id="e_cancel">Cancel</button></div>`;
     b.appendChild(ed);
     ed.querySelector("#e_t").focus();
+
+    // switching type swaps the format list + relevant fields, and suggests a re-query
+    ed.querySelector("#e_mt").addEventListener("change", (e) => {
+      const t = e.target.value;
+      ed.querySelector("#e_f").innerHTML = fmtOptions(t, t === "music" ? "CD" : "DVD");
+      ed.querySelector("#e_artist").hidden = t !== "music";
+      ed.querySelector("#e_s").hidden = t === "music";
+      ed.querySelector("#e_d").hidden = t === "music";
+      if (t !== startType) ed.querySelector("#e_r").checked = true;   // re-enrich with the right provider
+    });
+
     ed.querySelector("#e_save").onclick = () => {
       const title = ed.querySelector("#e_t").value.trim(); if (!title) return;
-      setCorr(m, { title, year: ed.querySelector("#e_y").value ? Number(ed.querySelector("#e_y").value) : null,
-        format: ed.querySelector("#e_f").value, studio: ed.querySelector("#e_s").value.trim(),
-        distributor: ed.querySelector("#e_d").value.trim(), requery: ed.querySelector("#e_r").checked });
+      const type = ed.querySelector("#e_mt").value;
+      const patch = {
+        title, media_type: type,
+        year: ed.querySelector("#e_y").value ? Number(ed.querySelector("#e_y").value) : null,
+        format: ed.querySelector("#e_f").value,
+        requery: ed.querySelector("#e_r").checked,
+      };
+      if (type === "music") patch.artist = ed.querySelector("#e_artist").value.trim();
+      else { patch.studio = ed.querySelector("#e_s").value.trim(); patch.distributor = ed.querySelector("#e_d").value.trim(); }
+      setCorr(m, patch);
       applyCorrection(m); render();
     };
     ed.querySelector("#e_cancel").onclick = () => render();
