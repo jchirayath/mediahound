@@ -12,6 +12,7 @@ from .identify import get_identifier
 from .identify.base import Identification
 from .imaging import make_placeholder_poster, prepared_jpeg, save_thumbnail
 from .intro import make_intro
+from .links import listen_links as _listen_links
 from .metadata import get_metadata_provider
 from .metadata.base import MovieMeta
 from .resale import estimate
@@ -116,21 +117,6 @@ _MOCK = [
          actors=["Anthony Gonzalez", "Gael García Bernal"], studio="Pixar", stream=["Netflix", "Hulu"], photos=2,
          intro="On the Day of the Dead, a boy crosses into the afterlife to reclaim his family's song."),
 ]
-
-# Where-to-listen: keyless search deep-links (exact links need a Spotify/Apple key).
-_LISTEN_BASE = {
-    "Spotify": "https://open.spotify.com/search/",
-    "Apple Music": "https://music.apple.com/us/search?term=",
-    "YouTube Music": "https://music.youtube.com/search?q=",
-}
-
-
-def _listen_links(artist: str, title: str, services=("Spotify", "Apple Music", "YouTube Music")) -> dict:
-    import urllib.parse
-    q = urllib.parse.quote(f"{artist} {title}".strip())
-    return {"checked": True,
-            "providers": [{"name": s, "url": _LISTEN_BASE[s] + q} for s in services if s in _LISTEN_BASE]}
-
 
 # Sample music releases for --mock (curated; generated placeholder art, no copyrighted sleeves).
 _MOCK_MUSIC = [
