@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — unreleased — "MediaHound"
+
+Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog
+(movies *and* music).
+
+### Added
+- **Music support** — catalog CDs, vinyl and cassettes. New `media_type` discriminator and a
+  `MusicMeta` model; **MusicBrainz + Cover Art Archive** metadata provider (open, zero-key); keyless
+  **Spotify / Apple Music / YouTube Music** "where-to-listen" links.
+- **CSV import/export** — `mediahound import catalog.csv` bulk-adds movies & music (no photos
+  needed), optionally enriched online; `mediahound export -o catalog.csv` backs up the catalog.
+- **Frontend** — a **🎬 Movies / 🎵 Music** segmented filter, per-media-type cards (artist / label /
+  tracklist / ♫ listen for music), and music-aware search.
+- Provider factory now routes by media type: `get_metadata_provider(cfg, media_type)`.
+
+### Changed
+- Rebrand across package, CLI (`mediahound`), JS data global, `localStorage` keys, branding and docs.
+- Default site title/subtitle are media-generic.
+
 ## [0.1.0] — 2026-06-09
 
 First public release.

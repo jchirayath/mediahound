@@ -1,4 +1,4 @@
-# 🎬 MediaHound
+# 🎬🎵 MediaHound
 
 [![CI](https://github.com/jchirayath/mediahound/actions/workflows/ci.yml/badge.svg)](https://github.com/jchirayath/mediahound/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/jchirayath/mediahound/actions/workflows/codeql.yml/badge.svg)](https://github.com/jchirayath/mediahound/actions/workflows/codeql.yml)
@@ -6,12 +6,16 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Live demo](https://img.shields.io/badge/live-demo-ff5252.svg)](https://jchirayath.github.io/mediahound/)
 
-**Turn photos of your DVD / VHS / Blu-ray collection into a sleek, searchable web catalog.**
+**Turn photos of your movie *and* music collection into a sleek, searchable web catalog.**
 
-Point MediaHound at a folder of cover photos. It identifies each movie, pulls in poster art,
-genres, cast, studio, runtime and ratings, writes a short enticing intro, estimates the used
-resale value, checks where it's streaming, and generates a polished static website you can
-search, filter, sort, and curate — with a password-protected admin mode.
+Point MediaHound at a folder of cover photos — DVDs, VHS, Blu-ray, **CDs, vinyl, cassettes** — or
+**import a CSV**. It identifies each item, pulls in cover art, genres, cast/artist, studio/label,
+runtime/tracklist and ratings, writes a short enticing intro, estimates the used resale value, links
+where to **watch** (movies) or **listen** (music), and generates a polished static website you can
+search, filter by **🎬 Movies / 🎵 Music**, sort, and curate — with a password-protected admin mode.
+
+Movies are identified/enriched via TMDB / OMDb / Wikidata + JustWatch; music via **MusicBrainz +
+Cover Art Archive** (open, zero-key) with keyless Spotify / Apple Music / YouTube Music links.
 
 **▶ [Live demo](https://jchirayath.github.io/mediahound/)** — explore a sample catalog in your browser (admin password: `changeme`).
 
@@ -66,6 +70,18 @@ cd mysite && python3 -m http.server 8000
 
 Add more photos to `RawImages/` anytime and re-run `build` — only the **new** ones are processed
 (state is tracked by content hash in `data/manifest.json`).
+
+### Or import from a CSV (no photos)
+
+```bash
+mediahound import catalog.csv --config mysite/config.toml          # add rows offline
+mediahound import catalog.csv --config mysite/config.toml --online # …and fetch cover art + metadata
+mediahound export --config mysite/config.toml -o backup.csv        # dump the whole catalog back to CSV
+```
+
+Columns (case-insensitive; extras ignored): `media_type, title, artist, director, year, format,
+label, studio, genres, rating, barcode, cover_url, intro`. `media_type` is inferred (`music` if an
+`artist` is given, else `movie`). See [`examples/sample-import.csv`](examples/sample-import.csv).
 
 ---
 
@@ -131,9 +147,10 @@ Both paths are first-class — pick them per-site in `config.toml`. The default 
 | Concern | Default (no key) | Optional upgrade |
 |---|---|---|
 | **Identify** title from a cover | `tesseract` — open-source OCR | `claude` (Anthropic vision, also writes the intro) · `ollama` (local model) |
-| **Metadata** + poster | `wikidata` — Wikidata + Wikipedia + Wikimedia | `tmdb` (free key) · `omdb` (free key) |
-| **Where to watch** | `justwatch` — no key | — |
-| **Resale** | eBay sold-listings link + estimate | — |
+| **Movie** metadata + poster | `wikidata` — Wikidata + Wikipedia + Wikimedia | `tmdb` (free key) · `omdb` (free key) |
+| **Music** metadata + cover art | `musicbrainz` — MusicBrainz + Cover Art Archive | `discogs` *(planned)* |
+| **Where to watch / listen** | `justwatch` (movies) · keyless Spotify/Apple/YouTube search (music) | Spotify / Apple Music keys *(planned)* |
+| **Resale** | eBay sold-listings link + estimate | Discogs price *(planned, music)* |
 
 Switch to a premium provider in `config.toml`:
 

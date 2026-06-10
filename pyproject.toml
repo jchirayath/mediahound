@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mediahound"
-version = "0.1.0"
-description = "Turn photos of your DVD/VHS collection into a sleek, searchable web catalog."
+version = "0.2.0"
+description = "Turn photos of your movie & music collection into a sleek, searchable web catalog."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
