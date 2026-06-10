@@ -50,13 +50,15 @@ def rotate_file(path: Path, degrees: int) -> bool:
     return True
 
 
-def make_placeholder_poster(text: str, dest: Path, color=(40, 44, 64), subtitle=None) -> None:
-    """A styled placeholder poster used by --mock. Deliberately generated art (never a real
-    movie poster) so the demo carries no copyrighted images."""
+def make_placeholder_poster(text: str, dest: Path, color=(40, 44, 64), subtitle=None,
+                            shape: str = "poster") -> None:
+    """A styled placeholder cover used by --mock. Deliberately generated art (never a real
+    movie poster or album sleeve) so the demo carries no copyrighted images.
+    shape="poster" → 2:3 (movies); shape="square" → 1:1 (album art)."""
     import unicodedata
     ascii_text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode() or text
     text = ascii_text
-    w, h = 600, 900
+    w, h = (600, 600) if shape == "square" else (600, 900)
     img = Image.new("RGB", (w, h), color)
     draw = ImageDraw.Draw(img)
     for i in range(h):  # vertical gradient: a touch lighter at top, darker toward the bottom

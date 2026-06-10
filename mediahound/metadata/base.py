@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 @dataclass
 class MovieMeta:
     matched: bool
+    media_type: str = "movie"
     source: str = ""                 # "tmdb" | "wikidata" | "omdb"
     source_id: str = ""
     title: str | None = None
@@ -30,8 +31,33 @@ class MovieMeta:
     raw: dict = field(default_factory=dict)
 
 
+@dataclass
+class MusicMeta:
+    """Enrichment result for a music release (album/single on CD, vinyl, cassette)."""
+    matched: bool
+    media_type: str = "music"
+    source: str = ""                 # "musicbrainz" | "discogs"
+    source_id: str = ""
+    title: str | None = None         # release / album title
+    artist: str | None = None
+    year: int | None = None
+    genres: list[str] = field(default_factory=list)
+    label: str | None = None         # record label
+    catalog_no: str | None = None
+    barcode: str | None = None
+    format: str | None = None        # CD | Vinyl | Cassette
+    disc_count: int | None = None
+    tracklist: list[str] = field(default_factory=list)
+    rating: float | None = None
+    overview: str | None = None
+    cover_url: str | None = None
+    source_url: str | None = None    # link to MusicBrainz / Discogs page
+    raw: dict = field(default_factory=dict)
+
+
 class MetadataProvider:
     name = "base"
+    media_type = "movie"
 
     def lookup(self, title: str, year: int | None = None) -> MovieMeta:
         raise NotImplementedError

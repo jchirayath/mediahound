@@ -117,6 +117,55 @@ _MOCK = [
          intro="On the Day of the Dead, a boy crosses into the afterlife to reclaim his family's song."),
 ]
 
+# Where-to-listen: keyless search deep-links (exact links need a Spotify/Apple key).
+_LISTEN_BASE = {
+    "Spotify": "https://open.spotify.com/search/",
+    "Apple Music": "https://music.apple.com/us/search?term=",
+    "YouTube Music": "https://music.youtube.com/search?q=",
+}
+
+
+def _listen_links(artist: str, title: str, services=("Spotify", "Apple Music", "YouTube Music")) -> dict:
+    import urllib.parse
+    q = urllib.parse.quote(f"{artist} {title}".strip())
+    return {"checked": True,
+            "providers": [{"name": s, "url": _LISTEN_BASE[s] + q} for s in services if s in _LISTEN_BASE]}
+
+
+# Sample music releases for --mock (curated; generated placeholder art, no copyrighted sleeves).
+_MOCK_MUSIC = [
+    dict(title="The Dark Side of the Moon", artist="Pink Floyd", year=1973, format="Vinyl",
+         label="Harvest", genres=["Progressive Rock"], rating=9.2, color=(18, 18, 22),
+         tracklist=["Speak to Me", "Breathe (In the Air)", "On the Run", "Time", "Money",
+                    "Us and Them", "Brain Damage", "Eclipse"],
+         intro="A seamless suite on madness and time — heard best on vinyl, end to end."),
+    dict(title="Rumours", artist="Fleetwood Mac", year=1977, format="Vinyl",
+         label="Warner Bros.", genres=["Soft Rock", "Pop Rock"], rating=8.9, color=(74, 54, 32),
+         tracklist=["Second Hand News", "Dreams", "Never Going Back Again", "Go Your Own Way",
+                    "The Chain", "Gold Dust Woman"],
+         intro="Heartbreak turned into immaculate harmonies — a band falling apart, beautifully."),
+    dict(title="Thriller", artist="Michael Jackson", year=1982, format="Cassette",
+         label="Epic", genres=["Pop", "Funk", "R&B"], rating=9.0, color=(40, 20, 24),
+         tracklist=["Wanna Be Startin' Somethin'", "Thriller", "Beat It", "Billie Jean",
+                    "Human Nature", "P.Y.T."],
+         intro="The best-selling album ever made — pop, funk and a werewolf, on one tape."),
+    dict(title="Kind of Blue", artist="Miles Davis", year=1959, format="Vinyl",
+         label="Columbia", genres=["Jazz", "Modal Jazz"], rating=9.4, color=(20, 32, 52),
+         tracklist=["So What", "Freddie Freeloader", "Blue in Green", "All Blues", "Flamenco Sketches"],
+         intro="Modal jazz at its most serene — the record almost every collection starts with."),
+    dict(title="Nevermind", artist="Nirvana", year=1991, format="CD",
+         label="DGC", genres=["Grunge", "Alternative Rock"], rating=8.7, color=(20, 48, 60),
+         tracklist=["Smells Like Teen Spirit", "In Bloom", "Come as You Are", "Lithium",
+                    "Polly", "Drain You"],
+         intro="The CD that dragged the underground overground — louder, quieter, louder."),
+    dict(title="The Miseducation of Lauryn Hill", artist="Lauryn Hill", year=1998, format="CD",
+         label="Ruffhouse / Columbia", genres=["Neo Soul", "Hip Hop", "R&B"], rating=9.1,
+         color=(34, 52, 30),
+         tracklist=["Lost Ones", "Ex-Factor", "To Zion", "Doo Wop (That Thing)",
+                    "Everything Is Everything"],
+         intro="Soul, hip-hop and gospel fused into one of the finest debuts ever pressed."),
+]
+
 
 class _NullMetadata:
     """Offline stand-in — never touches the network; every title becomes a manual entry."""
@@ -506,6 +555,7 @@ def _process_one(cfg, store, img, h, get_ident, metadata, threshold) -> bool:
 
     movie = {
         "id": mid,
+        "media_type": "movie",
         "title": meta.title or ident.title,
         "year": meta.year or ident.year,
         "format": fmt,
@@ -594,7 +644,7 @@ def _build_mock(cfg, store, stats, log) -> Stats:
                                        for n in mk["stream"]]}
         seen = (i % 4 == 0)
         movie = {
-            "id": mid, "title": title, "year": year, "format": fmt, "category": "Film",
+            "id": mid, "media_type": "movie", "title": title, "year": year, "format": fmt, "category": "Film",
             "genres": mk["genres"], "language": mk["language"], "spoken_languages": [mk["language"]],
             "runtime": mk["runtime"], "rating": mk["rating"], "director": mk.get("director"),
             "actors": mk.get("actors", []), "studio": mk.get("studio"), "distributor": None,
@@ -607,6 +657,32 @@ def _build_mock(cfg, store, stats, log) -> Stats:
         }
         store.upsert_movie(movie)
         store.record(f"mock-{mid}", movie["source_image"], "identified", mid, _now())
+        stats.new += 1
+        stats.identified += 1
+
+    # --- music releases (CDs / vinyl / cassettes) ------------------------------------
+    for i, mk in enumerate(_MOCK_MUSIC):
+        title, artist, year, fmt = mk["title"], mk["artist"], mk["year"], mk["format"]
+        mid = f"{_slug(artist)}-{_slug(title)}-{year}"
+        cover = cfg.posters_dir / f"{mid}.jpg"
+        make_placeholder_poster(f"{artist} — {title}", cover, color=mk.get("color", (30, 30, 36)),
+                                subtitle=fmt, shape="square")
+        images = [f"posters/{cover.name}"]
+        played = (i % 3 == 0)
+        item = {
+            "id": mid, "media_type": "music", "title": title, "artist": artist,
+            "year": year, "format": fmt, "label": mk.get("label"), "genres": mk["genres"],
+            "rating": mk["rating"], "tracklist": mk.get("tracklist", []),
+            "disc_count": 1, "intro": mk["intro"], "overview": mk["intro"],
+            "poster": images[0], "images": images,
+            "listen": _listen_links(artist, title),
+            "source": {"name": "mock", "url": None},
+            "resale": estimate(f"{artist} {title}", year, fmt, mk["rating"], tld),
+            "source_image": f"(demo) {artist} — {title}", "confidence": 0.99,
+            "seen": played, "date_seen": ("2024-03-01" if played else None), "added_at": _now(),
+        }
+        store.upsert_movie(item)
+        store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())
         stats.new += 1
         stats.identified += 1
 
