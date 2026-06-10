@@ -70,9 +70,45 @@ def cmd_build(args) -> int:
     return 0
 
 
+def _load_or_die(config_arg: str):
+    config_path = Path(config_arg).resolve()
+    if not config_path.is_file():
+        print(f"Config not found: {config_path}\nRun `mediahound init <dir>` first.", file=sys.stderr)
+        sys.exit(2)
+    return load_config(config_path)
+
+
+def cmd_import(args) -> int:
+    from . import pipeline
+    from .csvio import import_csv
+    from .store import Store
+    cfg = _load_or_die(args.config)
+    csv_path = Path(args.file).resolve()
+    if not csv_path.is_file():
+        print(f"CSV not found: {csv_path}", file=sys.stderr)
+        return 2
+    store = Store(cfg.data_dir)
+    import_csv(cfg, store, csv_path, online=args.online, log=print)
+    store.save()
+    pipeline._write_site(cfg, store)
+    print(f"Done. Catalog written to {cfg.data_dir}")
+    return 0
+
+
+def cmd_export(args) -> int:
+    from .csvio import export_csv
+    from .store import Store
+    cfg = _load_or_die(args.config)
+    store = Store(cfg.data_dir)
+    out = Path(args.output).resolve()
+    n = export_csv(store, out)
+    print(f"Exported {n} item(s) → {out}")
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mediahound",
-                                description="Catalog a DVD/VHS collection from cover photos.")
+                                description="Catalog a movie & music collection from cover photos or CSV.")
     p.add_argument("--version", action="version", version=f"mediahound {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 
@@ -93,6 +129,18 @@ def main(argv=None) -> int:
     pb.add_argument("--refresh-streaming", action="store_true",
                     help="re-check where-to-watch for every title (implies --online)")
     pb.set_defaults(func=cmd_build)
+
+    pm = sub.add_parser("import", help="bulk-add items from a CSV (no photos needed).")
+    pm.add_argument("file", help="path to the CSV file")
+    pm.add_argument("--config", default="config.toml", help="path to config.toml")
+    pm.add_argument("--online", action="store_true",
+                    help="enrich each row (cover art + missing fields) via the metadata providers")
+    pm.set_defaults(func=cmd_import)
+
+    pe = sub.add_parser("export", help="write the whole catalog to a CSV (backup/migration).")
+    pe.add_argument("--config", default="config.toml", help="path to config.toml")
+    pe.add_argument("-o", "--output", default="catalog.csv", help="output CSV path")
+    pe.set_defaults(func=cmd_export)
 
     args = p.parse_args(argv)
     return args.func(args)
