@@ -54,7 +54,7 @@ def test_incremental_is_idempotent(tmp_path):
 def test_resale_estimate_ranges():
     v = estimate("Some Old Tape", 1988, "VHS", 8.0, "com")
     assert v["low"] < v["mid"] < v["high"]
-    assert "ebay.com" in v["sold_listings_url"]
+    assert v["sold_listings_url"].startswith("https://www.ebay.com/")
     assert "LH_Sold=1" in v["sold_listings_url"]
 
 

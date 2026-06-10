@@ -396,6 +396,10 @@ def _write_site(cfg: Config, store: Store) -> None:
         "generated_at": _now(),
         "count": len(store.collection),
         "unidentified": len(store.unidentified),
+        # NOTE: this is NOT password storage in the security sense. The "admin" view is a
+        # client-side convenience gate on a *static* site; this hash is intentionally published
+        # and protects no server-side resource (the catalog can't change without rebuilding +
+        # redeploying). It is compared in-browser via WebCrypto SHA-256. See SECURITY.md.
         "admin_password_sha256": hashlib.sha256(pw.encode("utf-8")).hexdigest(),
     }
     (cfg.data_dir / "site.json").write_text(
