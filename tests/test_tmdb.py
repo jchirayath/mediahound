@@ -22,7 +22,7 @@ _DETAIL = {
 def test_tmdb_parses_search_then_detail(monkeypatch):
     monkeypatch.setenv("TMDB_API_KEY", "k")
 
-    def fake_get(url, params=None, timeout=None):
+    def fake_get(url, params=None, headers=None, timeout=None):
         return FakeResp(_SEARCH if "/search/movie" in url else _DETAIL)
 
     monkeypatch.setattr(tmod.requests, "get", fake_get)
@@ -37,6 +37,34 @@ def test_tmdb_parses_search_then_detail(monkeypatch):
     assert m.studio == "Warner Bros." and m.tagline == "Free your mind."
     assert m.poster_url.endswith("/w500/p.jpg")
     assert m.source_url == "https://www.themoviedb.org/movie/603"
+
+
+def test_tmdb_v4_token_uses_bearer(monkeypatch):
+    monkeypatch.setenv("TMDB_API_KEY", "eyJabc.def.ghi")     # v4 read access token (JWT)
+    cap = {}
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        cap["headers"], cap["params"] = headers, params
+        return FakeResp(_SEARCH if "/search/movie" in url else _DETAIL)
+
+    monkeypatch.setattr(tmod.requests, "get", fake_get)
+    TMDBProvider({}).lookup("The Matrix", 1999)
+    assert cap["headers"].get("Authorization") == "Bearer eyJabc.def.ghi"
+    assert "api_key" not in cap["params"]                    # not sent as a query param
+
+
+def test_tmdb_v3_key_uses_query_param(monkeypatch):
+    monkeypatch.setenv("TMDB_API_KEY", "abc123def")          # classic v3 key
+    cap = {}
+
+    def fake_get(url, params=None, headers=None, timeout=None):
+        cap["headers"], cap["params"] = headers, params
+        return FakeResp(_SEARCH if "/search/movie" in url else _DETAIL)
+
+    monkeypatch.setattr(tmod.requests, "get", fake_get)
+    TMDBProvider({}).lookup("The Matrix", 1999)
+    assert cap["params"].get("api_key") == "abc123def"
+    assert "Authorization" not in cap["headers"]
 
 
 def test_tmdb_no_results_and_empty_title(monkeypatch):

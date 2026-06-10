@@ -37,9 +37,13 @@ class TMDBProvider(MetadataProvider):
             )
 
     def _get(self, path: str, **params) -> dict:
-        params["api_key"] = self.api_key
         params.setdefault("language", self.language)
-        r = requests.get(f"{_BASE}{path}", params=params, timeout=30)
+        headers = {"accept": "application/json"}
+        if self.api_key.startswith("eyJ"):        # v4 read access token (JWT) → Bearer auth
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        else:                                     # v3 API key → query param
+            params["api_key"] = self.api_key
+        r = requests.get(f"{_BASE}{path}", params=params, headers=headers, timeout=30)
         r.raise_for_status()
         return r.json()
 
