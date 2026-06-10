@@ -69,6 +69,7 @@
         </span>
         <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
         <span id="saveState" class="save-state" hidden></span>
+        <button id="importBtn" class="btn-ghost admin-only" type="button" hidden title="Bulk-add titles from a CSV list">⬆ Import list</button>
         <button id="rebuildBtn" class="btn-ghost admin-only" type="button" hidden title="Re-bake the catalog from your saved edits and reload">↻ Rebuild</button>
         <button id="exportChanges" class="btn-ghost admin-only" type="button" hidden>Export changes</button>
         <button id="exportSeen" class="btn-ghost admin-only" type="button" hidden>Export seen</button>
@@ -154,6 +155,28 @@
         <button class="btn" data-close>Close</button>
       </div>
       <p class="dialog-sub" id="settingsPwNote" hidden></p>
+    </div>
+  </div>
+
+  <!-- Bulk import from a CSV list (needs `mediahound serve --admin`) -->
+  <div class="dialog" id="importDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card dialog-wide">
+      <h2>Import titles from a list</h2>
+      <p class="dialog-sub">Paste or upload a CSV. Only <b>title</b> is required — any missing fields
+        are left blank, or filled in for you if you tick “enrich online”. The first row must be the
+        column header.</p>
+      <div class="settings-row" style="align-items:center">
+        <label>Load a .csv<input type="file" id="importFile" accept=".csv,text/csv" /></label>
+        <label class="ie-check"><input type="checkbox" id="importOnline" /> Enrich online (fetch cover art &amp; fill blanks)</label>
+      </div>
+      <textarea id="importCsv" rows="9" spellcheck="false"
+        placeholder="media_type,title,artist,director,year,format,genres&#10;movie,The Goonies,,Richard Donner,1985,VHS,Adventure; Family&#10;music,Abbey Road,The Beatles,,1969,Vinyl,Rock; Pop"></textarea>
+      <p class="dialog-sub" id="importNote" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" id="importGo">Import</button>
+        <button class="btn" data-close>Cancel</button>
+      </div>
     </div>
   </div>
 

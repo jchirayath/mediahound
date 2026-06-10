@@ -3,6 +3,20 @@
 This guide covers how to fix titles, mark items seen, manage photos, and — most importantly —
 how to make those edits **stick** so they survive every future `mediahound build`.
 
+## Bulk-importing a list of titles
+
+To add many titles at once from a CSV (no photos needed):
+
+- **CLI:** `mediahound import yourlist.csv` (add `--online` to fetch cover art & fill blanks).
+- **Admin screen:** under `mediahound serve --admin`, click **⬆ Import list**, then paste or upload
+  the CSV (and optionally tick *enrich online*).
+
+**Only `title` is required.** The importer is tolerant of partial data: missing columns are left
+blank or — with online enrichment — filled from the provider; unknown columns are ignored; headers
+are case-insensitive; `media_type` is inferred (`music` if an `artist` is present, else `movie`).
+So a one-column list of titles works, and so does a fully-specified sheet. See
+[`examples/sample-import.csv`](../examples/sample-import.csv) for the recognised columns.
+
 ## How edits are stored
 
 Every change you make in the **admin view** is recorded as a small **correction**, keyed by the

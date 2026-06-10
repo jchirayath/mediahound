@@ -88,6 +88,23 @@ def test_cross_origin_write_is_refused(served_site):
     assert "evil" not in saved
 
 
+def test_import_adds_titles_from_partial_csv(served_site):
+    base, cfg = served_site
+    csv = "media_type,title,artist\nmovie,The Goonies,\nmusic,Abbey Road,The Beatles\n"
+    status, body = _post(base + "/api/import", {"csv": csv, "online": False}, origin=base)
+    assert status == 200 and body["ok"] is True and body["added"] == 2
+    titles = {i["title"]: i.get("media_type") for i in
+              json.loads((cfg.data_dir / "collection.json").read_text())}
+    assert titles.get("The Goonies") == "movie"
+    assert titles.get("Abbey Road") == "music"
+
+
+def test_import_title_only_csv(served_site):
+    base, cfg = served_site
+    status, body = _post(base + "/api/import", {"csv": "title\nSolo Title\n", "online": False}, origin=base)
+    assert status == 200 and body["added"] == 1     # only a `title` column → still works
+
+
 def test_serve_without_admin_has_no_write_api(tmp_path):
     site = tmp_path / "site"
     assert cli.main(["init", str(site)]) == 0

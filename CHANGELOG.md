@@ -35,8 +35,14 @@ Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **mult
   On the next build the move also **relocates the source cover photo** into the matching
   `RawImages/video` or `RawImages/audio` folder (idempotent, path-traversal-guarded), so a
   reclassified title is correct at the source and won't revert if `corrections.json` is cleared.
+- **⬆ Import list (admin screen)** — under `serve --admin`, a new button + `POST /api/import` lets you
+  paste or upload a CSV and bulk-add titles (optionally enriched online), with the site rebuilt in
+  place. Same importer as the CLI: only `title` is required.
 
 ### Changed
+- **Filters are now media-type-aware** — the Format / Genre / Studio·Label / Language dropdowns
+  narrow to the active 🎬 Movies or 🎵 Music tab (and show everything under *All*), so you no longer
+  see movie-only formats while browsing music.
 - Rebrand across package, CLI (`mediahound`), JS data global, `localStorage` keys, branding and docs.
 - Default site title/subtitle are media-generic.
 
