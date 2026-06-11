@@ -130,6 +130,23 @@
         else alert("Rebuild failed: " + ((r && r.error) || "unknown"));
       }).catch((e) => alert("Rebuild failed: " + e));
   }
+  function doPublish(token) {
+    const el = $("#saveState"); if (el) { el.textContent = "🌐 Publishing…"; el.hidden = false; }
+    fetch("api/publish", { method: "POST", headers: authHeaders(), body: JSON.stringify(token ? { token } : {}) })
+      .then((r) => r.json()).then((r) => {
+        if (el) el.hidden = true;
+        if (r && r.ok) {
+          window.prompt("✓ Published! Copy your shareable link:", r.url);
+        } else if (r && r.need_token) {
+          const t = window.prompt(
+            "Paste a Netlify access token to publish (saved securely in your keychain).\n" +
+            "Get one free at netlify.com → User settings → Applications → New access token:");
+          if (t && t.trim()) doPublish(t.trim());
+        } else {
+          alert("Publish failed: " + ((r && r.error) || "unknown"));
+        }
+      }).catch((e) => { if (el) el.hidden = true; alert("Publish failed: " + e); });
+  }
   function openImport() {
     if (!serverAdmin) {
       alert("Bulk import needs the local admin server.\n\nRun:  mediahound serve --admin\n" +
@@ -607,6 +624,7 @@
     const rb = $("#rebuildBtn"); if (rb) rb.hidden = !live;
     const ib = $("#importBtn"); if (ib) ib.hidden = !live;
     const ab = $("#addPhotosBtn"); if (ab) ab.hidden = !live;
+    const pb = $("#publishBtn"); if (pb) pb.hidden = !(live && !phoneMode);   // publish uses your Netlify token — local only
     if (live) {
       $("#adminBadge").textContent = "● ADMIN — saving to disk";
       const ex = $("#exportChanges"); if (ex) ex.title = "Optional — your edits are already saved to data/ by the server";
@@ -816,6 +834,7 @@
     });
     // Add photos (upload + drag-drop)
     if ($("#addPhotosBtn")) $("#addPhotosBtn").onclick = openUpload;
+    if ($("#publishBtn")) $("#publishBtn").onclick = () => doPublish();
     if ($("#uploadGo")) $("#uploadGo").onclick = doUpload;
     if ($("#uploadFiles")) $("#uploadFiles").addEventListener("change", (e) => addUploadFiles(e.target.files));
     const dz = $("#dropZone");

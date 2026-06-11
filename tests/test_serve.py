@@ -188,6 +188,22 @@ def test_api_keys_refused_over_phone_lan(tmp_path, mem_keyring):
     assert code == 403
 
 
+def test_publish_needs_token_when_none_set(served_site, mem_keyring):
+    base, cfg = served_site
+    status, body = _post(base + "/api/publish", {}, origin=base)
+    assert status == 200 and body["ok"] is False and body["need_token"] is True
+
+
+def test_publish_with_token_deploys(served_site, mem_keyring, monkeypatch):
+    from mediahound import publish
+    monkeypatch.setattr(publish, "deploy", lambda cfg, token, log=None: "https://demo.netlify.app")
+    base, cfg = served_site
+    status, body = _post(base + "/api/publish", {"token": "tok-xyz"}, origin=base)
+    assert status == 200 and body["ok"] is True and body["url"] == "https://demo.netlify.app"
+    from mediahound import keystore
+    assert keystore.get_key("NETLIFY_AUTH_TOKEN") == "tok-xyz"   # token saved to keychain
+
+
 def test_phone_mode_prints_qr_and_token_gates_writes(tmp_path):
     import re
     site = tmp_path / "site"

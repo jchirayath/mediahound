@@ -171,6 +171,11 @@ class _Handler(SimpleHTTPRequestHandler):
                 return self._send_json(
                     {"ok": False, "error": "API keys can only be set on the computer running MediaHound"}, 403)
             return self._set_keys()
+        if route == "/api/publish":
+            if self.token:                     # publishing uses your Netlify token — localhost only
+                return self._send_json(
+                    {"ok": False, "error": "Publish from the computer running MediaHound"}, 403)
+            return self._publish()
         return self._send_json({"ok": False, "error": "unknown endpoint"}, 404)
 
     # -- handlers ---------------------------------------------------------
@@ -288,6 +293,26 @@ class _Handler(SimpleHTTPRequestHandler):
         else:
             self.log_fn("  API key save requested but the keychain backend is unavailable")
         return self._send_json({"ok": bool(changed), "changed": changed, "keys": keystore.status()})
+
+    def _publish(self):
+        """Deploy the generated site to Netlify and return its public URL."""
+        from . import keystore
+        body = self._read_json_body() or {}
+        token = (body.get("token") or "").strip()
+        if token:                              # a token sent from the UI → save it for next time
+            keystore.set_key("NETLIFY_AUTH_TOKEN", token)
+        token = token or keystore.get_key("NETLIFY_AUTH_TOKEN")
+        if not token:
+            return self._send_json({"ok": False, "need_token": True,
+                                    "error": "A Netlify access token is required to publish."}, 200)
+        try:
+            from . import publish
+            url = publish.deploy(self.cfg, token, log=self.log_fn)
+            self.log_fn(f"  published → {url}")
+            return self._send_json({"ok": True, "url": url})
+        except Exception as exc:               # noqa: BLE001 - report to the client
+            self.log_fn(f"  publish failed: {exc}")
+            return self._send_json({"ok": False, "error": str(exc)}, 502)
 
 
 def make_handler(cfg: Config, admin: bool, origins: set, log_fn, token: str | None = None):
