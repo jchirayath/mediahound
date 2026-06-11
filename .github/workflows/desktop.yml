@@ -1,0 +1,55 @@
+name: Build desktop app
+
+# Builds the double-clickable MediaHound app for macOS and Windows with PyInstaller.
+# Runs on demand, or attaches zipped builds to a published GitHub Release.
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            artifact: MediaHound-macOS
+          - os: windows-latest
+            artifact: MediaHound-Windows
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install + build
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[desktop,build]"
+          pyinstaller --noconfirm --clean packaging/mediahound.spec
+
+      - name: Zip the build
+        shell: bash
+        run: |
+          cd dist
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            ditto -c -k --sequesterRsrc --keepParent "MediaHound.app" "../${{ matrix.artifact }}.zip"
+          else
+            7z a "../${{ matrix.artifact }}.zip" "MediaHound" >/dev/null
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.zip
+
+      - name: Attach to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.artifact }}.zip

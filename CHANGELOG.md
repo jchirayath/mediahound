@@ -19,6 +19,10 @@ All notable changes to this project are documented here. The format is based on
   “Take Photo / Photo Library”). Uploads are **token-gated** — a secret baked into the QR link is
   required on every write — so only the device that scanned can edit; nothing leaves your network.
   Adds a small `qrcode` dependency.
+- **Desktop app** — `mediahound gui` opens the editor in a **native window** (`pywebview`, with a
+  browser fallback). A PyInstaller spec + `packaging/build-desktop.sh` + a `desktop.yml` workflow build
+  a **double-clickable macOS `.app` / Windows `.exe`** (attached to releases), so non-technical users
+  never touch Python or a terminal. The app keeps its library in `~/MediaHound Library`.
 
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 
