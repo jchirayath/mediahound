@@ -87,13 +87,14 @@ def test_media_type_move_movie_to_music_clears_movie_fields(tmp_path):
     cfg = _cfg(tmp_path)
     store = Store(cfg.output_dir / "data")
     store.upsert_movie({"id": "m1", "media_type": "movie", "title": "Live Concert",
-                        "director": "X", "actors": ["Y"], "studio": "Z",
+                        "format": "DVD", "director": "X", "actors": ["Y"], "studio": "Z",
                         "streaming": {"providers": []}, "images": ["x"]})
     store.corrections = {"m1": {"media_type": "music", "artist": "The Band"}}
     pipeline._apply_corrections(cfg, store, lambda *_: None, online=False)
     m = store.find_movie("m1")
     assert m["media_type"] == "music"
     assert m["artist"] == "The Band"
+    assert m["format"] == "CD"                      # DVD is invalid for music → normalised
     for gone in ("director", "actors", "studio", "streaming"):
         assert gone not in m                       # movie-only fields cleared
 
