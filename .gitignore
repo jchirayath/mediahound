@@ -1,7 +1,12 @@
 # Secrets & local config
+# (gitignore has no inline comments — keep patterns and comments on separate lines)
 .env
 */.env
-config.toml          # real instance config (use config.example.toml as the template)
+# PyPI token etc. — secrets live in ~/.pypirc (chmod 600), never in the repo
+env.json
+.pypirc
+# real instance config (use config.example.toml as the template)
+config.toml
 
 # Generated catalog output (a user's personal data — never committed to the tool repo)
 RawImages/
