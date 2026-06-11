@@ -14,6 +14,11 @@ All notable changes to this project are documented here. The format is based on
   `RawImages/video` or `RawImages/audio`, and catalogued on rebuild. Localhost-only, same-origin-guarded.
 - **First-run welcome screen** — an empty catalog now shows a friendly “add your first photos” card
   instead of a blank grid.
+- **`mediahound app --phone`** — add photos **from your phone**: opens the editor to your local
+  network and prints a **QR code** to scan. Capture is the same Add-photos flow (mobile browsers offer
+  “Take Photo / Photo Library”). Uploads are **token-gated** — a secret baked into the QR link is
+  required on every write — so only the device that scanned can edit; nothing leaves your network.
+  Adds a small `qrcode` dependency.
 
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 

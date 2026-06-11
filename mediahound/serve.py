@@ -14,6 +14,7 @@ endpoint — never expose it on a public interface.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import threading
 import webbrowser
@@ -25,6 +26,35 @@ from .config import Config
 
 _MAX_BODY = 8 * 1024 * 1024         # 8 MB cap on a JSON write payload
 _MAX_UPLOAD = 40 * 1024 * 1024      # 40 MB cap for a single photo upload (base64-inflated)
+
+
+def _lan_ip() -> str:
+    """Best-effort local-network IP (for phone mode). Never sends traffic."""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))            # picks the right interface; no packets sent
+        return s.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        s.close()
+
+
+def _print_qr(url: str, log) -> None:
+    """Print a scannable QR for `url` to the terminal (falls back to the URL alone)."""
+    try:
+        import io
+
+        import qrcode
+        qr = qrcode.QRCode(border=1)
+        qr.add_data(url)
+        qr.make(fit=True)
+        buf = io.StringIO()
+        qr.print_ascii(out=buf, invert=True)
+        log(buf.getvalue())
+    except Exception:                          # noqa: BLE001 - qrcode optional
+        log("  (install the `qrcode` package to show a scannable code)")
 
 
 def _merge(existing: dict, patch: dict) -> dict:
@@ -43,6 +73,7 @@ class _Handler(SimpleHTTPRequestHandler):
     admin: bool = False
     cfg: Config = None
     allowed_origins: set = frozenset()
+    token: str | None = None          # phone mode: a shared secret required on every write
     log_fn = staticmethod(lambda *_: None)
 
     # -- helpers ----------------------------------------------------------
@@ -60,6 +91,14 @@ class _Handler(SimpleHTTPRequestHandler):
         if origin is None:           # non-browser client (curl) or same-origin GET
             return True
         return origin in self.allowed_origins
+
+    def _token_ok(self) -> bool:
+        # No token configured (localhost-only mode) → the loopback bind is the protection.
+        # Token configured (phone/LAN mode) → require it on every write (constant-time compare).
+        if not self.token:
+            return True
+        given = self.headers.get("X-MediaHound-Token") or ""
+        return hmac.compare_digest(given, self.token)
 
     def _read_json_body(self, max_bytes: int = _MAX_BODY):
         n = int(self.headers.get("Content-Length") or 0)
@@ -105,6 +144,8 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._send_json({"ok": False, "error": "not found"}, 404)
         if not self._origin_ok():
             return self._send_json({"ok": False, "error": "cross-origin write refused"}, 403)
+        if not self._token_ok():
+            return self._send_json({"ok": False, "error": "missing or invalid access token"}, 403)
 
         if route == "/api/corrections":
             return self._merge_file("corrections.json", "corrections")
@@ -220,35 +261,53 @@ class _Handler(SimpleHTTPRequestHandler):
         return self._send_json({"ok": True, "saved": target.name, "media_type": media_type})
 
 
-def make_handler(cfg: Config, admin: bool, origins: set, log_fn):
+def make_handler(cfg: Config, admin: bool, origins: set, log_fn, token: str | None = None):
     return type("MediaHoundHandler", (_Handler,), {
         "admin": admin, "cfg": cfg, "allowed_origins": frozenset(origins),
-        "log_fn": staticmethod(log_fn),
+        "token": token, "log_fn": staticmethod(log_fn),
     })
 
 
-def serve(cfg: Config, host: str = "127.0.0.1", port: int = 8765,
-          admin: bool = False, open_browser: bool = True, log=print) -> int:
+def serve(cfg: Config, host: str = "127.0.0.1", port: int = 8765, admin: bool = False,
+          open_browser: bool = True, log=print, phone: bool = False) -> int:
+    """Serve the site. `phone=True` enables LAN access for uploading from a phone:
+    binds to all interfaces, prints a QR code, and **token-gates every write** so only the
+    device that scanned the code can edit."""
     site = cfg.output_dir.resolve()
     if not (site / "index.html").is_file():
         log(f"No index.html in {site} — run `mediahound build` first.")
         return 2
 
-    origins = {f"http://{host}:{port}", f"http://localhost:{port}", f"http://127.0.0.1:{port}"}
-    handler = partial(make_handler(cfg, admin, origins, log), directory=str(site))
+    token = None
+    lan = _lan_ip()
+    if phone:
+        import secrets
+        host = "0.0.0.0"                       # noqa: S104 - intentional LAN bind for phone mode
+        token = secrets.token_urlsafe(16)
+
+    origins = {f"http://{host}:{port}", f"http://localhost:{port}", f"http://127.0.0.1:{port}",
+               f"http://{lan}:{port}"}
+    handler = partial(make_handler(cfg, admin, origins, log, token), directory=str(site))
     httpd = ThreadingHTTPServer((host, port), handler)
 
-    url = f"http://{host}:{port}/"
+    local_url = f"http://127.0.0.1:{port}/" + (f"?t={token}" if token else "")
     mode = "ADMIN (edits save straight to data/)" if admin else "read-only preview"
     log(f"MediaHound serving {site}")
-    log(f"  → {url}   [{mode}]")
-    if admin:
-        log("  Admin writes are localhost-only. Unlock the portal with your admin password,")
-        log("  then your title/format/delete/seen edits persist to data/ automatically and")
-        log("  survive every future `mediahound build`.")
+    log(f"  → http://127.0.0.1:{port}/   [{mode}]")
+    if phone:
+        phone_url = f"http://{lan}:{port}/?t={token}"
+        log("")
+        log("  📱 PHONE MODE — scan this with your phone (same Wi-Fi) to add photos from it:")
+        log("")
+        _print_qr(phone_url, log)
+        log(f"     {phone_url}")
+        log("  ⚠️  This opens the editor to your local network. Only share the code with people")
+        log("     you trust, and only on a trusted Wi-Fi. The token protects edits; stop with Ctrl+C.")
+    elif admin:
+        log("  Admin writes are localhost-only; edits persist to data/ and survive every rebuild.")
     log("  Press Ctrl+C to stop.")
     if open_browser:
-        threading.Timer(0.4, lambda: webbrowser.open(url)).start()
+        threading.Timer(0.4, lambda: webbrowser.open(local_url)).start()
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

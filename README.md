@@ -69,6 +69,16 @@ mediahound app          # sets up a library and opens the editor in your browser
 **➕ Add photos** to **drag-and-drop** your cover pics — they're saved and identified automatically.
 No config files, no separate build/serve commands. Everything stays on your computer.
 
+**Snap covers on your phone:**
+
+```bash
+mediahound app --phone   # opens to your Wi-Fi and prints a QR code
+```
+
+Scan the QR with your phone (on the same Wi-Fi), tap **➕ Add photos → Take Photo**, and they upload
+straight into your catalog. Uploads are **token-protected** (only the phone that scanned the code can
+add photos) and nothing leaves your network — use it on a network you trust.
+
 ### The CLI way (more control)
 
 ```bash
