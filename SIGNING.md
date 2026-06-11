@@ -38,6 +38,11 @@ export APPLE_ID="you@example.com" APPLE_TEAM_ID="XXXXXXXXXX" APPLE_APP_PASSWORD=
 bundle exec fastlane mac sign
 ```
 
+**Using an App Store Connect API key instead of an app-specific password** (recommended — it's what
+the poker_manager setup uses): set `ASC_KEY_ID`, `ASC_ISSUER_ID` and `ASC_KEY_FILE` (path to your
+`AuthKey_*.p8`). The lane auto-detects these and notarizes with the key. In CI, provide the key as a
+base64 secret `ASC_KEY_P8_BASE64` (plus `ASC_KEY_ID`/`ASC_ISSUER_ID`) and the workflow writes it out.
+
 Already keep a **Fastlane `match`** repo? Set `MATCH_GIT_URL` and the lane fetches the Developer ID
 cert with `match(type: "developer_id")` instead of needing it pre-installed in the keychain.
 

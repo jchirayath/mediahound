@@ -10,9 +10,10 @@
 #
 # Required env (see ../SIGNING.md):
 #   MAC_SIGN_IDENTITY   "Developer ID Application: Your Name (TEAMID)"
-#   APPLE_ID            your Apple ID email
-#   APPLE_TEAM_ID       your 10-char Team ID
-#   APPLE_APP_PASSWORD  an app-specific password (appleid.apple.com → Sign-In & Security)
+# Notarization auth — EITHER an App Store Connect API key (recommended):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_FILE (path to AuthKey_*.p8)
+# OR an Apple ID + app-specific password:
+#   APPLE_ID, APPLE_TEAM_ID, APPLE_APP_PASSWORD
 # Optional:
 #   MATCH_GIT_URL       if set, the Developer ID cert is fetched with `match` (your existing repo)
 
@@ -38,13 +39,19 @@ platform :mac do
        "--sign #{identity.shellescape} #{app.shellescape}")
 
     UI.message("Notarizing (this can take a few minutes) …")
-    notarize(
-      package: app,
-      bundle_id: "com.chirayath.mediahound",
-      username: ENV["APPLE_ID"],
-      asc_provider: ENV["APPLE_TEAM_ID"],   # notarytool team id
-      print_log: true,
-    )
+    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"]
+      # App Store Connect API key (recommended — no app-specific password needed)
+      api_key = app_store_connect_api_key(
+        key_id: ENV["ASC_KEY_ID"],
+        issuer_id: ENV["ASC_ISSUER_ID"],
+        key_filepath: ENV["ASC_KEY_FILE"] || File.join(__dir__, "AuthKey.p8"),
+      )
+      notarize(package: app, bundle_id: "com.chirayath.mediahound", api_key: api_key, print_log: true)
+    else
+      # fallback: Apple ID + app-specific password
+      notarize(package: app, bundle_id: "com.chirayath.mediahound",
+               username: ENV["APPLE_ID"], asc_provider: ENV["APPLE_TEAM_ID"], print_log: true)
+    end
 
     sh("xcrun stapler staple #{app.shellescape}")
     UI.success("✅ Signed + notarized: #{app}")
