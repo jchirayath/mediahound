@@ -20,6 +20,11 @@ Cover Art Archive** (open, zero-key) with keyless Spotify / Apple Music / YouTub
 
 **▶ [Live demo](https://jchirayath.github.io/mediahound/)** — explore a sample catalog in your browser (admin password: `changeme`).
 
+**🖥️ Download the desktop app — no Python, no terminal:**
+&nbsp; **[⬇ macOS](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-macOS.zip)**
+&nbsp; **[⬇ Windows](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-Windows.zip)**
+&nbsp; — unzip and open. *(Or `pip install mediahound` — see below.)*
+
 [![MediaHound screenshot](docs/screenshot.jpg)](https://jchirayath.github.io/mediahound/)
 
 > ℹ️ The demo shows **real movie posters and album covers** (hotlinked from IMDb/OMDb and Cover Art
@@ -83,10 +88,12 @@ add photos) and nothing leaves your network — use it on a network you trust.
 
 Prefer to double-click an icon? A native app opens the editor in its own window:
 
-- **Download:** grab `MediaHound-macOS.zip` / `MediaHound-Windows.zip` from the
-  [Releases](https://github.com/jchirayath/mediahound/releases) page, unzip, and open it. *(Unsigned
-  builds show a Gatekeeper/SmartScreen prompt the first time — right-click → **Open** on macOS, or
-  **More info → Run anyway** on Windows.)* To ship builds that open with no warning, see [SIGNING.md](SIGNING.md).
+- **Download:** **[⬇ macOS (.app)](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-macOS.zip)**
+  · **[⬇ Windows (.exe)](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-Windows.zip)**
+  — or pick a specific version on the [Releases](https://github.com/jchirayath/mediahound/releases)
+  page. Unzip, and open. *(Unsigned builds show a Gatekeeper/SmartScreen prompt the first time —
+  right-click → **Open** on macOS, or **More info → Run anyway** on Windows.)* To ship builds that
+  open with no warning, see [SIGNING.md](SIGNING.md).
 - **Or, if you've got Python:** `pip install "mediahound[desktop]"` then `mediahound gui` opens the
   same native window. (Without the `[desktop]` extra it falls back to opening your browser.)
 - **Build it yourself:** `bash packaging/build-desktop.sh` (uses PyInstaller; build on the OS you
