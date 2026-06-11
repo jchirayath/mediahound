@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added — easier for non-technical users
+- **`mediahound app`** — one command that sets up a library (if needed) and opens the editor in the
+  browser. No config files, no separate `build`/`serve` steps to remember.
+- **➕ Add photos (admin screen)** — **drag-and-drop** cover photos straight into the catalog
+  (`POST /api/upload`): each photo is validated (must be a real image), filename-sanitised, saved into
+  `RawImages/video` or `RawImages/audio`, and catalogued on rebuild. Localhost-only, same-origin-guarded.
+- **First-run welcome screen** — an empty catalog now shows a friendly “add your first photos” card
+  instead of a blank grid.
+
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 
 Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog

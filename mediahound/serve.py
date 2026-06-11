@@ -23,7 +23,8 @@ from pathlib import Path
 
 from .config import Config
 
-_MAX_BODY = 8 * 1024 * 1024  # 8 MB cap on a write payload
+_MAX_BODY = 8 * 1024 * 1024         # 8 MB cap on a JSON write payload
+_MAX_UPLOAD = 40 * 1024 * 1024      # 40 MB cap for a single photo upload (base64-inflated)
 
 
 def _merge(existing: dict, patch: dict) -> dict:
@@ -60,9 +61,9 @@ class _Handler(SimpleHTTPRequestHandler):
             return True
         return origin in self.allowed_origins
 
-    def _read_json_body(self):
+    def _read_json_body(self, max_bytes: int = _MAX_BODY):
         n = int(self.headers.get("Content-Length") or 0)
-        if n <= 0 or n > _MAX_BODY:
+        if n <= 0 or n > max_bytes:
             return None
         try:
             return json.loads(self.rfile.read(n).decode("utf-8"))
@@ -115,6 +116,8 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._rebuild()
         if route == "/api/import":
             return self._import()
+        if route == "/api/upload":
+            return self._upload()
         return self._send_json({"ok": False, "error": "unknown endpoint"}, 404)
 
     # -- handlers ---------------------------------------------------------
@@ -174,6 +177,47 @@ class _Handler(SimpleHTTPRequestHandler):
                     os.remove(tmp)
                 except OSError:
                     pass
+
+    def _upload(self):
+        """Save one dropped cover photo into RawImages/<video|audio>. The client uploads
+        files one at a time (base64), then calls /api/rebuild to catalog them."""
+        import base64
+        import io
+        import os
+        import re
+
+        from .store import IMAGE_EXTS
+        body = self._read_json_body(max_bytes=_MAX_UPLOAD)
+        if not isinstance(body, dict) or not isinstance(body.get("data"), str):
+            return self._send_json({"ok": False, "error": "expected {filename, media_type, data}"}, 400)
+        media_type = "music" if body.get("media_type") == "music" else "movie"
+        sub = "audio" if media_type == "music" else "video"
+        # sanitise the filename → a safe basename with an image extension
+        raw_name = os.path.basename(str(body.get("filename") or "photo.jpg")).strip()
+        stem, ext = os.path.splitext(raw_name)
+        stem = re.sub(r"[^A-Za-z0-9._-]", "_", stem) or "photo"
+        if ext.lower() not in IMAGE_EXTS:
+            return self._send_json({"ok": False, "error": f"unsupported file type: {ext!r}"}, 400)
+        try:
+            blob = base64.b64decode(body["data"], validate=True)
+        except Exception:                              # noqa: BLE001
+            return self._send_json({"ok": False, "error": "bad base64 data"}, 400)
+        # verify it's a real image before writing anything to disk
+        try:
+            from PIL import Image
+            Image.open(io.BytesIO(blob)).verify()
+        except Exception:                              # noqa: BLE001
+            return self._send_json({"ok": False, "error": "not a valid image"}, 400)
+        dest_dir = (self.cfg.input_dir / sub)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        target = dest_dir / f"{stem}{ext.lower()}"
+        i = 1
+        while target.exists():                         # never clobber an existing photo
+            target = dest_dir / f"{stem}-{i}{ext.lower()}"
+            i += 1
+        target.write_bytes(blob)
+        self.log_fn(f"  uploaded {target.name} → RawImages/{sub}/")
+        return self._send_json({"ok": True, "saved": target.name, "media_type": media_type})
 
 
 def make_handler(cfg: Config, admin: bool, origins: set, log_fn):

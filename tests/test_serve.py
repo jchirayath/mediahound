@@ -105,6 +105,46 @@ def test_import_title_only_csv(served_site):
     assert status == 200 and body["added"] == 1     # only a `title` column → still works
 
 
+def _png_b64():
+    import base64
+    import io
+
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new("RGB", (40, 50), (90, 60, 120)).save(buf, "PNG")
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def test_upload_saves_photo_into_rawimages(served_site):
+    base, cfg = served_site
+    status, body = _post(base + "/api/upload",
+                         {"filename": "My Cover! .png", "media_type": "music", "data": _png_b64()},
+                         origin=base)
+    assert status == 200 and body["ok"] is True
+    saved = cfg.input_dir / "audio" / body["saved"]
+    assert saved.is_file()                              # landed in RawImages/audio/
+    assert " " not in body["saved"] and "!" not in body["saved"]   # filename sanitised
+
+
+def test_upload_rejects_non_image(served_site):
+    import base64
+    base, cfg = served_site
+    status, body = _post(base + "/api/upload",
+                         {"filename": "x.png", "media_type": "movie",
+                          "data": base64.b64encode(b"not an image").decode()},
+                         origin=base)
+    assert status == 400 and body["ok"] is False
+    assert not list((cfg.input_dir / "video").glob("*"))   # nothing written
+
+
+def test_upload_cross_origin_refused(served_site):
+    base, cfg = served_site
+    status, body = _post(base + "/api/upload",
+                         {"filename": "x.png", "media_type": "movie", "data": _png_b64()},
+                         origin="http://evil.example")
+    assert status == 403 and body["ok"] is False
+
+
 def test_serve_without_admin_has_no_write_api(tmp_path):
     site = tmp_path / "site"
     assert cli.main(["init", str(site)]) == 0

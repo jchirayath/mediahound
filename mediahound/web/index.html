@@ -69,6 +69,7 @@
         </span>
         <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
         <span id="saveState" class="save-state" hidden></span>
+        <button id="addPhotosBtn" class="btn-ghost admin-only" type="button" hidden title="Add cover photos to your catalog">➕ Add photos</button>
         <button id="importBtn" class="btn-ghost admin-only" type="button" hidden title="Bulk-add titles from a CSV list">⬆ Import list</button>
         <button id="rebuildBtn" class="btn-ghost admin-only" type="button" hidden title="Re-bake the catalog from your saved edits and reload">↻ Rebuild</button>
         <button id="exportChanges" class="btn-ghost admin-only" type="button" hidden>Export changes</button>
@@ -175,6 +176,31 @@
       <p class="dialog-sub" id="importNote" hidden></p>
       <div class="dialog-actions">
         <button class="btn btn-primary" id="importGo">Import</button>
+        <button class="btn" data-close>Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add cover photos (needs `mediahound serve --admin`) -->
+  <div class="dialog" id="uploadDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card dialog-wide">
+      <h2>Add cover photos</h2>
+      <p class="dialog-sub">Drop in photos of your covers (or choose files). They're added to your
+        collection and identified automatically.</p>
+      <div class="settings-row" style="align-items:center;gap:18px">
+        <span>These are:</span>
+        <label class="ie-check"><input type="radio" name="upType" value="movie" checked /> 🎬 Movies (DVD/VHS/Blu-ray)</label>
+        <label class="ie-check"><input type="radio" name="upType" value="music" /> 🎵 Music (CD/vinyl/cassette)</label>
+      </div>
+      <label id="dropZone" class="dropzone">
+        <input type="file" id="uploadFiles" accept="image/*" multiple hidden />
+        <span class="dz-text">📸 Drag photos here, or <u>click to choose</u></span>
+        <span class="dz-list" id="uploadList"></span>
+      </label>
+      <p class="dialog-sub" id="uploadNote" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" id="uploadGo" disabled>Add to catalog</button>
         <button class="btn" data-close>Cancel</button>
       </div>
     </div>

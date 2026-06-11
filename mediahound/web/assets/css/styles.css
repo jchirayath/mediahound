@@ -415,3 +415,21 @@ body.server-admin #exportChanges, body.server-admin #exportSeen { opacity: .6; }
 #importCsv { width: 100%; box-sizing: border-box; font-family: ui-monospace, Menlo, monospace;
   font-size: .82rem; margin-top: 10px; padding: 10px; border: 1px solid #cfd6e0; border-radius: 8px; resize: vertical; }
 #importNote { margin-top: 8px; }
+
+/* Add-photos dropzone */
+.dropzone { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;
+  margin-top:12px; padding:34px 18px; border:2px dashed #c3ccd8; border-radius:12px;
+  background:#f7f9fc; color:#5a6675; cursor:pointer; text-align:center; transition:.15s; }
+.dropzone:hover, .dropzone.drag { border-color:#3a86ff; background:#eef4ff; color:#26425f; }
+.dropzone .dz-text { font-size:.95rem; }
+.dropzone .dz-list { font-size:.82rem; color:#3a86ff; min-height:1em; }
+
+/* First-run welcome */
+.welcome { display:flex; justify-content:center; padding:36px 16px; }
+.welcome-card { max-width:560px; text-align:center; color:#1f2937; background:#fff; border:1px solid #e7ecf3;
+  border-radius:16px; padding:40px 32px; box-shadow:0 8px 30px rgba(20,40,80,.06); }
+.welcome-emoji { font-size:2.6rem; }
+.welcome-card h2 { margin:.4em 0 .3em; color:#111827; }
+.welcome-card p { color:#5a6675; margin:.2em 0 1.1em; }
+.welcome-hint { font-size:.9rem; }
+.welcome-hint code { background:#f1f4f8; padding:2px 6px; border-radius:5px; }

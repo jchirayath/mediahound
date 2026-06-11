@@ -51,7 +51,7 @@
     wire();
     applyAdminUI();
     render();
-    pingServer().then(() => applyAdminUI());   // detect `serve --admin` → enable auto-save UI
+    pingServer().then(() => { applyAdminUI(); if (!movies.length) render(); });   // detect `serve --admin`; refresh welcome CTA
   }).catch((e) => { $("#loading").innerHTML = "<p>Couldn't load the collection.</p>"; console.error(e); });
 
   // ---- helpers ------------------------------------------------------------
@@ -130,6 +130,71 @@
         if (r && r.ok) { note.textContent = `✓ Added ${r.added}${r.enriched ? `, enriched ${r.enriched}` : ""} — reloading`; location.reload(); }
         else { note.textContent = "Import failed: " + ((r && r.error) || "unknown"); }
       }).catch((e) => { note.textContent = "Import failed: " + e; });
+  }
+
+  // ---- Add photos (drag-and-drop upload) ----------------------------------
+  let uploadFiles = [];
+  function openUpload() {
+    if (!serverAdmin) {
+      alert("Adding photos needs the local app.\n\nStart it with:  mediahound app\n(or  mediahound serve --admin)");
+      return;
+    }
+    uploadFiles = []; renderUploadList();
+    $("#uploadNote").hidden = true; $("#uploadDialog").hidden = false;
+  }
+  function addUploadFiles(list) {
+    for (const f of list) if (f.type.startsWith("image/")) uploadFiles.push(f);
+    renderUploadList();
+  }
+  function renderUploadList() {
+    $("#uploadList").textContent = uploadFiles.length ? `${uploadFiles.length} photo(s) ready` : "";
+    $("#uploadGo").disabled = uploadFiles.length === 0;
+  }
+  function fileToBase64(file) {
+    return new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res(String(r.result).split(",", 2)[1]);   // strip the data: prefix
+      r.onerror = rej; r.readAsDataURL(file);
+    });
+  }
+  async function doUpload() {
+    const note = $("#uploadNote"); note.hidden = false;
+    const type = (document.querySelector('input[name="upType"]:checked') || {}).value || "movie";
+    $("#uploadGo").disabled = true;
+    let ok = 0;
+    for (let i = 0; i < uploadFiles.length; i++) {
+      const f = uploadFiles[i];
+      note.textContent = `Uploading ${i + 1} / ${uploadFiles.length}…`;
+      try {
+        const data = await fileToBase64(f);
+        const r = await fetch("api/upload", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename: f.name, media_type: type, data }) }).then((x) => x.json());
+        if (r && r.ok) ok++;
+      } catch (e) { /* keep going */ }
+    }
+    note.textContent = `Cataloguing ${ok} photo(s)… this can take a moment.`;
+    fetch("api/rebuild", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+      .then((r) => r.json()).then(() => location.reload())
+      .catch(() => location.reload());
+  }
+
+  // ---- first-run welcome (empty catalog) ----------------------------------
+  function showWelcome() {
+    $("#loading").hidden = true; $("#empty").hidden = true; $("#grid").innerHTML = "";
+    $("#mediaTabs").hidden = true;
+    let w = $("#welcome");
+    if (!w) { w = document.createElement("div"); w.id = "welcome"; w.className = "welcome";
+      document.querySelector("main.wrap").prepend(w); }
+    w.innerHTML =
+      '<div class="welcome-card"><div class="welcome-emoji">🎬🎵</div>' +
+      "<h2>Your catalog is empty — let's fill it.</h2>" +
+      "<p>Add photos of your DVD, VHS, CD &amp; vinyl covers and MediaHound builds your searchable collection.</p>" +
+      (serverAdmin
+        ? '<button class="btn btn-primary" id="welcomeAdd">➕ Add your first photos</button>'
+        : "<p class=\"welcome-hint\">To add photos, start the app with <code>mediahound app</code>.</p>");
+    w.hidden = false;
+    const add = $("#welcomeAdd");
+    if (add) add.onclick = () => { if (!isAdmin) openLogin(); else openUpload(); };
   }
   function galleryOf(m) {
     const removed = (corrections[m.id] && corrections[m.id].removed_images) || [];
@@ -224,6 +289,9 @@
   }
 
   function render() {
+    // First run: empty catalog → a friendly welcome instead of a bare grid.
+    if (!movies.length) { showWelcome(); return; }
+    $("#welcome") && ($("#welcome").hidden = true);
     // show the 🎬/🎵 switch only when the catalog actually mixes types (recomputed after edits)
     $("#mediaTabs").hidden = new Set(movies.map((m) => m.media_type || "movie")).size < 2;
     const v = currentView();
@@ -517,6 +585,7 @@
     document.body.classList.toggle("server-admin", live);
     const rb = $("#rebuildBtn"); if (rb) rb.hidden = !live;
     const ib = $("#importBtn"); if (ib) ib.hidden = !live;
+    const ab = $("#addPhotosBtn"); if (ab) ab.hidden = !live;
     if (live) {
       $("#adminBadge").textContent = "● ADMIN — saving to disk";
       const ex = $("#exportChanges"); if (ex) ex.title = "Optional — your edits are already saved to data/ by the server";
@@ -688,15 +757,25 @@
       const f = e.target.files[0]; if (!f) return;
       const rd = new FileReader(); rd.onload = () => { $("#importCsv").value = rd.result; }; rd.readAsText(f);
     });
+    // Add photos (upload + drag-drop)
+    if ($("#addPhotosBtn")) $("#addPhotosBtn").onclick = openUpload;
+    if ($("#uploadGo")) $("#uploadGo").onclick = doUpload;
+    if ($("#uploadFiles")) $("#uploadFiles").addEventListener("change", (e) => addUploadFiles(e.target.files));
+    const dz = $("#dropZone");
+    if (dz) {
+      ["dragenter", "dragover"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add("drag"); }));
+      ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
+      dz.addEventListener("drop", (e) => { if (e.dataTransfer && e.dataTransfer.files) addUploadFiles(e.dataTransfer.files); });
+    }
     $("#exportSeen").onclick = exportSeen;
     $("#loginGo").onclick = tryLogin;
     $("#loginPw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
     $("#lbPrev").onclick = () => zoomStep(-1);
     $("#lbNext").onclick = () => zoomStep(1);
     // dialog + lightbox close
-    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; }));
+    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; }));
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; }
+      if (e.key === "Escape") { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; }
       if (zoomState && e.key === "ArrowLeft") zoomStep(-1);
       if (zoomState && e.key === "ArrowRight") zoomStep(1);
     });

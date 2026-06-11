@@ -123,6 +123,24 @@ def cmd_serve(args) -> int:
                            open_browser=not args.no_open)
 
 
+def cmd_app(args) -> int:
+    """One command for non-technical users: set up the folder if needed, then open the editor."""
+    from . import pipeline
+    from . import serve as serve_mod
+    site = Path(args.directory).resolve()
+    config_path = site / "config.toml"
+    if not config_path.is_file():
+        print(f"Setting up a new MediaHound library at {site} …")
+        cmd_init(argparse.Namespace(directory=str(site), force=False))
+        print()
+    cfg = load_config(config_path)
+    # make sure there's a catalog to open (an empty one is fine — the welcome screen guides you)
+    if not (cfg.data_dir / "collection.json").is_file():
+        pipeline.build(cfg, online=False, log=print)
+    return serve_mod.serve(cfg, host=args.host, port=args.port, admin=True,
+                           open_browser=not args.no_open)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mediahound",
                                 description="Catalog a movie & music collection from cover photos or CSV.")
@@ -169,6 +187,16 @@ def main(argv=None) -> int:
                     help="bind address (default 127.0.0.1; admin writes should stay localhost)")
     ps.add_argument("--no-open", action="store_true", help="don't open a browser window")
     ps.set_defaults(func=cmd_serve)
+
+    pa = sub.add_parser("app",
+                        help="the easy button: set up a library (if needed) and open the editor in "
+                             "your browser — no other commands to remember.")
+    pa.add_argument("directory", nargs="?", default="MediaHound-Library",
+                    help="library folder (created if missing; default ./MediaHound-Library)")
+    pa.add_argument("--port", type=int, default=8765, help="port (default 8765)")
+    pa.add_argument("--host", default="127.0.0.1", help="bind address (keep on localhost)")
+    pa.add_argument("--no-open", action="store_true", help="don't open a browser window")
+    pa.set_defaults(func=cmd_app)
 
     args = p.parse_args(argv)
     return args.func(args)
