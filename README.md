@@ -346,4 +346,8 @@ changed without rebuilding + redeploying). API keys stay in a gitignored `.env`;
 hash ships. All rendered data is HTML-escaped and links are scheme-restricted. See
 **[SECURITY.md](SECURITY.md)** for the full threat model and reporting instructions.
 
+**Privacy:** MediaHound is offline-first with **no account and no telemetry** — your photos, catalog,
+and keys stay on your computer; data leaves only when you opt into online metadata, Publish, or phone
+upload. See **[PRIVACY.md](PRIVACY.md)**.
+
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
