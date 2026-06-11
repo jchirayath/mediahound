@@ -15,8 +15,10 @@ import os
 
 _SERVICE = "mediahound"
 
-# The only names that may be stored/loaded — guards against arbitrary keychain writes.
+# Metadata provider keys — these are the ones surfaced in the admin "API keys" panel.
 KEY_NAMES = ("TMDB_API_KEY", "OMDB_API_KEY", "ANTHROPIC_API_KEY")
+# Every name that may be stored at all (publish token included) — guards arbitrary writes.
+_ALLOWED = (*KEY_NAMES, "NETLIFY_AUTH_TOKEN")
 
 
 def _keyring():
@@ -25,7 +27,7 @@ def _keyring():
 
 
 def get_key(name: str) -> str | None:
-    if name not in KEY_NAMES:
+    if name not in _ALLOWED:
         return None
     try:
         return _keyring().get_password(_SERVICE, name)
@@ -35,7 +37,7 @@ def get_key(name: str) -> str | None:
 
 def set_key(name: str, value: str | None) -> bool:
     """Store (or, if value is falsy, delete) a key. Returns True on success."""
-    if name not in KEY_NAMES:
+    if name not in _ALLOWED:
         return False
     try:
         kr = _keyring()

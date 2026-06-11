@@ -7,6 +7,11 @@ All notable changes to this project are documented here. The format is based on
 ## [Unreleased]
 
 ### Added — easier for non-technical users
+- **🌐 One-click Publish** — a Publish button in the admin console deploys your catalog to **Netlify**
+  (free hosting) and hands back a shareable link. Paste a Netlify access token once (saved in the OS
+  keychain); the site id is remembered so the URL stays stable. Only the generated site is uploaded —
+  `RawImages/`, `.env`, `config.toml` and dotfiles are never sent. Localhost-only (uses your token).
+  New `mediahound/publish.py` + `POST /api/publish`.
 - **`mediahound app`** — one command that sets up a library (if needed) and opens the editor in the
   browser. No config files, no separate `build`/`serve` steps to remember.
 - **➕ Add photos (admin screen)** — **drag-and-drop** cover photos straight into the catalog

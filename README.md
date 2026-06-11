@@ -94,6 +94,10 @@ Prefer to double-click an icon? A native app opens the editor in its own window:
 
 The app keeps your library in **`~/MediaHound Library`** and works fully offline.
 
+### Share it — one-click Publish
+
+When your catalog's ready, click **🌐 Publish** in the admin console to deploy it to **Netlify** (free) and get a shareable link. Paste a Netlify access token once (stored in your OS keychain); only the finished site is uploaded — your source photos and config never leave your computer.
+
 ### The CLI way (more control)
 
 ```bash
