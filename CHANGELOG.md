@@ -38,6 +38,11 @@ All notable changes to this project are documented here. The format is based on
 - **Desktop builds can be signed** — `desktop.yml` now runs optional macOS codesign+notarize and
   Windows signtool steps **when the signing secrets are set** (skipped otherwise). See [SIGNING.md](SIGNING.md).
 
+- **Brand & logo** — a distinctive MediaHound mark (a hound whose nose is a play button): SVG
+  icon + light/dark wordmark lockups, a web **favicon**, and macOS `.icns` / Windows `.ico` app
+  icons wired into the desktop build. The portal header and generated sites now carry the mark.
+  Brand kit + palette in [docs/brand/](docs/brand/).
+
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 
 Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog

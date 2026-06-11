@@ -608,8 +608,9 @@
     $("#siteTitle").textContent = t; document.title = t;
     $("#siteSubtitle").textContent = s;
     const bi = $("#brandImg"), bm = $("#brandMark");
-    if (view.site_image) { bi.src = view.site_image; bi.hidden = false; bm.hidden = true; }
-    else { bi.hidden = true; bm.hidden = false; }
+    // user logo if set, else the MediaHound hound mark (never the bare ▶ fallback)
+    bi.src = view.site_image || "assets/img/mediahound-icon.svg";
+    bi.hidden = false; bm.hidden = true;
   }
   function applyAdminUI() {
     document.body.classList.toggle("is-admin", isAdmin);

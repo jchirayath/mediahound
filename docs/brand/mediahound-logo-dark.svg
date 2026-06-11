@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 320" role="img" aria-label="MediaHound">
+  <defs>
+    <linearGradient id="mhBgL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF7A5C"/><stop offset="1" stop-color="#E11D48"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(8,8) scale(0.59)">
+    <rect x="24" y="24" width="464" height="464" rx="112" fill="url(#mhBgL)"/>
+    <path d="M196 168 C112 180 86 276 122 364 C137 399 192 392 210 356 C190 300 196 230 234 196 C223 176 210 166 196 168 Z" fill="#F4E4D9"/>
+    <path d="M316 168 C400 180 426 276 390 364 C375 399 320 392 302 356 C322 300 316 230 278 196 C289 176 302 166 316 168 Z" fill="#F4E4D9"/>
+    <path d="M256 172 C324 172 362 222 362 286 C362 354 314 398 256 398 C198 398 150 354 150 286 C150 222 188 172 256 172 Z" fill="#FFFFFF"/>
+    <circle cx="216" cy="266" r="19" fill="#3A1020"/><circle cx="296" cy="266" r="19" fill="#3A1020"/>
+    <circle cx="222" cy="260" r="6" fill="#FFFFFF"/><circle cx="302" cy="260" r="6" fill="#FFFFFF"/>
+    <ellipse cx="256" cy="338" rx="48" ry="37" fill="#F0D5C9"/>
+    <path d="M243 318 L243 358 L281 338 Z" fill="#E11D48"/>
+  </g>
+  <text x="330" y="205" font-family="'Trebuchet MS','Segoe UI',Helvetica,Arial,sans-serif" font-size="150" font-weight="700" letter-spacing="-3"><tspan fill="#F4E4D9">Media</tspan><tspan fill="#E11D48" fill="#FF6B81">Hound</tspan></text>
+</svg>
