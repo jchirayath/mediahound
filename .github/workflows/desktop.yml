@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  actions: read       # SignPath downloads the unsigned build artifact to sign it
 
 jobs:
   build:
@@ -85,6 +86,50 @@ jobs:
           [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERT_PFX))
           $signtool = (Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" | Select-Object -Last 1).FullName
           & $signtool sign /f $pfx /p $env:WINDOWS_CERT_PASSWORD /tr http://timestamp.digicert.com /td sha256 /fd sha256 "dist\MediaHound\MediaHound.exe"
+
+      # --- Free OSS code-signing via SignPath Foundation (self-skips without a token) ---
+      # Setup: apply at https://signpath.org → create the project, connect this repo as a
+      # trusted build, then add secret SIGNPATH_API_TOKEN + var SIGNPATH_ORGANIZATION_ID.
+      # See SIGNING.md.
+      - name: Check SignPath config
+        if: runner.os == 'Windows'
+        id: signpath
+        shell: bash
+        env:
+          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+        run: |
+          if [ -n "${SIGNPATH_API_TOKEN:-}" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No SignPath token — Windows build stays unsigned."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Upload unsigned exe for SignPath
+        if: runner.os == 'Windows' && steps.signpath.outputs.enabled == 'true'
+        id: unsigned_exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: MediaHound-exe-unsigned
+          path: dist/MediaHound/MediaHound.exe
+
+      - name: Sign with SignPath
+        if: runner.os == 'Windows' && steps.signpath.outputs.enabled == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: mediahound
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          github-artifact-id: ${{ steps.unsigned_exe.outputs.artifact-id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Swap in the SignPath-signed exe
+        if: runner.os == 'Windows' && steps.signpath.outputs.enabled == 'true'
+        shell: bash
+        run: cp signed/MediaHound.exe dist/MediaHound/MediaHound.exe
 
       - name: Zip the build
         shell: bash

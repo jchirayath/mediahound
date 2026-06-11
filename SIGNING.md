@@ -48,20 +48,51 @@ cert with `match(type: "developer_id")` instead of needing it pre-installed in t
 
 ## Windows (Authenticode)
 
-Requires a code-signing certificate (OV/EV) from a CA.
+There's no free *trusted* CA for Windows (no "Let's Encrypt" equivalent). Two supported paths:
+
+### Option 1 — SignPath Foundation (free, for open-source) ⭐ recommended
+
+[SignPath Foundation](https://signpath.org/) provides **free code signing for qualifying open-source
+projects**. The workflow's SignPath steps **self-skip** until you configure it.
+
+One-time setup:
+
+1. Apply for the **Foundation (OSS) plan** at <https://signpath.org/> with this repo.
+2. In SignPath, create:
+   - a **Project** with slug `mediahound` (must match `project-slug` in `desktop.yml`),
+   - an **Artifact configuration** for a single PE file (`MediaHound.exe`),
+   - a **Signing policy** (default slug `release-signing`),
+   - a **Trusted Build System** connection to this GitHub repo (so SignPath verifies the build origin).
+3. In GitHub → Settings:
+   - **Secret** `SIGNPATH_API_TOKEN` (a SignPath CI user token),
+   - **Variable** `SIGNPATH_ORGANIZATION_ID` (your SignPath org id),
+   - *(optional)* **Variable** `SIGNPATH_POLICY_SLUG` if not `release-signing`.
+
+On the next build, the Windows `MediaHound.exe` is uploaded, signed by SignPath, and swapped back in
+before zipping. (The `release-signing` policy may require a one-click approval in SignPath per build;
+use a `test-signing` policy for fully automatic signing while you set things up.)
+
+> SignPath gives you a *real* certificate, so "Unknown publisher" goes away. Windows SmartScreen
+> *download* reputation can still take a little while to fully clear, but a genuine signature builds it
+> far faster (and per-publisher).
+
+### Option 2 — Your own certificate (`signtool`)
+
+If you buy a cert from a CA (OV ~$200-400/yr, or **Azure Trusted Signing** ~$10/mo):
 
 | Secret | What it is |
 | --- | --- |
 | `WINDOWS_CERT_PFX` | Your code-signing cert exported as `.pfx`, **base64-encoded**. |
 | `WINDOWS_CERT_PASSWORD` | The `.pfx` password. |
 
-The workflow signs `MediaHound.exe` with `signtool` (SHA-256, RFC-3161 timestamp). Note: a brand-new
-OV certificate still accrues SmartScreen reputation over time; an **EV** certificate clears SmartScreen
-immediately.
+The workflow signs `MediaHound.exe` with `signtool` (SHA-256, RFC-3161 timestamp). An **EV** cert (or
+Azure Trusted Signing) clears SmartScreen immediately; a new OV cert accrues reputation over time.
+*(EV certs now require a hardware token / cloud HSM, which doesn't fit the `.pfx`-in-CI flow — prefer
+SignPath or Azure Trusted Signing for hands-off CI.)*
 
 ## Verifying
 
 - macOS: `spctl -a -vvv -t install MediaHound.app` should say *accepted / Notarized Developer ID*.
-- Windows: right-click `MediaHound.exe` → Properties → **Digital Signatures**.
+- Windows: right-click `MediaHound.exe` → Properties → **Digital Signatures** (shows the SignPath/your publisher).
 
 Keep all of these in GitHub Secrets only — never commit certificates or passwords to the repo.
