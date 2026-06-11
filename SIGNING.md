@@ -7,7 +7,12 @@ To ship builds that open with **no warning**, add the signing secrets below to t
 (**Settings → Secrets and variables → Actions**). The workflow signs automatically when they're
 present and silently skips signing when they're not — so nothing breaks if you only set up one OS.
 
-## macOS (Developer ID + notarization)
+## macOS (Developer ID + notarization, via Fastlane)
+
+> MediaHound's desktop app is a **macOS** app (no iOS target). It's distributed **outside the App
+> Store**, so it needs a **Developer ID Application** certificate (not an App Store / iOS cert) — no
+> new app record in App Store Connect is required. Signing is done with **Fastlane**
+> ([`fastlane/Fastfile`](fastlane/Fastfile)), reusing your existing Apple Developer account.
 
 Requires an Apple Developer account ($99/yr) and a **Developer ID Application** certificate.
 
@@ -20,9 +25,21 @@ Requires an Apple Developer account ($99/yr) and a **Developer ID Application** 
 | `APPLE_TEAM_ID` | Your 10-character Apple Team ID. |
 | `APPLE_APP_PASSWORD` | An **app-specific password** for that Apple ID (appleid.apple.com → Sign-In and Security). |
 
-The workflow imports the cert into a temporary keychain, `codesign`s `MediaHound.app` with the
-hardened runtime, submits it to Apple's notary service (`notarytool … --wait`), and staples the
-ticket.
+**In CI:** `desktop.yml` imports the cert into a temporary keychain, then runs
+`bundle exec fastlane mac sign`, which `codesign`s `MediaHound.app` with the hardened runtime,
+notarizes it (`notarize` action → `notarytool`), and staples the ticket.
+
+**Locally** (the same way you sign your other apps):
+
+```bash
+bash packaging/build-desktop.sh        # produces dist/MediaHound.app
+export MAC_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"
+export APPLE_ID="you@example.com" APPLE_TEAM_ID="XXXXXXXXXX" APPLE_APP_PASSWORD="abcd-efgh-ijkl-mnop"
+bundle exec fastlane mac sign
+```
+
+Already keep a **Fastlane `match`** repo? Set `MATCH_GIT_URL` and the lane fetches the Developer ID
+cert with `match(type: "developer_id")` instead of needing it pre-installed in the keychain.
 
 ## Windows (Authenticode)
 

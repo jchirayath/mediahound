@@ -43,6 +43,10 @@ All notable changes to this project are documented here. The format is based on
   icons wired into the desktop build. The portal header and generated sites now carry the mark.
   Brand kit + palette in [docs/brand/](docs/brand/).
 
+- **Fastlane signing** — `fastlane/Fastfile` (`mac sign` lane) codesigns + notarizes the macOS
+  desktop app with a Developer ID cert; `desktop.yml` uses it when the signing secrets are set. See
+  [SIGNING.md](SIGNING.md).
+
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 
 Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog

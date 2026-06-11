@@ -1,0 +1,52 @@
+# Sign + notarize the MediaHound desktop app with Fastlane.
+#
+# NOTE: MediaHound has no iOS target. The downloadable app is a **macOS** .app (built by
+# PyInstaller — see packaging/). This signs it for distribution outside the App Store with a
+# **Developer ID Application** certificate, reusing your existing Apple Developer account.
+#
+# Usage (after a build produces dist/MediaHound.app):
+#   bundle exec fastlane mac sign
+#   bundle exec fastlane mac sign app:dist/MediaHound.app
+#
+# Required env (see ../SIGNING.md):
+#   MAC_SIGN_IDENTITY   "Developer ID Application: Your Name (TEAMID)"
+#   APPLE_ID            your Apple ID email
+#   APPLE_TEAM_ID       your 10-char Team ID
+#   APPLE_APP_PASSWORD  an app-specific password (appleid.apple.com → Sign-In & Security)
+# Optional:
+#   MATCH_GIT_URL       if set, the Developer ID cert is fetched with `match` (your existing repo)
+
+require "shellwords"
+
+REPO_ROOT = File.expand_path("..", __dir__)
+
+default_platform(:mac)
+
+platform :mac do
+  desc "Codesign + notarize the built MediaHound.app (Developer ID, outside the App Store)"
+  lane :sign do |options|
+    app = File.join(REPO_ROOT, options[:app] || "dist/MediaHound.app")
+    UI.user_error!("App not found: #{app}\nBuild it first:  bash packaging/build-desktop.sh") unless File.exist?(app)
+    identity = ENV["MAC_SIGN_IDENTITY"] || UI.user_error!("Set MAC_SIGN_IDENTITY")
+
+    # Reuse your existing Fastlane match certs if you keep a match repo; otherwise the
+    # Developer ID cert just needs to be in the login keychain.
+    match(type: "developer_id", platform: "macos", readonly: true) if ENV["MATCH_GIT_URL"]
+
+    UI.message("Codesigning #{app} …")
+    sh("codesign --deep --force --options runtime --timestamp " \
+       "--sign #{identity.shellescape} #{app.shellescape}")
+
+    UI.message("Notarizing (this can take a few minutes) …")
+    notarize(
+      package: app,
+      bundle_id: "com.chirayath.mediahound",
+      username: ENV["APPLE_ID"],
+      asc_provider: ENV["APPLE_TEAM_ID"],   # notarytool team id
+      print_log: true,
+    )
+
+    sh("xcrun stapler staple #{app.shellescape}")
+    UI.success("✅ Signed + notarized: #{app}")
+  end
+end
