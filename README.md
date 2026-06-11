@@ -350,4 +350,7 @@ hash ships. All rendered data is HTML-escaped and links are scheme-restricted. S
 and keys stay on your computer; data leaves only when you opt into online metadata, Publish, or phone
 upload. See **[PRIVACY.md](PRIVACY.md)**.
 
+**Roadmap:** what's next (barcode scanning, Discogs, backup/exports, personal catalog) is designed in
+[docs/design/](docs/design/); the full backlog is in [docs/ROADMAP.md](docs/ROADMAP.md).
+
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
