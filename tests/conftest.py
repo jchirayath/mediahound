@@ -1,5 +1,34 @@
 """Shared test helpers — no network is ever made; HTTP is monkeypatched."""
+import pytest
 import requests
+
+
+@pytest.fixture
+def mem_keyring():
+    """Swap in an in-memory keyring so tests never touch the real OS keychain."""
+    import keyring
+    from keyring.backend import KeyringBackend
+
+    class _Mem(KeyringBackend):
+        priority = 1
+
+        def __init__(self):
+            super().__init__()
+            self._d = {}
+
+        def get_password(self, service, username):
+            return self._d.get((service, username))
+
+        def set_password(self, service, username, password):
+            self._d[(service, username)] = password
+
+        def delete_password(self, service, username):
+            self._d.pop((service, username), None)
+
+    prev = keyring.get_keyring()
+    keyring.set_keyring(_Mem())
+    yield
+    keyring.set_keyring(prev)
 
 
 class FakeResp:

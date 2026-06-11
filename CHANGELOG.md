@@ -23,6 +23,12 @@ All notable changes to this project are documented here. The format is based on
   browser fallback). A PyInstaller spec + `packaging/build-desktop.sh` + a `desktop.yml` workflow build
   a **double-clickable macOS `.app` / Windows `.exe`** (attached to releases), so non-technical users
   never touch Python or a terminal. The app keeps its library in `~/MediaHound Library`.
+- **API keys in the admin console** — set TMDB / OMDb / Anthropic keys under **Settings → API keys**
+  instead of editing a `.env`. Keys are stored in the **OS keychain** (`keyring`), never in a file and
+  never returned to the browser (the UI shows only “✓ set / not set”). The build reads them via
+  `keystore.load_into_env()` (real env and `.env` keep precedence). The set endpoint is
+  **localhost-only — refused over the phone/LAN mode** even with a valid token. Adds a `keyring`
+  dependency; new `mediahound/keystore.py`.
 
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 

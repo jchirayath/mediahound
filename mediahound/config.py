@@ -102,6 +102,10 @@ def load_config(config_path: str | os.PathLike) -> Config:
     config_path = Path(config_path).resolve()
     base_dir = config_path.parent
     load_dotenv(base_dir / ".env")
+    # keys set via the admin console live in the OS keychain — fill any still-unset ones
+    # (real env and .env keep precedence). No-op if `keyring` is unavailable.
+    from .keystore import load_into_env
+    load_into_env()
     with open(config_path, "rb") as fh:
         user = tomllib.load(fh)
     merged = _deep_merge(DEFAULTS, user)

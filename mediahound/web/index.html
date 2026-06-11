@@ -150,6 +150,26 @@
           <input type="text" id="setPassword" placeholder="leave blank to keep" />
         </label>
       </div>
+      <div id="apiKeysBlock" hidden>
+        <h3 class="settings-h3">API keys (optional — for richer metadata)</h3>
+        <p class="dialog-sub">Stored in your computer's secure keychain — never in a file, never shown
+          again, never sent to the browser. Leave blank to keep the current value.</p>
+        <div class="settings-row">
+          <label>TMDB <span class="key-state" id="keyState_TMDB_API_KEY"></span>
+            <input type="password" id="key_TMDB_API_KEY" autocomplete="off" placeholder="paste key…" />
+          </label>
+          <label>OMDb <span class="key-state" id="keyState_OMDB_API_KEY"></span>
+            <input type="password" id="key_OMDB_API_KEY" autocomplete="off" placeholder="paste key…" />
+          </label>
+          <label>Anthropic <span class="key-state" id="keyState_ANTHROPIC_API_KEY"></span>
+            <input type="password" id="key_ANTHROPIC_API_KEY" autocomplete="off" placeholder="paste key…" />
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn btn-primary" id="keysSave" type="button">Save API keys</button>
+          <span class="dialog-sub" id="keysNote" hidden></span>
+        </div>
+      </div>
       <div class="dialog-actions">
         <button class="btn btn-primary" id="settingsSave">Apply</button>
         <button class="btn btn-gold" id="settingsExport">Export view-config.json</button>
