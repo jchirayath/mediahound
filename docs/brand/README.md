@@ -21,6 +21,9 @@ correctly in a real browser** (ImageMagick drops the gradient), so prefer the SV
 
 | Token | Hex | Where |
 | --- | --- | --- |
+| Headphones | `#2A2F3A` | band + ear cups |
+| Ear-cup | `#FF8E73` | inner cup |
+| Antenna/ear | `#FFE3D7` · `#F4E4D9` | TV antennas + floppy ears |
 | Coral | `#FF7A5C` | gradient top |
 | Red | `#E11D48` | gradient bottom, nose, "Hound" (light bg) |
 | Red (bright) | `#FF6B81` | "Hound" on dark backgrounds |
