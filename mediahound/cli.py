@@ -138,7 +138,7 @@ def cmd_app(args) -> int:
     if not (cfg.data_dir / "collection.json").is_file():
         pipeline.build(cfg, online=False, log=print)
     return serve_mod.serve(cfg, host=args.host, port=args.port, admin=True,
-                           open_browser=not args.no_open)
+                           open_browser=not args.no_open, phone=args.phone)
 
 
 def main(argv=None) -> int:
@@ -193,6 +193,9 @@ def main(argv=None) -> int:
                              "your browser — no other commands to remember.")
     pa.add_argument("directory", nargs="?", default="MediaHound-Library",
                     help="library folder (created if missing; default ./MediaHound-Library)")
+    pa.add_argument("--phone", action="store_true",
+                    help="let your phone add photos: open to your Wi-Fi and show a QR code to scan "
+                         "(uploads are token-protected). Use on a trusted network only.")
     pa.add_argument("--port", type=int, default=8765, help="port (default 8765)")
     pa.add_argument("--host", default="127.0.0.1", help="bind address (keep on localhost)")
     pa.add_argument("--no-open", action="store_true", help="don't open a browser window")

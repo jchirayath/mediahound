@@ -31,6 +31,25 @@
 
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
+  // Phone mode: an access token may arrive in the URL (?t=…). Stash it for write calls,
+  // then strip it from the address bar so it isn't left visible or shared by accident.
+  const TOKEN_KEY = "mediahound:token";
+  (function () {
+    const u = new URLSearchParams(location.search);
+    const t = u.get("t");
+    if (t) {
+      sessionStorage.setItem(TOKEN_KEY, t);
+      u.delete("t");
+      history.replaceState(null, "", location.pathname + (u.toString() ? "?" + u : "") + location.hash);
+    }
+  })();
+  function authHeaders() {
+    const h = { "Content-Type": "application/json" };
+    const t = sessionStorage.getItem(TOKEN_KEY);
+    if (t) h["X-MediaHound-Token"] = t;
+    return h;
+  }
+
   // ---- boot ---------------------------------------------------------------
   const loader = window.MEDIAHOUND_DATA
     ? Promise.resolve(window.MEDIAHOUND_DATA)
@@ -92,7 +111,7 @@
   }
   function persist(endpoint, payload) {
     if (!serverAdmin) return;
-    fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
+    fetch(endpoint, { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) })
       .then((r) => r.json()).then((r) => { if (r && r.ok) flashSaved(); })
       .catch(() => {/* offline export still available */});
   }
@@ -103,7 +122,7 @@
   }
   function rebuildSite() {
     const el = $("#saveState"); if (el) { el.textContent = "↻ Rebuilding…"; el.hidden = false; }
-    fetch("api/rebuild", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+    fetch("api/rebuild", { method: "POST", headers: authHeaders(), body: "{}" })
       .then((r) => r.json()).then((r) => {
         if (r && r.ok) { if (el) el.textContent = "✓ Rebuilt — reloading"; location.reload(); }
         else alert("Rebuild failed: " + ((r && r.error) || "unknown"));
@@ -124,7 +143,7 @@
     if (!csv) { note.textContent = "Paste or load a CSV first."; return; }
     const online = $("#importOnline").checked;
     note.textContent = online ? "Importing & enriching online — this can take a moment…" : "Importing…";
-    fetch("api/import", { method: "POST", headers: { "Content-Type": "application/json" },
+    fetch("api/import", { method: "POST", headers: authHeaders(),
                           body: JSON.stringify({ csv, online }) })
       .then((r) => r.json()).then((r) => {
         if (r && r.ok) { note.textContent = `✓ Added ${r.added}${r.enriched ? `, enriched ${r.enriched}` : ""} — reloading`; location.reload(); }
@@ -167,13 +186,13 @@
       note.textContent = `Uploading ${i + 1} / ${uploadFiles.length}…`;
       try {
         const data = await fileToBase64(f);
-        const r = await fetch("api/upload", { method: "POST", headers: { "Content-Type": "application/json" },
+        const r = await fetch("api/upload", { method: "POST", headers: authHeaders(),
           body: JSON.stringify({ filename: f.name, media_type: type, data }) }).then((x) => x.json());
         if (r && r.ok) ok++;
       } catch (e) { /* keep going */ }
     }
     note.textContent = `Cataloguing ${ok} photo(s)… this can take a moment.`;
-    fetch("api/rebuild", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+    fetch("api/rebuild", { method: "POST", headers: authHeaders(), body: "{}" })
       .then((r) => r.json()).then(() => location.reload())
       .catch(() => location.reload());
   }

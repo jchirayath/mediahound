@@ -145,6 +145,51 @@ def test_upload_cross_origin_refused(served_site):
     assert status == 403 and body["ok"] is False
 
 
+def test_phone_mode_prints_qr_and_token_gates_writes(tmp_path):
+    import re
+    site = tmp_path / "site"
+    assert cli.main(["init", str(site)]) == 0
+    assert cli.main(["build", "--config", str(site / "config.toml"), "--mock"]) == 0
+    cfg = load_config(site / "config.toml")
+    port = _free_port()
+    lines = []
+    threading.Thread(
+        target=serve.serve,
+        kwargs=dict(cfg=cfg, host="127.0.0.1", port=port, admin=True,
+                    open_browser=False, log=lines.append, phone=True),
+        daemon=True,
+    ).start()
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(60):
+        try:
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            break
+        except OSError:
+            time.sleep(0.05)
+    txt = "\n".join(lines)
+    assert "PHONE MODE" in txt                       # the banner printed
+    m = re.search(r"\?t=([A-Za-z0-9_-]+)", txt)       # a token URL was printed (for the QR)
+    assert m, "no token URL printed"
+    token = m.group(1)
+
+    def upload(tok):
+        req = urllib.request.Request(
+            base + "/api/upload",
+            data=json.dumps({"filename": "a.png", "media_type": "movie", "data": _png_b64()}).encode(),
+            method="POST", headers={"Content-Type": "application/json", "Origin": base})
+        if tok:
+            req.add_header("X-MediaHound-Token", tok)
+        try:
+            with urllib.request.urlopen(req, timeout=3) as r:
+                return r.status
+        except urllib.error.HTTPError as e:
+            return e.code
+
+    assert upload(None) == 403          # no token → refused
+    assert upload("nope") == 403        # wrong token → refused
+    assert upload(token) == 200         # correct token → accepted
+
+
 def test_serve_without_admin_has_no_write_api(tmp_path):
     site = tmp_path / "site"
     assert cli.main(["init", str(site)]) == 0
