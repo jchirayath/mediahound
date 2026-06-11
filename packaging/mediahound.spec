@@ -23,7 +23,7 @@ datas = [
 hiddenimports = collect_submodules("webview") + ["PIL.Image", "qrcode", "requests"]
 
 a = Analysis(
-    [os.path.join(PKG, "desktop.py")],
+    [os.path.join(SPECPATH, "mediahound_app.py")],   # noqa: F821 - launcher imports the package
     pathex=[ROOT],
     binaries=[],
     datas=datas,
