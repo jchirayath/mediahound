@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/mediahound-logo-dark.svg">
+    <img alt="MediaHound" src="docs/brand/mediahound-logo.svg" height="92">
+  </picture>
+</p>
+
 # 🎬🎵 MediaHound
 
 [![CI](https://github.com/jchirayath/mediahound/actions/workflows/ci.yml/badge.svg)](https://github.com/jchirayath/mediahound/actions/workflows/ci.yml)

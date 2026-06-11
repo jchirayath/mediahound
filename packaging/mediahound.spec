@@ -35,15 +35,19 @@ a = Analysis(
 )
 pyz = PYZ(a.pure)
 
+ICON_WIN = os.path.join(SPECPATH, "mediahound.ico")          # noqa: F821
+ICON_MAC = os.path.join(SPECPATH, "mediahound.icns")         # noqa: F821
+
 exe = EXE(
     pyz, a.scripts, [], exclude_binaries=True,
     name="MediaHound", console=False,                        # windowed (no terminal)
+    icon=(ICON_WIN if sys.platform == "win32" else None),
 )
 coll = COLLECT(exe, a.binaries, a.datas, name="MediaHound")
 
 if sys.platform == "darwin":
     app = BUNDLE(
-        coll, name="MediaHound.app",
+        coll, name="MediaHound.app", icon=ICON_MAC,
         bundle_identifier="com.chirayath.mediahound",
         info_plist={"NSHighResolutionCapable": True, "LSApplicationCategoryType": "public.app-category.utilities"},
     )
