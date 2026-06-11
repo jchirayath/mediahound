@@ -358,6 +358,9 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
     _MOVIE_ONLY = ("director", "actors", "runtime", "studio", "distributor", "tagline",
                    "spoken_languages", "streaming")
     _MUSIC_ONLY = ("artist", "label", "tracklist", "disc_count", "barcode", "catalog_no", "listen")
+    # valid formats per type — an incompatible format is normalised when a title switches type
+    _FORMATS = {"movie": ("DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"),
+                "music": ("CD", "Vinyl", "Cassette", "Unknown")}
     tld = cfg.resale.get("ebay_tld", "com")
     requery_consumed = False
 
@@ -384,6 +387,10 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
                 for f in (_MOVIE_ONLY if new == "music" else _MUSIC_ONLY):
                     m.pop(f, None)
                 log(f"  correction: moved {mid} → {new}")
+            # a DVD/VHS left on a music item (or a CD on a movie) is wrong — normalise it
+            # (idempotent; runs even if the type already matches, to repair earlier moves)
+            if m.get("format") and m["format"] not in _FORMATS[new]:
+                m["format"] = _FORMATS[new][0]
             # keep the source photo in the matching RawImages/<video|audio> folder (idempotent)
             _sync_source_folder(cfg, store, m, new, log)
         if "artist" in c:

@@ -50,6 +50,10 @@ Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **mult
 - **“Export changes” now merges** with the site's existing `data/corrections.json` before downloading,
   so exporting can never silently drop a previously-saved correction (which would make that title
   revert on the next build).
+- **Format is normalised when a title changes type** — a movie-only format left on a music item
+  (e.g. a CD that was catalogued as a `DVD`) is reset to the new type's default, so the card's format
+  badge and meta line no longer show `DVD` on music (or `CD` on a movie). Applied both in the build
+  and live in the portal.
 
 ## [0.1.0] — 2026-06-09
 

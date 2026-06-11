@@ -74,6 +74,9 @@
              if (c.media_type) m.media_type = c.media_type; if ("artist" in c) m.artist = c.artist || null;
              if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
              if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery; }
+    // a movie-only format on a music item (or vice-versa) is wrong — normalise to the type's default
+    const valid = FORMATS_BY_TYPE[m.media_type || "movie"];
+    if (valid && m.format && !valid.includes(m.format)) m.format = valid[0];
     return m;
   }
   function saveCorrections() { save(CORR_KEY, corrections); persist("api/corrections", corrections); }
