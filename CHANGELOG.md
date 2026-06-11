@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] — 2026-06-11
+
+### Fixed
+- **Desktop app crashed on launch** ("started and exited"). PyInstaller ran `desktop.py` as
+  `__main__`, which broke its package-relative imports (`from .config import …`). A launcher
+  (`packaging/mediahound_app.py`) now imports the package so the app opens correctly. The macOS
+  download is signed, **notarized**, and verified to launch.
+
+### Added
+- **New logo** — a hound **wearing headphones, watching TV** (music + movies, with the play-button
+  nose). Full set: SVG icon + light/dark wordmark lockups, web favicon, and macOS `.icns` / Windows
+  `.ico` app icons wired into the build. Brand kit + palette in [docs/brand/](docs/brand/).
+- **Code-signing** — macOS Developer ID + notarization via **Fastlane** (`fastlane/Fastfile`; App
+  Store Connect API key or app-specific password), and **free Windows signing via SignPath Foundation**
+  for this open-source project. Both self-skip until configured. See [SIGNING.md](SIGNING.md).
+- **[PRIVACY.md](PRIVACY.md)** — offline-first, no account or telemetry; a clear table of the only
+  times data leaves your computer.
+
 ## [0.3.0] — 2026-06-11 — "Easy mode"
 
 ### Added — easier for non-technical users
@@ -34,20 +52,6 @@ All notable changes to this project are documented here. The format is based on
   `keystore.load_into_env()` (real env and `.env` keep precedence). The set endpoint is
   **localhost-only — refused over the phone/LAN mode** even with a valid token. Adds a `keyring`
   dependency; new `mediahound/keystore.py`.
-
-- **Free Windows signing via SignPath** — optional SignPath Foundation (OSS) steps in `desktop.yml`
-  sign `MediaHound.exe` for free when configured (self-skip otherwise). See [SIGNING.md](SIGNING.md).
-- **Desktop builds can be signed** — `desktop.yml` now runs optional macOS codesign+notarize and
-  Windows signtool steps **when the signing secrets are set** (skipped otherwise). See [SIGNING.md](SIGNING.md).
-
-- **Brand & logo** — a distinctive MediaHound mark (a hound whose nose is a play button): SVG
-  icon + light/dark wordmark lockups, a web **favicon**, and macOS `.icns` / Windows `.ico` app
-  icons wired into the desktop build. The portal header and generated sites now carry the mark.
-  Brand kit + palette in [docs/brand/](docs/brand/).
-
-- **Fastlane signing** — `fastlane/Fastfile` (`mac sign` lane) codesigns + notarizes the macOS
-  desktop app with a Developer ID cert; `desktop.yml` uses it when the signing secrets are set. See
-  [SIGNING.md](SIGNING.md).
 
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 
@@ -138,6 +142,7 @@ First public release.
 - Secrets live only in a gitignored `.env`; only the admin password **hash** is published. The admin
   gate is a convenience control, not server-side auth (see [SECURITY.md](SECURITY.md)).
 
+[0.3.1]: https://github.com/jchirayath/mediahound/releases/tag/v0.3.1
 [0.3.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.3.0
 [0.2.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.1.0
