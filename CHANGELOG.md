@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [0.2.0] — unreleased — "MediaHound"
+## [0.2.0] — 2026-06-11 — "MediaHound"
 
 Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog
 (movies *and* music).
@@ -93,4 +93,5 @@ First public release.
 - Secrets live only in a gitignored `.env`; only the admin password **hash** is published. The admin
   gate is a convenience control, not server-side auth (see [SECURITY.md](SECURITY.md)).
 
+[0.2.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.1.0
