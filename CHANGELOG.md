@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0] — 2026-06-11 — "Easy mode"
 
 ### Added — easier for non-technical users
 - **🌐 One-click Publish** — a Publish button in the admin console deploys your catalog to **Netlify**
@@ -127,5 +127,6 @@ First public release.
 - Secrets live only in a gitignored `.env`; only the admin password **hash** is published. The admin
   gate is a convenience control, not server-side auth (see [SECURITY.md](SECURITY.md)).
 
+[0.3.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.3.0
 [0.2.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.2.0
 [0.1.0]: https://github.com/jchirayath/mediahound/releases/tag/v0.1.0
