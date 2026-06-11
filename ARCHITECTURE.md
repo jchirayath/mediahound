@@ -34,11 +34,15 @@ They never talk at runtime — the CLI produces files; the site reads them.
 
 | Module | Responsibility |
 |---|---|
-| `cli.py` | `mediahound init <dir>` and `mediahound build` (argparse). |
-| `config.py` | Loads `config.toml`, merges defaults, loads `.env` secrets, resolves paths. |
+| `cli.py` | Subcommands (argparse): `init`, `build`, `import`, `export`, `serve`, **`app`** (the one-command easy path), **`gui`** (native desktop window). |
+| `config.py` | Loads `config.toml`, merges defaults, loads `.env` secrets **then fills any unset key from the OS keychain** (`keystore.load_into_env()`), resolves paths. |
 | `pipeline.py` | Orchestration: scan → identify → enrich → intro/resale/streaming → write. Also `--mock`, corrections, offline/online gating, and the metadata cache + plausibility guard. |
 | `store.py` | The incremental `manifest.json` and the JSON the website reads (collection / unidentified). Merges duplicate photos into one gallery; applies seen/corrections. |
 | `imaging.py` | Pillow helpers: prepare a compact JPEG for OCR/vision, save thumbnails, auto-upright landscape covers, rotate, placeholder posters for `--mock`. |
+| `serve.py` | `serve` previews the site; `serve --admin` exposes a **localhost-only write API** so admin edits save straight to `data/` (+ photo upload, CSV import, rebuild, API-keys, publish). `--phone` binds to the LAN with a **per-session token + QR** for uploading from a phone. |
+| `desktop.py` | The desktop app: sets up `~/MediaHound Library`, starts the admin server, opens it in a **native webview window** (browser fallback). PyInstaller entry point for the `.app`/`.exe`. |
+| `keystore.py` | Provider/publish secrets in the **OS keychain** (`keyring`): TMDB/OMDb/Anthropic + the Netlify token. Write-only from the UI; status is booleans only. |
+| `publish.py` | One-click **Netlify** deploy (file-digest protocol): only the generated site is uploaded; the site id is remembered so the URL stays stable. |
 | `identify/` | **Identifier** providers → `Identification`. `tesseract` (default), `claude`, `ollama`. |
 | `metadata/` | **MetadataProvider** providers → `MovieMeta`. `wikidata` (default), `tmdb`, `omdb`. |
 | `intro.py` | The enticing 1–2 sentence hook (identifier-written → tagline → templated). |
@@ -76,14 +80,26 @@ Vanilla JS + CSS, **no framework, no build step**:
 - `assets/css/styles.css` — the dark, responsive theme.
 
 Two modes: a read-only **default** view, and an **admin** view unlocked by SHA-256-comparing the
-typed password against `site.admin_password_sha256`. Admin edits persist to `localStorage` and are
-exported as the round-trip JSON files above. The only network calls the site makes are the outbound
-"watch" / "sell" / "more info" links you click.
+typed password against `site.admin_password_sha256`. When the site is opened through
+`mediahound serve --admin` / `app` / `gui`, admin edits POST to the localhost write API and persist
+straight to `data/` (and photo/CSV/keys/publish actions are available); when opened as plain static
+files, edits live in `localStorage` and are exported as the round-trip JSON files above. The only
+other network calls the site makes are the outbound "watch" / "sell" / "more info" links you click.
+
+### The local write API (`serve --admin`)
+
+A small same-origin-guarded HTTP API, **bound to `127.0.0.1`**: `/api/corrections|seen|identify`
+(persist edits), `/api/upload` (drag-and-drop a cover), `/api/import` (CSV), `/api/rebuild`,
+`/api/keys` (store API keys in the keychain — localhost only), `/api/publish` (deploy to Netlify —
+localhost only). `--phone` adds a **per-session token** required on every write (constant-time
+compare) so a phone on the LAN can upload without opening the API to other devices.
 
 ## Design principles
 
 - **Offline by default** — building never hits the network unless `--online` is passed.
-- **No secrets in the repo** — keys only in a gitignored `.env`; only a password *hash* ships.
+- **No secrets in the repo** — keys live in a gitignored `.env` **or the OS keychain** (set in the
+  admin console); only a password *hash* ships. The write API and key/publish endpoints are
+  localhost-only.
 - **Degrade gracefully** — a failed lookup, rate-limited key, or unreadable cover never crashes a
   build or drops a title; it becomes a manual entry with your cover photo.
 - **Trust the photo** — the identified name is authoritative; a fuzzy metadata match that returns a
