@@ -1,0 +1,5 @@
+# MediaHound is a macOS desktop app (no iOS target). Values come from env so no
+# account details are committed — see ../SIGNING.md.
+app_identifier "com.chirayath.mediahound"
+apple_id ENV["APPLE_ID"]
+team_id ENV["APPLE_TEAM_ID"]

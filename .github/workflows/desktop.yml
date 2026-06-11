@@ -36,18 +36,21 @@ jobs:
       # --- Optional code-signing (runs only when the signing secrets are configured) ---
       # See SIGNING.md for the secrets these steps expect. Without them, builds are
       # unsigned (a Gatekeeper/SmartScreen prompt appears on first open).
-      - name: Sign & notarize (macOS)
+      - name: Sign & notarize (macOS, via Fastlane)
         if: runner.os == 'macOS'
         env:
           APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
+          MAC_SIGN_IDENTITY: ${{ secrets.APPLE_SIGN_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          # fastlane's notarize action reads the app-specific password from this env var:
+          FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
         run: |
           set -euo pipefail
           if [ -z "${APPLE_CERTIFICATE_P12:-}" ]; then echo "No Apple signing secrets — shipping unsigned."; exit 0; fi
+          # import the Developer ID cert into a temporary keychain so codesign can find it
           KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
           security create-keychain -p actions "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
@@ -56,10 +59,9 @@ jobs:
           printf '%s' "$APPLE_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
           security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k actions "$KEYCHAIN"
-          codesign --deep --force --options runtime --timestamp --sign "$APPLE_SIGN_IDENTITY" dist/MediaHound.app
-          ditto -c -k --keepParent dist/MediaHound.app "$RUNNER_TEMP/notarize.zip"
-          xcrun notarytool submit "$RUNNER_TEMP/notarize.zip" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
-          xcrun stapler staple dist/MediaHound.app
+          # codesign + notarize + staple through Fastlane (fastlane/Fastfile :sign lane)
+          bundle install
+          bundle exec fastlane mac sign
 
       - name: Sign (Windows)
         if: runner.os == 'Windows'
