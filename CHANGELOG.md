@@ -35,6 +35,9 @@ All notable changes to this project are documented here. The format is based on
   **localhost-only — refused over the phone/LAN mode** even with a valid token. Adds a `keyring`
   dependency; new `mediahound/keystore.py`.
 
+- **Desktop builds can be signed** — `desktop.yml` now runs optional macOS codesign+notarize and
+  Windows signtool steps **when the signing secrets are set** (skipped otherwise). See [SIGNING.md](SIGNING.md).
+
 ## [0.2.0] — 2026-06-11 — "MediaHound"
 
 Renamed **ReelShelf → MediaHound** and grew from a movie catalog into a **multi-media** catalog
