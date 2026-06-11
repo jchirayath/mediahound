@@ -86,7 +86,7 @@ Prefer to double-click an icon? A native app opens the editor in its own window:
 - **Download:** grab `MediaHound-macOS.zip` / `MediaHound-Windows.zip` from the
   [Releases](https://github.com/jchirayath/mediahound/releases) page, unzip, and open it. *(Unsigned
   builds show a Gatekeeper/SmartScreen prompt the first time — right-click → **Open** on macOS, or
-  **More info → Run anyway** on Windows.)*
+  **More info → Run anyway** on Windows.)* To ship builds that open with no warning, see [SIGNING.md](SIGNING.md).
 - **Or, if you've got Python:** `pip install "mediahound[desktop]"` then `mediahound gui` opens the
   same native window. (Without the `[desktop]` extra it falls back to opening your browser.)
 - **Build it yourself:** `bash packaging/build-desktop.sh` (uses PyInstaller; build on the OS you
