@@ -433,3 +433,9 @@ body.server-admin #exportChanges, body.server-admin #exportSeen { opacity: .6; }
 .welcome-card p { color:#5a6675; margin:.2em 0 1.1em; }
 .welcome-hint { font-size:.9rem; }
 .welcome-hint code { background:#f1f4f8; padding:2px 6px; border-radius:5px; }
+
+/* API keys (settings) */
+.key-state { font-size: .78rem; font-weight: 600; }
+.key-state.is-set { color: #1a7f4b; }
+.key-state.is-unset { color: #9aa5b1; }
+#apiKeysBlock { border-top: 1px solid #eef1f5; margin-top: 14px; padding-top: 6px; }

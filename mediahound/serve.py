@@ -132,10 +132,16 @@ class _Handler(SimpleHTTPRequestHandler):
 
     # -- routes -----------------------------------------------------------
     def do_GET(self):
-        if self.path.rstrip("/") == "/api/ping":
+        route = self.path.split("?", 1)[0].rstrip("/")
+        if route == "/api/ping":
             from . import __version__
-            return self._send_json({"ok": True, "admin": self.admin,
-                                    "app": "mediahound", "version": __version__})
+            return self._send_json({"ok": True, "admin": self.admin, "app": "mediahound",
+                                    "version": __version__, "phone": bool(self.token)})
+        if route == "/api/keys":
+            if not self.admin:
+                return self._send_json({"ok": False, "error": "not found"}, 404)
+            from . import keystore
+            return self._send_json({"ok": True, "keys": keystore.status()})  # booleans only
         return super().do_GET()
 
     def do_POST(self):
@@ -159,6 +165,12 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._import()
         if route == "/api/upload":
             return self._upload()
+        if route == "/api/keys":
+            # API keys are set from THIS computer only — never accept them over the LAN.
+            if self.token:
+                return self._send_json(
+                    {"ok": False, "error": "API keys can only be set on the computer running MediaHound"}, 403)
+            return self._set_keys()
         return self._send_json({"ok": False, "error": "unknown endpoint"}, 404)
 
     # -- handlers ---------------------------------------------------------
@@ -259,6 +271,23 @@ class _Handler(SimpleHTTPRequestHandler):
         target.write_bytes(blob)
         self.log_fn(f"  uploaded {target.name} → RawImages/{sub}/")
         return self._send_json({"ok": True, "saved": target.name, "media_type": media_type})
+
+    def _set_keys(self):
+        """Store provider API keys in the OS keychain. Values are write-only (never read back)."""
+        from . import keystore
+        body = self._read_json_body()
+        if not isinstance(body, dict):
+            return self._send_json({"ok": False, "error": "expected a JSON object"}, 400)
+        changed = []
+        for name, value in body.items():
+            if name in keystore.KEY_NAMES:
+                if keystore.set_key(name, (str(value) if value else "").strip() or None):
+                    changed.append(name)
+        if changed:
+            self.log_fn(f"  saved API key(s) to the OS keychain: {', '.join(changed)}")
+        else:
+            self.log_fn("  API key save requested but the keychain backend is unavailable")
+        return self._send_json({"ok": bool(changed), "changed": changed, "keys": keystore.status()})
 
 
 def make_handler(cfg: Config, admin: bool, origins: set, log_fn, token: str | None = None):

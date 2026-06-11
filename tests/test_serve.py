@@ -145,6 +145,49 @@ def test_upload_cross_origin_refused(served_site):
     assert status == 403 and body["ok"] is False
 
 
+def test_api_keys_status_and_set(served_site, mem_keyring):
+    base, cfg = served_site
+    body = json.loads(urllib.request.urlopen(base + "/api/keys", timeout=2).read())
+    assert body["keys"] == {"TMDB_API_KEY": False, "OMDB_API_KEY": False, "ANTHROPIC_API_KEY": False}
+    status, body = _post(base + "/api/keys", {"TMDB_API_KEY": "secret-123"}, origin=base)
+    assert status == 200 and body["ok"] is True and body["changed"] == ["TMDB_API_KEY"]
+    assert body["keys"]["TMDB_API_KEY"] is True
+    assert "secret-123" not in json.dumps(body)          # the value is never echoed back
+    from mediahound import keystore
+    assert keystore.get_key("TMDB_API_KEY") == "secret-123"   # stored in the (mock) keychain
+
+
+def test_api_keys_refused_over_phone_lan(tmp_path, mem_keyring):
+    import re
+    site = tmp_path / "site"
+    cli.main(["init", str(site)])
+    cli.main(["build", "--config", str(site / "config.toml"), "--mock"])
+    cfg = load_config(site / "config.toml")
+    port = _free_port()
+    lines = []
+    threading.Thread(target=serve.serve,
+                     kwargs=dict(cfg=cfg, host="127.0.0.1", port=port, admin=True,
+                                 open_browser=False, log=lines.append, phone=True),
+                     daemon=True).start()
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(60):
+        try:
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            break
+        except OSError:
+            time.sleep(0.05)
+    token = re.search(r"\?t=([A-Za-z0-9_-]+)", "\n".join(lines)).group(1)
+    req = urllib.request.Request(  # even WITH the valid token, keys can't be set over the LAN
+        base + "/api/keys", data=json.dumps({"TMDB_API_KEY": "x"}).encode(), method="POST",
+        headers={"Content-Type": "application/json", "Origin": base, "X-MediaHound-Token": token})
+    try:
+        urllib.request.urlopen(req, timeout=3)
+        code = 200
+    except urllib.error.HTTPError as e:
+        code = e.code
+    assert code == 403
+
+
 def test_phone_mode_prints_qr_and_token_gates_writes(tmp_path):
     import re
     site = tmp_path / "site"

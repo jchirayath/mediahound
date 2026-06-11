@@ -98,6 +98,23 @@ edits live in your browser until you export them:
 
 ---
 
+## API keys (optional richer metadata)
+
+For best posters/metadata you can add keys for **TMDB**, **OMDb**, and **Anthropic** (Claude vision).
+Under `serve --admin` / the desktop app, open **⚙ Settings → API keys**, paste a key, and **Save**.
+
+- Keys are stored in your computer's **OS keychain** (macOS Keychain / Windows Credential Manager /
+  Linux Secret Service) — never written to a file, and never sent back to the browser (the panel only
+  shows *✓ set / not set*).
+- The build picks them up automatically (precedence: real environment → the instance `.env` → the
+  keychain). After saving, run **↻ Rebuild** with online enabled (or `mediahound build --online`).
+- For security, keys can only be set **on the computer running MediaHound** — the panel is hidden and
+  the endpoint refused in `--phone`/LAN mode, so keys never travel over the network.
+
+(Prefer files? You can still put `TMDB_API_KEY=…` etc. in a gitignored `.env` next to `config.toml`.)
+
+---
+
 ## Moving a title between Movies and Music
 
 Sometimes a disc is catalogued under the wrong type — e.g. a concert DVD that's really a

@@ -105,9 +105,11 @@
   // When the site is served by the local admin server, every edit is written
   // straight into data/ — so it survives the next `mediahound build` with no
   // "Export changes → drop file in" step. Falls back to localStorage-only.
-  let serverAdmin = false;
+  let serverAdmin = false, phoneMode = false;
   function pingServer() {
-    return j("api/ping", null).then((r) => { serverAdmin = !!(r && r.admin); return serverAdmin; });
+    return j("api/ping", null).then((r) => {
+      serverAdmin = !!(r && r.admin); phoneMode = !!(r && r.phone); return serverAdmin;
+    });
   }
   function persist(endpoint, payload) {
     if (!serverAdmin) return;
@@ -669,7 +671,42 @@
     $("#setColumns").value = view.columns || 4;
     $("#setPassword").value = "";
     $("#settingsPwNote").hidden = true;
+    loadApiKeys();
     $("#settingsDialog").hidden = false;
+  }
+
+  // ---- API keys (stored in the OS keychain by the local app) --------------
+  const KEY_NAMES = ["TMDB_API_KEY", "OMDB_API_KEY", "ANTHROPIC_API_KEY"];
+  function loadApiKeys() {
+    // only when the local app is running and NOT exposed to the phone/LAN
+    const show = serverAdmin && !phoneMode;
+    $("#apiKeysBlock").hidden = !show;
+    if (!show) return;
+    KEY_NAMES.forEach((n) => { $("#key_" + n).value = ""; });
+    $("#keysNote").hidden = true;
+    j("api/keys", null).then((r) => {
+      const set = (r && r.keys) || {};
+      KEY_NAMES.forEach((n) => {
+        const el = $("#keyState_" + n); if (!el) return;
+        el.textContent = set[n] ? "✓ set" : "not set";
+        el.className = "key-state " + (set[n] ? "is-set" : "is-unset");
+      });
+    });
+  }
+  function saveApiKeys() {
+    const payload = {};
+    KEY_NAMES.forEach((n) => { const v = $("#key_" + n).value.trim(); if (v) payload[n] = v; });
+    const note = $("#keysNote"); note.hidden = false;
+    if (!Object.keys(payload).length) { note.textContent = "Nothing to save (leave blank to keep)."; return; }
+    note.textContent = "Saving to keychain…";
+    fetch("api/keys", { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) })
+      .then((r) => r.json()).then((r) => {
+        if (r && r.ok) {
+          note.textContent = `✓ Saved: ${(r.changed || []).join(", ")}. Run ↻ Rebuild (online) to use them.`;
+          KEY_NAMES.forEach((n) => { $("#key_" + n).value = ""; });
+          loadApiKeys();
+        } else { note.textContent = "Couldn't save: " + ((r && r.error) || "keychain unavailable"); }
+      }).catch((e) => { note.textContent = "Couldn't save: " + e; });
   }
   async function saveSettings() {
     view.site_title = $("#setTitle").value.trim() || null;
@@ -760,6 +797,7 @@
     $("#settingsBtn").onclick = openSettings;
     $("#settingsSave").onclick = saveSettings;
     $("#settingsExport").onclick = exportSettings;
+    if ($("#keysSave")) $("#keysSave").onclick = saveApiKeys;
     $("#setImage").addEventListener("change", (e) => {
       const f = e.target.files[0]; if (!f) return;
       fileToDataURL(f, 200, (url) => {

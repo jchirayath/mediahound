@@ -26,6 +26,7 @@ dependencies = [
     "requests>=2.28",
     "Pillow>=9.0",
     "qrcode>=7.0",          # `mediahound app --phone` prints a scannable QR for phone uploads
+    "keyring>=24.0",        # store provider API keys in the OS keychain (admin console)
 ]
 
 [project.optional-dependencies]
