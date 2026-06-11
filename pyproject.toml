@@ -30,6 +30,8 @@ dependencies = [
 
 [project.optional-dependencies]
 ocr = ["pytesseract>=0.3.10"]   # zero-key default identifier
+desktop = ["pywebview>=4.0"]    # native window for `mediahound gui` / the bundled app
+build = ["pyinstaller>=6.0"]    # package the desktop app into a .app / .exe
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.4"]
 
 [project.urls]
@@ -41,6 +43,9 @@ Changelog = "https://github.com/jchirayath/mediahound/blob/main/CHANGELOG.md"
 
 [project.scripts]
 mediahound = "mediahound.cli:main"
+
+[project.gui-scripts]
+mediahound-gui = "mediahound.desktop:main"
 
 [tool.setuptools]
 packages = ["mediahound", "mediahound.identify", "mediahound.metadata"]

@@ -79,6 +79,21 @@ Scan the QR with your phone (on the same Wi-Fi), tap **➕ Add photos → Take P
 straight into your catalog. Uploads are **token-protected** (only the phone that scanned the code can
 add photos) and nothing leaves your network — use it on a network you trust.
 
+### Desktop app (no Python, no terminal)
+
+Prefer to double-click an icon? A native app opens the editor in its own window:
+
+- **Download:** grab `MediaHound-macOS.zip` / `MediaHound-Windows.zip` from the
+  [Releases](https://github.com/jchirayath/mediahound/releases) page, unzip, and open it. *(Unsigned
+  builds show a Gatekeeper/SmartScreen prompt the first time — right-click → **Open** on macOS, or
+  **More info → Run anyway** on Windows.)*
+- **Or, if you've got Python:** `pip install "mediahound[desktop]"` then `mediahound gui` opens the
+  same native window. (Without the `[desktop]` extra it falls back to opening your browser.)
+- **Build it yourself:** `bash packaging/build-desktop.sh` (uses PyInstaller; build on the OS you
+  want). CI builds the macOS + Windows apps automatically — see `.github/workflows/desktop.yml`.
+
+The app keeps your library in **`~/MediaHound Library`** and works fully offline.
+
 ### The CLI way (more control)
 
 ```bash

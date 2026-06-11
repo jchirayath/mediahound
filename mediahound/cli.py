@@ -141,6 +141,11 @@ def cmd_app(args) -> int:
                            open_browser=not args.no_open, phone=args.phone)
 
 
+def cmd_gui(args) -> int:
+    from . import desktop
+    return desktop.run(args.directory)
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mediahound",
                                 description="Catalog a movie & music collection from cover photos or CSV.")
@@ -200,6 +205,10 @@ def main(argv=None) -> int:
     pa.add_argument("--host", default="127.0.0.1", help="bind address (keep on localhost)")
     pa.add_argument("--no-open", action="store_true", help="don't open a browser window")
     pa.set_defaults(func=cmd_app)
+
+    pg = sub.add_parser("gui", help="open the editor in a native desktop window (the bundled app).")
+    pg.add_argument("directory", nargs="?", help="library folder (default: ~/MediaHound Library)")
+    pg.set_defaults(func=cmd_gui)
 
     args = p.parse_args(argv)
     return args.func(args)
