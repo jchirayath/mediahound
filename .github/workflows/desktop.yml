@@ -23,8 +23,8 @@ jobs:
             artifact: MediaHound-Windows
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -108,7 +108,7 @@ jobs:
       - name: Upload unsigned exe for SignPath
         if: runner.os == 'Windows' && steps.signpath.outputs.enabled == 'true'
         id: unsigned_exe
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: MediaHound-exe-unsigned
           path: dist/MediaHound/MediaHound.exe
@@ -141,7 +141,7 @@ jobs:
             7z a "../${{ matrix.artifact }}.zip" "MediaHound" >/dev/null
           fi
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}.zip
