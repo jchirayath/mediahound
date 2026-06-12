@@ -82,6 +82,14 @@ class _Handler(SimpleHTTPRequestHandler):
         self.directory = type(self).site_dir
         return super().translate_path(path)
 
+    # Never let the app shell (index.html / identify.html) be stale-cached by the webview or
+    # browser — otherwise an upgraded MediaHound keeps showing the old UI until a hard refresh.
+    def end_headers(self):
+        route = self.path.split("?", 1)[0]
+        if route.endswith((".html", "/")) or route == "":
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+        super().end_headers()
+
     # -- helpers ----------------------------------------------------------
     def _send_json(self, obj, status=200):
         body = json.dumps(obj).encode("utf-8")

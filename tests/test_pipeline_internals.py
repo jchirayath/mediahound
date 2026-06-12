@@ -140,3 +140,18 @@ def test_media_type_move_music_to_movie_clears_music_fields(tmp_path):
     assert m["studio"] == "Studio"
     for gone in ("artist", "label", "tracklist"):
         assert gone not in m                       # music-only fields cleared
+
+
+def test_sync_web_assets_refreshes_shell_but_preserves_data(tmp_path):
+    cfg = _cfg(tmp_path)
+    # a "stale" library: an old shell + real user data
+    cfg.output_dir.mkdir(parents=True, exist_ok=True)
+    (cfg.output_dir / "index.html").write_text("OLD UI", encoding="utf-8")
+    (cfg.output_dir / "data" / "collection.json").write_text('[{"id":"keep"}]', encoding="utf-8")
+    pipeline.sync_web_assets(cfg, lambda *_: None)
+    # the shell is refreshed from the installed package template…
+    html = (cfg.output_dir / "index.html").read_text(encoding="utf-8")
+    assert "OLD UI" not in html and "MediaHound" in html
+    assert (cfg.output_dir / "assets" / "js" / "app.js").is_file()
+    # …and user data is untouched
+    assert (cfg.output_dir / "data" / "collection.json").read_text(encoding="utf-8") == '[{"id":"keep"}]'

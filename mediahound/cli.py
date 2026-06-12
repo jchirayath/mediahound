@@ -193,9 +193,10 @@ def cmd_app(args) -> int:
         cmd_init(argparse.Namespace(directory=str(site), force=False))
         print()
     cfg = load_config(config_path)
-    # make sure there's a catalog to open (an empty one is fine — the welcome screen guides you)
-    if not (cfg.data_dir / "collection.json").is_file():
-        pipeline.build(cfg, online=False, log=print)
+    # Always do an offline rebuild on open: it refreshes the app UI to the installed version
+    # (sync_web_assets) and regenerates the site from existing data. Fast — new photos aren't
+    # fetched online here. An empty catalog is fine; the welcome screen guides you.
+    pipeline.build(cfg, online=False, log=print)
     return serve_mod.serve(cfg, host=args.host, port=args.port, admin=True,
                            open_browser=not args.no_open, phone=args.phone)
 

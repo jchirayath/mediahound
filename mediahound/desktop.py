@@ -55,8 +55,9 @@ def prepare(directory: str | None = None, log=print):
         log(f"Setting up your library at {site} …")
         cmd_init(argparse.Namespace(directory=str(site), force=False))
     cfg = load_config(config_path)
-    if not (cfg.data_dir / "collection.json").is_file():
-        pipeline.build(cfg, online=False, log=log)
+    # Offline rebuild on every open → refreshes the app UI to this version (sync_web_assets) and
+    # regenerates the site from existing data. Fast (no online lookups); an empty catalog is fine.
+    pipeline.build(cfg, online=False, log=log)
     return cfg
 
 

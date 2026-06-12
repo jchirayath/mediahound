@@ -22,6 +22,30 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _STOP = {"the", "a", "an", "of", "and", "vol", "volume", "part", "complete", "season",
          "collection", "edition", "special", "disc", "set", "series", "to", "in"}
 
+# The bundled static app shell (HTML/JS/CSS/icons). Lives next to this package.
+_WEB_TEMPLATE = Path(__file__).resolve().parent / "web"
+
+
+def sync_web_assets(cfg: Config, log=lambda *_: None) -> None:
+    """Refresh the static app shell (index.html, identify.html, favicon, assets/) in a library
+    from the **installed package** template, so upgrading MediaHound updates the UI of an existing
+    library. Only the app shell is overwritten — `data/`, `posters/`, `originals/`, `RawImages/`,
+    `config.toml` and `netlify.toml` are never touched (the template doesn't contain them)."""
+    import shutil
+    out = cfg.output_dir
+    if not _WEB_TEMPLATE.is_dir():
+        return
+    out.mkdir(parents=True, exist_ok=True)
+    for item in _WEB_TEMPLATE.iterdir():
+        target = out / item.name
+        try:
+            if item.is_dir():
+                shutil.copytree(item, target, dirs_exist_ok=True)
+            else:
+                shutil.copy2(item, target)
+        except OSError as exc:                       # never let a copy error break a build
+            log(f"  web sync: couldn't update {item.name}: {exc}")
+
 
 def _sig_tokens(s: str) -> set:
     return {t for t in _SLUG_RE.split((s or "").lower()) if t and t not in _STOP}
@@ -252,6 +276,7 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
           refresh_streaming: bool = False, online: bool = False, log=print) -> Stats:
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     cfg.posters_dir.mkdir(parents=True, exist_ok=True)
+    sync_web_assets(cfg, log)          # keep an existing library's UI current with the installed version
     store = Store(cfg.data_dir)
     stats = Stats()
 
