@@ -29,7 +29,8 @@ def list_images(input_dir: Path) -> list[Path]:
 # movies (DVD/VHS/Blu-ray/LaserDisc); `audio` → music (CD/vinyl/cassette). `movies`/`music`
 # are accepted aliases. Photos left in the input root take the default media type.
 MEDIA_FOLDERS = {"video": "movie", "movies": "movie", "movie": "movie",
-                 "audio": "music", "music": "music"}
+                 "audio": "music", "music": "music",
+                 "books": "book", "book": "book"}
 
 
 def _images_in(folder: Path) -> list[Path]:

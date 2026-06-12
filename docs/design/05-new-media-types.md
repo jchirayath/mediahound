@@ -1,6 +1,12 @@
 # 05 — New media types: Books & Video games
 
-**Status:** Planned · **Effort:** L · **Depends on:** Barcode (01, shipped) — books/games are barcode-first
+**Status:** 📚 Books **shipped** (P1) · 🎮 Games planned · **Effort:** L · **Depends on:** Barcode (01)
+
+> **P1 shipped.** Books are implemented: Open Library provider (`metadata/openlibrary.py`), ISBN
+> auto-routing (978/979), `📚 Books` tab + card + editor, `RawImages/books/`, CSV import/export, and
+> `_MOCK_BOOKS`. The movie/music field-clearing was generalised to N types. Video games (P3) remain
+> designed below. The full media-type *registry* refactor is deferred — books were added by extending
+> the existing movie/music pattern; the registry is the recommended cleanup before a 5th type.
 
 ## Why
 

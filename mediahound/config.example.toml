@@ -53,6 +53,14 @@ language = "en-US"                    # set TMDB_API_KEY in env or .env
 provider = "musicbrainz"
 
 # ----------------------------------------------------------------------------
+# BOOK METADATA — cover + author/publisher/year/pages/subjects for books.
+#   provider = "openlibrary" (default) Open Library (CC0), resolves by ISBN or title+author. NO key.
+# Scan a book's ISBN barcode (978/979) to identify the exact edition.
+# ----------------------------------------------------------------------------
+[book.metadata]
+provider = "openlibrary"
+
+# ----------------------------------------------------------------------------
 # BARCODE — decode a UPC/EAN to identify the EXACT release (more accurate than OCR).
 # Decoding needs the optional extra:  pip install "mediahound[barcode]"
 # Lookups are online, so they only run with --online (music → MusicBrainz/Discogs,

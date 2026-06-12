@@ -28,7 +28,9 @@
   let isAdmin = sessionStorage.getItem(ADMIN_KEY) === "1";
   let mediaType = "all";                 // "all" | "movie" | "music"
   const imgIndex = new Map();
-  const isMusic = (m) => (m.media_type || "movie") === "music";
+  const mtype = (m) => m.media_type || "movie";
+  const isMusic = (m) => mtype(m) === "music";
+  const isBook = (m) => mtype(m) === "book";
 
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
@@ -99,6 +101,7 @@
     if (c) { if (c.title) m.title = c.title; if (c.year) m.year = c.year; if (c.format) m.format = c.format;
              if (c.media_type) m.media_type = c.media_type; if ("artist" in c) m.artist = c.artist || null;
              if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
+             if ("author" in c) m.author = c.author || null; if ("publisher" in c) m.publisher = c.publisher || null;
              if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery;
              // personal catalog (admin-only; stripped from the published site)
              m.my_rating = "my_rating" in c ? c.my_rating : null;
@@ -350,7 +353,7 @@
     note.textContent = "Looking up " + upc + "…";
     fetch("api/identify-barcode", { method: "POST", headers: authHeaders(), body: JSON.stringify({ upc, media_type: type }) })
       .then((r) => r.json()).then((r) => {
-        if (r && r.ok && r.matched) { note.textContent = `✓ ${r.title}${r.artist ? " — " + r.artist : ""} — reloading`; stopCamera(); location.reload(); }
+        if (r && r.ok && r.matched) { const who = r.artist || r.author; note.textContent = `✓ ${r.title}${who ? " — " + who : ""} — reloading`; stopCamera(); location.reload(); }
         else if (r && r.ok) { note.textContent = "No match for that barcode. Try the other media type, or add it by photo."; }
         else { note.textContent = "Lookup failed: " + ((r && r.error) || "unknown"); }
       }).catch((e) => { note.textContent = "Lookup failed: " + e; });
@@ -414,7 +417,7 @@
     const list = mediaType === "all" ? movies : movies.filter((m) => (m.media_type || "movie") === mediaType);
     fill("#filterFormat", uniq(list.map((m) => m.format)));
     fill("#filterGenre", uniq(list.flatMap((m) => m.genres || [])));
-    fill("#filterStudio", uniq([...list.map((m) => m.studio), ...list.map((m) => m.label)]));  // studio (movie) or label (music)
+    fill("#filterStudio", uniq([...list.map((m) => m.studio), ...list.map((m) => m.label), ...list.map((m) => m.publisher)]));  // studio (movie) / label (music) / publisher (book)
     fill("#filterLanguage", uniq(list.map((m) => m.language)));
     fill("#filterCategory", uniq(list.map((m) => m.category)));
     // Tag/shelf filter — admin-only (personal data); `.admin-only` hides it for public viewers.
@@ -442,7 +445,7 @@
       if (mediaType !== "all" && (m.media_type || "movie") !== mediaType) return false;
       if (f && m.format !== f) return false;
       if (g && !(m.genres || []).includes(g)) return false;
-      if (st && m.studio !== st && m.label !== st) return false;   // studio (movie) or label (music)
+      if (st && m.studio !== st && m.label !== st && m.publisher !== st) return false;   // studio / label / publisher
       if (l && m.language !== l) return false;
       if (c && m.category !== c) return false;
       if (isAdmin && tag && !(m.tags || []).includes(tag)) return false;
@@ -458,7 +461,8 @@
       if (s === "unseen" && m.seen) return false;
       if (q) { const hay = [m.title, m.intro, m.overview, (m.genres || []).join(" "), m.language,
         String(m.year), m.director, (m.actors || []).join(" "), m.studio, m.distributor,
-        m.artist, m.label, (m.tracklist || []).join(" ")].join(" ").toLowerCase();
+        m.artist, m.label, (m.tracklist || []).join(" "),
+        m.author, m.publisher, m.isbn, m.series].join(" ").toLowerCase();
         if (!hay.includes(q)) return false; }
       return true;
     });
@@ -515,6 +519,8 @@
     if (fieldOn("meta")) {
       const parts = isMusic(m)
         ? [m.rating ? "★ " + m.rating : null, m.format, (m.tracklist && m.tracklist.length) ? m.tracklist.length + " tracks" : null].filter(Boolean)
+        : isBook(m)
+        ? [m.rating ? "★ " + m.rating : null, m.format, m.page_count ? m.page_count + " pp" : null, m.language].filter(Boolean)
         : [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language].filter(Boolean);
       b.appendChild(line("meta", parts.join(" · ")));
     }
@@ -528,6 +534,8 @@
       if (isMusic(m)) {
         if (m.artist) p.appendChild(person("🎤 " + m.artist, m.artist));
         if (m.tracklist && m.tracklist.length) p.title = m.tracklist.join("  ·  ");
+      } else if (isBook(m)) {
+        if (m.author) p.appendChild(person("🖊 " + m.author, m.author));
       } else {
         if (m.director) p.appendChild(person("🎬 " + m.director, m.director));
         (m.actors || []).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
@@ -540,6 +548,8 @@
       const s = lineEl("studio");
       if (isMusic(m)) {
         if (m.label) { const x = person("🏷 " + m.label, null); x.onclick = () => setFilter("#filterStudio", m.label); s.appendChild(x); }
+      } else if (isBook(m)) {
+        if (m.publisher) { const x = person("📖 " + m.publisher, null); x.onclick = () => setFilter("#filterStudio", m.publisher); s.appendChild(x); }
       } else {
         if (m.studio) { const x = person("🏛 " + m.studio, null); x.onclick = () => setFilter("#filterStudio", m.studio); s.appendChild(x); }
         if (m.distributor) s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
@@ -551,7 +561,7 @@
 
     // foot: where-to-watch (left) + resale (right) on one line
     const foot = lineEl("foot");
-    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = isMusic(m) ? listenPills(m) : watchPills(m); foot.appendChild(w); }
+    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = isMusic(m) ? listenPills(m) : isBook(m) ? readPills(m) : watchPills(m); foot.appendChild(w); }
     if (fieldOn("resale") && m.resale) {
       foot.insertAdjacentHTML("beforeend",
         `<span class="value">${esc(m.resale.display || "")}` +
@@ -661,6 +671,12 @@
     if (!p.length) return "";
     const short = { "Apple Music": "Apple", "YouTube Music": "YouTube" };
     return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Listen on ${esc(x.name)}">♫ ${esc(short[x.name] || x.name)}</a>`).join("");
+  }
+  function readPills(m) {
+    const p = (m.read && m.read.providers) || [];
+    if (!p.length) return "";
+    const short = { "Open Library": "OpenLib", "Goodreads": "Goodreads", "Google Books": "Google" };
+    return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Find on ${esc(x.name)}">📖 ${esc(short[x.name] || x.name)}</a>`).join("");
   }
   function seenToggle(m) {
     const d = lineEl("seentoggle");
@@ -778,6 +794,7 @@
   const FORMATS_BY_TYPE = {
     movie: ["DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"],
     music: ["CD", "Vinyl", "Cassette", "Unknown"],
+    book: ["Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown"],
   };
   function fmtOptions(type, current) {
     return (FORMATS_BY_TYPE[type] || FORMATS_BY_TYPE.movie)
@@ -794,13 +811,16 @@
         `<select id="e_mt" title="Media type">` +
           `<option value="movie" ${startType === "movie" ? "selected" : ""}>🎬 Movie</option>` +
           `<option value="music" ${startType === "music" ? "selected" : ""}>🎵 Music</option>` +
+          `<option value="book" ${startType === "book" ? "selected" : ""}>📚 Book</option>` +
         `</select>` +
         `<input id="e_y" type="number" value="${esc(m.year || "")}" placeholder="Year">` +
         `<select id="e_f">${fmtOptions(startType, m.format)}</select>` +
       `</div>` +
       `<input id="e_artist" type="text" value="${esc(m.artist || "")}" placeholder="Artist (for music)" ${startType === "music" ? "" : "hidden"}>` +
-      `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company" ${startType === "music" ? "hidden" : ""}>` +
-      `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor" ${startType === "music" ? "hidden" : ""}>` +
+      `<input id="e_author" type="text" value="${esc(m.author || "")}" placeholder="Author (for books)" ${startType === "book" ? "" : "hidden"}>` +
+      `<input id="e_publisher" type="text" value="${esc(m.publisher || "")}" placeholder="Publisher (for books)" ${startType === "book" ? "" : "hidden"}>` +
+      `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company" ${startType === "movie" ? "" : "hidden"}>` +
+      `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor" ${startType === "movie" ? "" : "hidden"}>` +
       `<label class="ie-check"><input id="e_r" type="checkbox"> Re-query internet on next online rebuild</label>` +
       `<div class="ie-row"><button class="btn-mini btn-primary" id="e_save">Save</button><button class="btn-mini" id="e_cancel">Cancel</button></div>`;
     b.appendChild(ed);
@@ -809,10 +829,12 @@
     // switching type swaps the format list + relevant fields, and suggests a re-query
     ed.querySelector("#e_mt").addEventListener("change", (e) => {
       const t = e.target.value;
-      ed.querySelector("#e_f").innerHTML = fmtOptions(t, t === "music" ? "CD" : "DVD");
+      ed.querySelector("#e_f").innerHTML = fmtOptions(t, (FORMATS_BY_TYPE[t] || FORMATS_BY_TYPE.movie)[0]);
       ed.querySelector("#e_artist").hidden = t !== "music";
-      ed.querySelector("#e_s").hidden = t === "music";
-      ed.querySelector("#e_d").hidden = t === "music";
+      ed.querySelector("#e_author").hidden = t !== "book";
+      ed.querySelector("#e_publisher").hidden = t !== "book";
+      ed.querySelector("#e_s").hidden = t !== "movie";
+      ed.querySelector("#e_d").hidden = t !== "movie";
       if (t !== startType) ed.querySelector("#e_r").checked = true;   // re-enrich with the right provider
     });
 
@@ -826,6 +848,7 @@
         requery: ed.querySelector("#e_r").checked,
       };
       if (type === "music") patch.artist = ed.querySelector("#e_artist").value.trim();
+      else if (type === "book") { patch.author = ed.querySelector("#e_author").value.trim(); patch.publisher = ed.querySelector("#e_publisher").value.trim(); }
       else { patch.studio = ed.querySelector("#e_s").value.trim(); patch.distributor = ed.querySelector("#e_d").value.trim(); }
       setCorr(m, patch);
       applyCorrection(m); render();

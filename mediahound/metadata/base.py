@@ -55,6 +55,29 @@ class MusicMeta:
     raw: dict = field(default_factory=dict)
 
 
+@dataclass
+class BookMeta:
+    """Enrichment result for a book (by ISBN, or title + author)."""
+    matched: bool
+    media_type: str = "book"
+    source: str = ""                 # "openlibrary" | "googlebooks"
+    source_id: str = ""
+    title: str | None = None
+    author: str | None = None        # primary author(s), human-readable
+    year: int | None = None          # first/publish year
+    genres: list[str] = field(default_factory=list)   # subjects
+    publisher: str | None = None
+    isbn: str | None = None
+    format: str | None = None        # Hardcover | Paperback | eBook | Audiobook
+    page_count: int | None = None
+    series: str | None = None
+    rating: float | None = None      # 0..10 if available
+    overview: str | None = None
+    cover_url: str | None = None
+    source_url: str | None = None    # link to the Open Library / Google Books page
+    raw: dict = field(default_factory=dict)
+
+
 class MetadataProvider:
     name = "base"
     media_type = "movie"

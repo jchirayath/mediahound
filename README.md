@@ -16,11 +16,13 @@
 Point MediaHound at a folder of cover photos — DVDs, VHS, Blu-ray, **CDs, vinyl, cassettes** — or
 **import a CSV**. It identifies each item, pulls in cover art, genres, cast/artist, studio/label,
 runtime/tracklist and ratings, writes a short enticing intro, estimates the used resale value, links
-where to **watch** (movies) or **listen** (music), and generates a polished static website you can
-search, filter by **🎬 Movies / 🎵 Music**, sort, and curate — with a password-protected admin mode.
+where to **watch** (movies), **listen** (music) or **find** (books), and generates a polished static
+website you can search, filter by **🎬 Movies / 🎵 Music / 📚 Books**, sort, and curate — with a
+password-protected admin mode.
 
 Movies are identified/enriched via TMDB / OMDb / Wikidata + JustWatch; music via **MusicBrainz +
-Cover Art Archive** (open, zero-key) with keyless Spotify / Apple Music / YouTube Music links.
+Cover Art Archive**; books via **Open Library** (open, zero-key) — scan a book's **ISBN** for an exact
+match. Keyless Spotify / Apple Music / YouTube Music + Open Library / Goodreads links throughout.
 
 **▶ [Live demo](https://jchirayath.github.io/mediahound/)** — explore a sample catalog in your browser (admin password: `changeme`).
 

@@ -13,8 +13,9 @@ from .identify.base import Identification
 from .imaging import make_placeholder_poster, prepared_jpeg, save_thumbnail
 from .intro import make_intro
 from .links import listen_links as _listen_links
+from .links import read_links as _read_links
 from .metadata import get_metadata_provider
-from .metadata.base import MovieMeta, MusicMeta
+from .metadata.base import BookMeta, MovieMeta, MusicMeta
 from .resale import estimate
 from .store import Store, list_media_images, sha256_file
 
@@ -95,18 +96,22 @@ def _find_raw_image(input_dir: Path, name: str) -> Path | None:
     if not name:
         return None
     for cand in (input_dir / name, input_dir / "video" / name, input_dir / "audio" / name,
-                 input_dir / "movies" / name, input_dir / "music" / name):
+                 input_dir / "movies" / name, input_dir / "music" / name, input_dir / "books" / name):
         if cand.is_file():
             return cand
     return None
 
 
+# RawImages subfolder that holds each media type's source photos.
+_TYPE_FOLDER = {"movie": "video", "music": "audio", "book": "books"}
+
+
 def _sync_source_folder(cfg: Config, store: Store, m: dict, new_type: str, log) -> None:
     """Keep an item's source cover photo(s) in the RawImages subfolder that matches its media
-    type (video → movies, audio → music). Idempotent: a photo already in place is left alone, so
-    a reclassified title is correct *at the source* too — it won't snap back if corrections.json
-    is ever cleared. Only moves files that stay inside RawImages."""
-    sub = "audio" if new_type == "music" else "video"
+    type (video → movies, audio → music, books → book). Idempotent: a photo already in place is left
+    alone, so a reclassified title is correct *at the source* too — it won't snap back if
+    corrections.json is ever cleared. Only moves files that stay inside RawImages."""
+    sub = _TYPE_FOLDER.get(new_type, "video")
     dest_dir = (cfg.input_dir / sub).resolve()
     names = set()
     if m.get("source_image"):
@@ -218,6 +223,20 @@ _MOCK_MUSIC = [
          intro="Soul, hip-hop and gospel fused into one of the finest debuts ever pressed."),
 ]
 
+# Sample books for --mock (generated placeholder covers; no copyrighted jackets stored).
+_MOCK_BOOKS = [
+    dict(title="Dune", author="Frank Herbert", year=1965, format="Paperback", publisher="Ace",
+         genres=["Science Fiction"], rating=8.7, page_count=688, color=(54, 38, 18),
+         intro="Spice, sandworms and prophecy — the desert epic that defined a genre."),
+    dict(title="The Left Hand of Darkness", author="Ursula K. Le Guin", year=1969, format="Paperback",
+         publisher="Ace", genres=["Science Fiction"], rating=8.4, page_count=304, color=(28, 40, 58),
+         intro="A lone envoy on a frozen world where gender is fluid — quietly revolutionary."),
+    dict(title="Pride and Prejudice", author="Jane Austen", year=1813, format="Hardcover",
+         publisher="T. Egerton", genres=["Classic", "Romance"], rating=8.6, page_count=432,
+         color=(64, 44, 30),
+         intro="Wit, manners and Mr. Darcy — the comedy of misjudgement that never ages."),
+]
+
 
 class _NullMetadata:
     """Offline stand-in — never touches the network; every title becomes a manual entry."""
@@ -293,19 +312,22 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
     images = list_media_images(cfg.input_dir)
     stats.scanned = len(images)
     n_audio = sum(1 for _, mt in images if mt == "music")
+    n_book = sum(1 for _, mt in images if mt == "book")
     log(f"Scanning {cfg.input_dir} → {len(images)} image(s) "
-        f"({len(images) - n_audio} video, {n_audio} audio)")
+        f"({len(images) - n_audio - n_book} video, {n_audio} audio, {n_book} books)")
 
     providers = None
     if images:
         if online:
             movie_meta = _CachedMetadata(get_metadata_provider(cfg), cfg.data_dir / ".metadata-cache.json")
             providers = {"movie": movie_meta,
-                         "music": get_metadata_provider(cfg, "music") if n_audio else _NullMetadata()}
+                         "music": get_metadata_provider(cfg, "music") if n_audio else _NullMetadata(),
+                         "book": get_metadata_provider(cfg, "book") if n_book else _NullMetadata()}
             log(f"Metadata: {movie_meta.name} (movies) + "
-                f"{providers['music'].name if n_audio else 'none'} (music), online + cached")
+                f"{providers['music'].name if n_audio else 'none'} (music) + "
+                f"{providers['book'].name if n_book else 'none'} (books), online + cached")
         else:
-            providers = {"movie": _NullMetadata(), "music": _NullMetadata()}
+            providers = {"movie": _NullMetadata(), "music": _NullMetadata(), "book": _NullMetadata()}
             log("OFFLINE mode — not contacting any online databases (use --online to enable).")
 
     # The identifier is built lazily — only when a NON-queued image actually needs it.
@@ -379,13 +401,17 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             _providers[mt] = get_metadata_provider(cfg, mt)
         return _providers[mt]
 
-    # movie-only / music-only fields, cleared when an item switches type
-    _MOVIE_ONLY = ("director", "actors", "runtime", "studio", "distributor", "tagline",
-                   "spoken_languages", "streaming")
-    _MUSIC_ONLY = ("artist", "label", "tracklist", "disc_count", "barcode", "catalog_no", "listen")
+    # per-type fields, cleared when an item switches to a *different* type
+    _TYPE_ONLY = {
+        "movie": ("director", "actors", "runtime", "studio", "distributor", "tagline",
+                  "spoken_languages", "streaming"),
+        "music": ("artist", "label", "tracklist", "disc_count", "barcode", "catalog_no", "listen"),
+        "book": ("author", "publisher", "page_count", "isbn", "series", "read"),
+    }
     # valid formats per type — an incompatible format is normalised when a title switches type
     _FORMATS = {"movie": ("DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"),
-                "music": ("CD", "Vinyl", "Cassette", "Unknown")}
+                "music": ("CD", "Vinyl", "Cassette", "Unknown"),
+                "book": ("Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown")}
     tld = cfg.resale.get("ebay_tld", "com")
     requery_consumed = False
 
@@ -404,24 +430,30 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             m["year"] = c["year"]
         if c.get("format"):
             m["format"] = c["format"]
-        # move a title between Movies and Music (clears the other type's stale fields)
-        if c.get("media_type") in ("movie", "music"):
+        # move a title between Movies / Music / Books (clears the *other* types' stale fields)
+        if c.get("media_type") in _FORMATS:
             new = c["media_type"]
             if new != m.get("media_type", "movie"):
                 m["media_type"] = new
-                for f in (_MOVIE_ONLY if new == "music" else _MUSIC_ONLY):
-                    m.pop(f, None)
+                for t, fields in _TYPE_ONLY.items():
+                    if t != new:
+                        for f in fields:
+                            m.pop(f, None)
                 log(f"  correction: moved {mid} → {new}")
-            # a DVD/VHS left on a music item (or a CD on a movie) is wrong — normalise it
+            # a format that doesn't belong to the new type (e.g. DVD on a book) is normalised
             # (idempotent; runs even if the type already matches, to repair earlier moves)
             if m.get("format") and m["format"] not in _FORMATS[new]:
                 m["format"] = _FORMATS[new][0]
-            # keep the source photo in the matching RawImages/<video|audio> folder (idempotent)
+            # keep the source photo in the matching RawImages/<video|audio|books> folder (idempotent)
             _sync_source_folder(cfg, store, m, new, log)
         if "artist" in c:
             m["artist"] = c["artist"] or None
         if "label" in c:
             m["label"] = c["label"] or None
+        if "author" in c:
+            m["author"] = c["author"] or None
+        if "publisher" in c:
+            m["publisher"] = c["publisher"] or None
         removed = set(c.get("removed_images") or [])
         if removed:
             m["images"] = [im for im in m.get("images", []) if im not in removed]
@@ -450,13 +482,18 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             mt = m.get("media_type", "movie")
             prov = _meta_provider(mt)
             try:
-                nm = (prov.lookup(m["title"], artist=m.get("artist")) if mt == "music"
-                      else prov.lookup(m["title"], m.get("year")))
+                if mt == "music":
+                    nm = prov.lookup(m["title"], artist=m.get("artist"))
+                elif mt == "book":
+                    nm = prov.lookup(m["title"], author=m.get("author"))
+                else:
+                    nm = prov.lookup(m["title"], m.get("year"))
             except Exception as exc:
                 log(f"  correction: re-query failed for {mid}: {exc}")
                 nm = None
             if nm and getattr(nm, "matched", False) and _plausible_title(m["title"], nm.title):
-                (_apply_meta_to_music if mt == "music" else _apply_meta_to_movie)(cfg, m, nm)
+                {"music": _apply_meta_to_music, "book": _apply_meta_to_book}.get(
+                    mt, _apply_meta_to_movie)(cfg, m, nm)
                 c["requery"] = False  # consumed → don't re-query every build
                 requery_consumed = True
                 log(f"  correction: re-queried {mid} ({mt}) → {nm.title} ({nm.source})")
@@ -516,6 +553,26 @@ def _apply_meta_to_music(cfg: Config, m: dict, meta: MusicMeta) -> None:
     m["catalog_no"] = meta.catalog_no
     m["overview"] = meta.overview
     m["listen"] = _listen_links(m.get("artist") or "", m["title"])
+    m["source"] = {"name": meta.source, "url": meta.source_url}
+    if meta.cover_url:
+        dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
+        if _download_poster(meta.cover_url, dest):
+            m["poster"] = f"posters/{dest.name}"
+
+
+def _apply_meta_to_book(cfg: Config, m: dict, meta: BookMeta) -> None:
+    """Overwrite a book's enrichment fields from a fresh Open Library lookup."""
+    m["title"] = meta.title or m["title"]
+    m["author"] = meta.author or m.get("author")
+    m["year"] = meta.year or m.get("year")
+    m["publisher"] = meta.publisher
+    m["genres"] = meta.genres
+    m["rating"] = meta.rating
+    m["page_count"] = meta.page_count
+    m["isbn"] = meta.isbn
+    m["series"] = meta.series
+    m["overview"] = meta.overview
+    m["read"] = _read_links(m.get("author") or "", m["title"])
     m["source"] = {"name": meta.source, "url": meta.source_url}
     if meta.cover_url:
         dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
@@ -754,15 +811,75 @@ def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
     return True
 
 
-class _FixedMusicProvider:
-    """One-shot music provider that returns an already-resolved MusicMeta (used when a barcode
-    has pinned the exact release, so we skip the fuzzy title search entirely)."""
+def _process_book(cfg, store, img, h, ident, provider, is_manual) -> bool:
+    """Enrich a book cover via the book provider (Open Library) and write a book record."""
+    meta = provider.lookup(ident.title, author=ident.artist)
+    if not getattr(meta, "matched", False) and not is_manual:
+        return _record_unidentified(cfg, store, img, h, ident, reason="no book match")
+    if not getattr(meta, "matched", False):
+        meta = BookMeta(True, source="manual", title=ident.title, author=ident.artist)
+
+    title = meta.title or ident.title
+    author = meta.author
+    mid = _slug(f"{author or ''}-{title}-{meta.year or ident.year or h[:6]}")
+
+    poster_rel = None
+    poster_dest = cfg.posters_dir / f"{mid}.jpg"
+    if meta.cover_url and _download_poster(meta.cover_url, poster_dest):    # Open Library cover
+        poster_rel = f"posters/{poster_dest.name}"
+    else:
+        try:
+            save_thumbnail(img, poster_dest, max_edge=600)                  # fall back to the photo
+            poster_rel = f"posters/{poster_dest.name}"
+        except Exception:
+            pass
+
+    original_rel = None
+    original_dest = cfg.output_dir / "originals" / f"{mid}-{h[:8]}.jpg"
+    try:
+        save_thumbnail(img, original_dest, max_edge=900, portrait=True)
+        original_rel = f"originals/{original_dest.name}"
+    except Exception:
+        pass
+
+    fmt = ident.format if ident.format and ident.format != "Unknown" else (meta.format or "Paperback")
+    images = [poster_rel] if poster_rel else []
+    if original_rel and original_rel not in images:
+        images.append(original_rel)
+    year = meta.year or ident.year
+    genre = meta.genres[0].lower() if meta.genres else None
+    intro = (f"A {genre} book worth a read." if genre
+             else (f"{author} — {title}." if author else title))
+
+    item = {
+        "id": mid, "media_type": "book", "title": title, "author": author,
+        "year": year, "format": fmt, "publisher": meta.publisher, "genres": meta.genres,
+        "rating": meta.rating, "page_count": meta.page_count, "isbn": meta.isbn,
+        "series": meta.series, "intro": intro, "overview": meta.overview,
+        "poster": poster_rel, "images": images,
+        "read": _read_links(author or "", title),
+        "source": {"name": meta.source, "url": meta.source_url},
+        "resale": estimate(f"{author or ''} {title}".strip(), year, fmt, meta.rating,
+                           cfg.resale.get("ebay_tld", "com")),
+        "source_image": img.name, "confidence": round(ident.confidence, 3),
+        "seen": False, "date_seen": None, "added_at": _now(),
+    }
+    store.upsert_movie(item)
+    if is_manual:
+        store.remove_unidentified_by_hash(h)
+    store.record(h, img.name, "identified", mid, _now())
+    return True
+
+
+class _FixedProvider:
+    """One-shot provider that returns an already-resolved meta (used when a barcode/ISBN has pinned
+    the exact release/edition, so we skip the fuzzy title search entirely)."""
     name = "barcode"
 
     def __init__(self, meta):
         self.meta = meta
 
-    def lookup(self, title, year=None, artist=None):
+    def lookup(self, title, year=None, **kw):
         return self.meta
 
 
@@ -787,10 +904,16 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
         # Barcode first (exact > fuzzy OCR): decode locally, resolve online. Music barcodes pin
         # the exact release — write it straight away, skipping OCR and the plausibility guard.
         bm = _try_barcode(cfg, img, media_type) if online else None
-        if bm and media_type == "music":
+        # An ISBN (978/979) self-identifies as a book even in a mixed folder.
+        bm_type = bm["media_type"] if bm else media_type
+        if bm and bm_type == "music":
             ident = Identification(True, bm["title"], bm["year"], "Unknown", None, 0.99,
                                    None, bm["artist"])
-            return _process_music(cfg, store, img, h, ident, _FixedMusicProvider(bm["meta"]), True)
+            return _process_music(cfg, store, img, h, ident, _FixedProvider(bm["meta"]), True)
+        if bm and bm_type == "book":
+            ident = Identification(True, bm["title"], bm["year"], "Unknown", None, 0.99,
+                                   None, bm.get("author"))
+            return _process_book(cfg, store, img, h, ident, _FixedProvider(bm["meta"]), True)
         if bm:                                  # movie: trust the UPC product title, then enrich
             is_manual = True
             ident = Identification(True, bm["title"], bm.get("year"), "Unknown", None, 0.99)
@@ -803,6 +926,8 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
 
     if media_type == "music":
         return _process_music(cfg, store, img, h, ident, providers["music"], is_manual)
+    if media_type == "book":
+        return _process_book(cfg, store, img, h, ident, providers["book"], is_manual)
 
     metadata = providers["movie"]
     meta = metadata.lookup(ident.title, ident.year)
@@ -997,6 +1122,32 @@ def _build_mock(cfg, store, stats, log) -> Stats:
             "resale": estimate(f"{artist} {title}", year, fmt, mk["rating"], tld),
             "source_image": f"(demo) {artist} — {title}", "confidence": 0.99,
             "seen": played, "date_seen": ("2024-03-01" if played else None), "added_at": _now(),
+        }
+        store.upsert_movie(item)
+        store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())
+        stats.new += 1
+        stats.identified += 1
+
+    # --- books -----------------------------------------------------------------------
+    for i, mk in enumerate(_MOCK_BOOKS):
+        title, author, year, fmt = mk["title"], mk["author"], mk["year"], mk["format"]
+        mid = f"{_slug(author)}-{_slug(title)}-{year}"
+        cover = cfg.posters_dir / f"{mid}.jpg"
+        make_placeholder_poster(f"{title}", cover, color=mk.get("color", (40, 36, 28)),
+                                subtitle=author)
+        images = [f"posters/{cover.name}"]
+        read = (i % 2 == 0)
+        item = {
+            "id": mid, "media_type": "book", "title": title, "author": author,
+            "year": year, "format": fmt, "publisher": mk.get("publisher"), "genres": mk["genres"],
+            "rating": mk["rating"], "page_count": mk.get("page_count"), "isbn": None,
+            "intro": mk["intro"], "overview": mk["intro"],
+            "poster": images[0], "images": images,
+            "read": _read_links(author, title),
+            "source": {"name": "mock", "url": None},
+            "resale": estimate(f"{author} {title}", year, fmt, mk["rating"], tld),
+            "source_image": f"(demo) {author} — {title}", "confidence": 0.99,
+            "seen": read, "date_seen": ("2024-04-01" if read else None), "added_at": _now(),
         }
         store.upsert_movie(item)
         store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())

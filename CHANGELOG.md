@@ -4,6 +4,17 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added — 📚 Books (new media type)
+- A third media type alongside movies & music. Books resolve by **ISBN** (an EAN-13 with the 978/979
+  prefix auto-routes as a book) or by title + author via **[Open Library](https://openlibrary.org)** —
+  **no API key**. New `metadata/openlibrary.py` (`BookMeta`), book fields (author, publisher, year,
+  pages, ISBN, subjects), a `📚 Books` tab, book card layout (author / publisher / pages / where-to-find
+  links), a book inline editor, `RawImages/books/`, CSV import/export columns, `[book.metadata]` config,
+  and `_MOCK_BOOKS` demo data. The movie/music field-clearing on a type-move generalised to N types.
+  See [docs/design/05-new-media-types.md](docs/design/05-new-media-types.md). (Video games next.)
+
 ## [0.4.0] — 2026-06-12
 
 ### Changed

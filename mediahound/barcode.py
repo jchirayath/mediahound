@@ -50,6 +50,12 @@ def _music_provider(cfg: Config):
     return MusicBrainzProvider()
 
 
+def is_isbn(code: str) -> bool:
+    """An EAN-13 in the Bookland range (978/979) is an ISBN — i.e. a book, unambiguously."""
+    code = (code or "").strip()
+    return len(code) == 13 and code.isdigit() and code[:3] in ("978", "979")
+
+
 def lookup(cfg: Config, upc: str, media_type: str = "music") -> dict | None:
     """Resolve a UPC to a release (music) or a product title (movie). Returns a dict:
       music → {media_type, upc, title, artist, year, meta:<MusicMeta>}
@@ -58,6 +64,14 @@ def lookup(cfg: Config, upc: str, media_type: str = "music") -> dict | None:
     upc = (upc or "").strip()
     if not upc:
         return None
+    # An ISBN (978/979) is always a book, regardless of the requested media_type.
+    if media_type == "book" or is_isbn(upc):
+        from .metadata import get_metadata_provider
+        meta = get_metadata_provider(cfg, "book").lookup_by_isbn(upc)
+        if not getattr(meta, "matched", False):
+            return None
+        return {"media_type": "book", "upc": upc, "title": meta.title,
+                "author": meta.author, "year": meta.year, "meta": meta}
     if media_type == "music":
         meta = _music_provider(cfg).lookup_by_barcode(upc)
         if not getattr(meta, "matched", False):
@@ -98,6 +112,36 @@ def music_item_from_meta(cfg: Config, meta, upc: str | None = None) -> dict:
         "resale": estimate(f"{meta.artist or ''} {meta.title}".strip(), meta.year, fmt,
                            meta.rating, cfg.resale.get("ebay_tld", "com")),
         "source_image": f"(barcode {upc})" if upc else f"(barcode) {meta.title}",
+        "confidence": 0.99, "seen": False, "date_seen": None,
+        "added_at": datetime.now(UTC).isoformat(timespec="seconds"),
+    }
+
+
+def book_item_from_meta(cfg: Config, meta, isbn: str | None = None) -> dict:
+    """Build a catalog item (book) from a resolved BookMeta — used when an ISBN is scanned
+    without a cover photo (the cover comes from Open Library)."""
+    import re
+    from datetime import UTC, datetime
+
+    from .links import read_links
+    from .resale import estimate
+
+    slug = re.sub(r"[^a-z0-9]+", "-",
+                  f"{meta.author or ''}-{meta.title}-{meta.year or (isbn or '')[:6]}".lower()).strip("-") or "item"
+    fmt = meta.format or "Paperback"
+    cover = meta.cover_url
+    return {
+        "id": slug, "media_type": "book", "title": meta.title, "author": meta.author,
+        "year": meta.year, "format": fmt, "publisher": meta.publisher, "genres": meta.genres,
+        "rating": meta.rating, "page_count": meta.page_count, "isbn": meta.isbn or isbn,
+        "series": meta.series,
+        "intro": f"{meta.author} — {meta.title}." if meta.author else meta.title,
+        "overview": meta.overview, "poster": cover, "images": [cover] if cover else [],
+        "read": read_links(meta.author or "", meta.title),
+        "source": {"name": meta.source, "url": meta.source_url},
+        "resale": estimate(f"{meta.author or ''} {meta.title}".strip(), meta.year, fmt,
+                           meta.rating, cfg.resale.get("ebay_tld", "com")),
+        "source_image": f"(isbn {isbn})" if isbn else f"(isbn) {meta.title}",
         "confidence": 0.99, "seen": False, "date_seen": None,
         "added_at": datetime.now(UTC).isoformat(timespec="seconds"),
     }

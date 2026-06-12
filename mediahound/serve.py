@@ -296,8 +296,9 @@ class _Handler(SimpleHTTPRequestHandler):
         body = self._read_json_body(max_bytes=_MAX_UPLOAD)
         if not isinstance(body, dict) or not isinstance(body.get("data"), str):
             return self._send_json({"ok": False, "error": "expected {filename, media_type, data}"}, 400)
-        media_type = "music" if body.get("media_type") == "music" else "movie"
-        sub = "audio" if media_type == "music" else "video"
+        mt_in = body.get("media_type")
+        media_type = mt_in if mt_in in ("music", "book") else "movie"
+        sub = {"music": "audio", "book": "books"}.get(media_type, "video")
         # sanitise the filename → a safe basename with an image extension
         raw_name = os.path.basename(str(body.get("filename") or "photo.jpg")).strip()
         stem, ext = os.path.splitext(raw_name)
@@ -369,7 +370,8 @@ class _Handler(SimpleHTTPRequestHandler):
         upc = (isinstance(body, dict) and str(body.get("upc") or "").strip()) or ""
         if not upc.isdigit():
             return self._send_json({"ok": False, "error": "expected {upc: <digits>, media_type}"}, 400)
-        media_type = "music" if (isinstance(body, dict) and body.get("media_type") == "music") else "movie"
+        mt_in = (isinstance(body, dict) and body.get("media_type")) or "movie"
+        media_type = mt_in if mt_in in ("music", "book") else "movie"
         tmp = None
         try:
             from . import barcode, pipeline
@@ -378,15 +380,19 @@ class _Handler(SimpleHTTPRequestHandler):
             if not match:
                 return self._send_json({"ok": True, "matched": False, "upc": upc})
             store = Store(self.cfg.data_dir)
-            if media_type == "music":
-                item = barcode.music_item_from_meta(self.cfg, match["meta"], upc)
+            # an ISBN auto-resolves to a book even if the UI guessed otherwise
+            mt = match["media_type"]
+            if mt in ("music", "book"):
+                item = (barcode.book_item_from_meta(self.cfg, match["meta"], upc) if mt == "book"
+                        else barcode.music_item_from_meta(self.cfg, match["meta"], upc))
                 store.upsert_movie(item)
                 store.record(f"barcode-{upc}", item["source_image"], "identified",
                              item["id"], pipeline._now())
                 store.save()
                 pipeline._write_site(self.cfg, store)
-                return self._send_json({"ok": True, "matched": True, "media_type": "music",
-                                        "title": item["title"], "artist": item.get("artist"),
+                return self._send_json({"ok": True, "matched": True, "media_type": mt,
+                                        "title": item["title"],
+                                        "artist": item.get("artist"), "author": item.get("author"),
                                         "year": item.get("year")})
             # movie: resolve UPC → product title, then enrich via the normal title path
             from .csvio import import_csv

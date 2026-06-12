@@ -19,10 +19,10 @@ switcher** · ❓ **inline Help** · decluttered **sticky two-row UI + action me
 
 See [`docs/design/`](design/):
 
-5. **[New media types: Books & Video games](design/05-new-media-types.md)** — ISBN/UPC scan →
-   Open Library / Wikidata / IGDB; generalizes the movie/music split into a **media-type registry**.
+5. **[New media types: Books & Video games](design/05-new-media-types.md)** — 📚 **Books shipped**
+   (ISBN → Open Library, zero-key); 🎮 **Video games** next (Wikidata/IGDB + PriceCharting resale).
 
-(Proposals 01–04 above shipped in 0.4.0.)
+(Proposals 01–04 shipped in 0.4.0; Books shipped post-0.4.0.)
 
 ## 🗂️ Backlog (not yet designed)
 
