@@ -37,7 +37,7 @@ AUDIO = {".mp3", ".flac", ".m4a", ".m4p", ".aac", ".wma", ".ogg", ".oga", ".wav"
 _YEAR = re.compile(r"(19|20)\d{2}")
 # Trailing disc/cd marker only: "(Disc 1)", "[CD 2]", "Disk 3" at end of string.
 _DISC = re.compile(r"\s*[\(\[]?\s*(?:disc|cd|disk)\s*\d+[^\)\]]*[\)\]]?\s*$", re.I)
-_PLACEHOLDER_ALBUM = re.compile(r"^\s*(\[non-?album.*\]|unknown.*|various|untitled|\(null\))\s*$", re.I)
+_PLACEHOLDER_ALBUM = re.compile(r"^\s*(\[non-?album.*\]|unknown.*|various|untitled|\(null\)|\(?singles?\)?)\s*$", re.I)
 
 # --- audiobook / spoken-word signals -------------------------------------------------
 _SPOKEN_GENRE = re.compile(r"audiobook|audio book|spoken|speech|podcast|radio drama|comedy radio", re.I)
@@ -231,8 +231,14 @@ def main() -> int:
             album = album or fb["album"]
             artist = artist or fb["artist"] or "Unknown Artist"
             year = year or fb["year"]
-        # collapse placeholder "albums" (loose singles) into a per-artist Singles bucket
+        # A placeholder album tag ("(Single)", "[non-album tracks]", "Unknown") carries no
+        # real album name — recover it from the folder ("Coldplay - 2003 - Clocks" → Clocks);
+        # only fall back to a per-artist "Singles" bucket when the folder doesn't help either.
         placeholder = bool(_PLACEHOLDER_ALBUM.match(album or ""))
+        if placeholder:
+            fb_album = parse_folder(p.parent)["album"]
+            if fb_album and not _PLACEHOLDER_ALBUM.match(fb_album):
+                album, placeholder = fb_album, False
         album_clean = "Singles" if placeholder else (clean_album(album) or album)
         key = (norm_key(artist), norm_key(album_clean))
         albums[key].append({**tags, "_album": album_clean, "_artist": artist,
