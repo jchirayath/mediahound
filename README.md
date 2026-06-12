@@ -11,18 +11,24 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
 [![Live demo](https://img.shields.io/badge/live-demo-e97b0c.svg)](https://jchirayath.github.io/mediahound/)
 
-**Turn photos of your movie *and* music collection into a sleek, searchable web catalog.**
+**Turn photos of your media collection into a sleek, searchable web catalog — movies, music, books,
+video games & audiobooks.**
 
-Point MediaHound at a folder of cover photos — DVDs, VHS, Blu-ray, **CDs, vinyl, cassettes** — or
-**import a CSV**. It identifies each item, pulls in cover art, genres, cast/artist, studio/label,
-runtime/tracklist and ratings, writes a short enticing intro, estimates the used resale value, links
-where to **watch** (movies), **listen** (music) or **find** (books), and generates a polished static
-website you can search, filter by **🎬 Movies / 🎵 Music / 📚 Books**, sort, and curate — with a
-password-protected admin mode.
+Point MediaHound at a folder of cover photos — DVDs, VHS, Blu-ray, **CDs, vinyl, cassettes, books,
+game boxes, audiobooks** — or **import a CSV**. It identifies each item, pulls in cover art, genres,
+the right creator (cast/artist/author/developer/narrator), studio/label/publisher, runtime/tracklist/
+duration and ratings, writes a short enticing intro, estimates the used resale value, links where to
+**watch** (movies), **listen** (music), **find** (books), **play/buy** (games) or **hear** (audiobooks),
+and generates a polished static website you can search, filter by **🎬 Movies / 🎵 Music / 📚 Books /
+🎮 Games / 🎧 Audiobooks**, sort, curate, and **print to a PDF inventory** — with a password-protected
+admin mode.
 
-Movies are identified/enriched via TMDB / OMDb / Wikidata + JustWatch; music via **MusicBrainz +
-Cover Art Archive**; books via **Open Library** (open, zero-key) — scan a book's **ISBN** for an exact
-match. Keyless Spotify / Apple Music / YouTube Music + Open Library / Goodreads links throughout.
+Everything is **zero-key by default**: movies via TMDB / OMDb / Wikidata + JustWatch; music via
+**MusicBrainz + Cover Art Archive**; books via **Open Library** (scan an **ISBN** for the exact
+edition); video games via the **Wikidata** query service (scan a **UPC**) with **PriceCharting** used
+prices; audiobooks via **Open Library + LibriVox** (narrator + length). Keyless Spotify / Apple Music /
+YouTube Music, Open Library / Goodreads, Steam / eShop / PS Store, and Audible / Libro.fm links
+throughout. Adding a new media type is one entry in a **shared registry** — not a new branch everywhere.
 
 **▶ [Live demo](https://jchirayath.github.io/mediahound/)** — explore a sample catalog in your browser (admin password: `changeme` — *demo only; pick your own when you build*).
 
@@ -129,8 +135,11 @@ pip install "mediahound[ocr]"   # adds the default OCR identifier
 mediahound init mysite      # scaffolds mysite/ (RawImages/{video,audio}/, config.toml, web template)
 
 # Sort your cover photos by media type:
-cp ~/Pictures/dvd-covers/*.jpg   mysite/RawImages/video/    # 🎬 movies (DVD/VHS/Blu-ray/LaserDisc)
-cp ~/Pictures/album-covers/*.jpg mysite/RawImages/audio/    # 🎵 music  (CD/vinyl/cassette)
+cp ~/Pictures/dvd-covers/*.jpg    mysite/RawImages/video/       # 🎬 movies (DVD/VHS/Blu-ray/LaserDisc)
+cp ~/Pictures/album-covers/*.jpg  mysite/RawImages/audio/       # 🎵 music  (CD/vinyl/cassette)
+cp ~/Pictures/book-covers/*.jpg   mysite/RawImages/books/       # 📚 books  (scan the ISBN)
+cp ~/Pictures/game-boxes/*.jpg    mysite/RawImages/games/       # 🎮 games  (scan the UPC)
+cp ~/Pictures/audiobooks/*.jpg    mysite/RawImages/audiobooks/  # 🎧 audiobooks
 
 mediahound build --config mysite/config.toml --online   # identify + enrich (see Providers below)
 cd mysite && python3 -m http.server 8000
@@ -144,10 +153,14 @@ Photos are sorted into **media-type subfolders** so MediaHound knows how to iden
 |---|---|---|
 | `RawImages/video/` | 🎬 movies | TMDB / OMDb / Wikidata + JustWatch |
 | `RawImages/audio/` | 🎵 music | MusicBrainz + Cover Art Archive + listen links |
+| `RawImages/books/` | 📚 books | Open Library (ISBN or title+author) + find links |
+| `RawImages/games/` | 🎮 video games | Wikidata (title/UPC) + where-to-play + PriceCharting |
+| `RawImages/audiobooks/` | 🎧 audiobooks | Open Library + LibriVox (narrator/length) + listen links |
 | `RawImages/` (root) | defaults to movies | — |
 
-(`movies/` and `music/` are accepted aliases.) Add more photos anytime and re-run `build` — only the
-**new** ones are processed (state is tracked by content hash in `data/manifest.json`).
+(`movies/`, `music/`, `book/`, `game/`, `audiobook/` are accepted aliases.) Add more photos anytime
+and re-run `build` — only the **new** ones are processed (state is tracked by content hash in
+`data/manifest.json`).
 
 ### Or import from a CSV (no photos)
 
@@ -157,11 +170,12 @@ mediahound import catalog.csv --config mysite/config.toml --online # …and fetc
 mediahound export --config mysite/config.toml -o backup.csv        # dump the whole catalog back to CSV
 ```
 
-Columns (case-insensitive; extras ignored): `media_type, title, artist, director, year, format,
-label, studio, genres, rating, barcode, cover_url, intro`. **Only `title` is required** — any missing
-fields are left blank (or filled by `--online`); even a one-column list of titles works. `media_type`
-is inferred (`music` if an `artist` is given, else `movie`). See
-[`examples/sample-import.csv`](examples/sample-import.csv).
+Columns (case-insensitive; extras ignored): `media_type, title, artist, author, narrator, developer,
+director, year, format, label, publisher, studio, platforms, tracklist, genres, rating, barcode, isbn,
+pages, duration, cover_url, intro`. **Only `title` is required** — any missing fields are left blank
+(or filled by `--online`); even a one-column list of titles works. `media_type` is inferred
+(`audiobook` if a `narrator` is given, `game` if a `developer`, `book` if an `author`, `music` if an
+`artist`, else `movie`). See [`examples/sample-import.csv`](examples/sample-import.csv).
 
 Prefer a UI? Under **`mediahound serve --admin`** the admin screen has an **⬆ Import list** button —
 paste or upload the same CSV, optionally tick *enrich online*, and the titles are added and the site
