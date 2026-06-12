@@ -26,10 +26,21 @@
       </div>
       <div class="header-right">
         <span id="adminBadge" class="admin-badge" hidden>● ADMIN MODE</span>
-        <div class="header-stats" id="headerStats"></div>
         <button id="helpBtn" class="btn-ghost" type="button" title="How to use MediaHound">❓ Help</button>
-        <button id="settingsBtn" class="btn-ghost admin-only" type="button" hidden>⚙ Settings</button>
         <button id="adminBtn" class="btn-ghost" type="button">🔒 Admin</button>
+      </div>
+    </div>
+    <div class="wrap subbar">
+      <div class="media-tabs" id="mediaTabs">
+        <button class="mt-btn is-on" type="button" data-mt="all">All</button>
+        <button class="mt-btn" type="button" data-mt="movie">🎬 Movies</button>
+        <button class="mt-btn" type="button" data-mt="music">🎵 Music</button>
+      </div>
+      <div class="subbar-right">
+        <span class="header-stats" id="headerStats"></span>
+        <span id="saveState" class="save-state" hidden></span>
+        <button id="settingsBtn" class="btn-ghost admin-only" type="button" hidden>⚙ Settings</button>
+        <button id="libraryBtn" class="btn-ghost admin-only" type="button" hidden title="Open or switch to another library">📚 Library</button>
       </div>
     </div>
   </header>
@@ -42,11 +53,6 @@
   </div>
 
   <div class="controls wrap" id="controls">
-    <div class="media-tabs" id="mediaTabs">
-      <button class="mt-btn is-on" type="button" data-mt="all">All</button>
-      <button class="mt-btn" type="button" data-mt="movie">🎬 Movies</button>
-      <button class="mt-btn" type="button" data-mt="music">🎵 Music</button>
-    </div>
     <div class="search-row">
       <input type="search" id="search" placeholder="Search title, artist, genre, cast, label…" autocomplete="off" />
       <select id="sort" title="Sort by">
@@ -90,19 +96,11 @@
           <button id="colPlus" class="cols-btn" type="button" aria-label="more columns">+</button>
         </span>
         <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
-        <span id="saveState" class="save-state" hidden></span>
-        <button id="addPhotosBtn" class="btn-ghost admin-only" type="button" hidden title="Add cover photos to your catalog">➕ Add photos</button>
-        <button id="scanBtn" class="btn-ghost admin-only" type="button" hidden title="Scan or type a barcode to identify the exact release">📷 Scan barcode</button>
-        <button id="importBtn" class="btn-ghost admin-only" type="button" hidden title="Bulk-add titles from a CSV list">⬆ Import list</button>
-        <button id="discogsBtn" class="btn-ghost admin-only" type="button" hidden title="Import a Discogs user's record/CD collection">💿 Discogs</button>
+        <button id="importMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Add photos, scan a barcode, or import a list">➕ Add ▾</button>
+        <button id="connectMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Discogs, publish to the web, Letterboxd">🔗 Connect ▾</button>
+        <button id="exportMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Export your catalog and edits">⤓ Export ▾</button>
+        <button id="backupMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Back up or restore your library">💾 Backup ▾</button>
         <button id="rebuildBtn" class="btn-ghost admin-only" type="button" hidden title="Re-bake the catalog from your saved edits and reload">↻ Rebuild</button>
-        <button id="libraryBtn" class="btn-ghost admin-only" type="button" hidden title="Open or switch to another library">📚 Library</button>
-        <button id="publishBtn" class="btn-ghost admin-only" type="button" hidden title="Publish your catalog to the web (Netlify)">🌐 Publish</button>
-        <button id="backupBtn" class="btn-ghost admin-only" type="button" hidden title="Download a zip backup of your whole library">⬇ Backup</button>
-        <button id="exportLetterboxd" class="btn-ghost admin-only" type="button" hidden title="Export your movies as a Letterboxd import CSV">🎬 Letterboxd</button>
-        <button id="exportChanges" class="btn-ghost admin-only" type="button" hidden>Export changes</button>
-        <button id="exportSeen" class="btn-ghost admin-only" type="button" hidden>Export seen</button>
-        <button id="exitAdmin" class="btn-ghost admin-only" type="button" hidden>Exit admin</button>
       </span>
     </div>
   </div>
@@ -218,6 +216,16 @@
         <button class="btn" data-close>Close</button>
       </div>
       <p class="dialog-sub" id="settingsPwNote" hidden></p>
+    </div>
+  </div>
+
+  <!-- Generic action menu (Add / Connect / Export / Backup) -->
+  <div class="dialog" id="menuDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card">
+      <h2 id="menuTitle">Menu</h2>
+      <div class="menu-items" id="menuItems"></div>
+      <div class="dialog-actions"><button class="btn" data-close>Close</button></div>
     </div>
   </div>
 

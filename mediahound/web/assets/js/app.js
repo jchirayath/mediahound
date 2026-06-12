@@ -852,20 +852,14 @@
     // and a one-click Rebuild appears. Static hosting (no server) keeps the export flow.
     const live = isAdmin && serverAdmin;
     document.body.classList.toggle("server-admin", live);
-    const rb = $("#rebuildBtn"); if (rb) rb.hidden = !live;
-    const ib = $("#importBtn"); if (ib) ib.hidden = !live;
-    const db = $("#discogsBtn"); if (db) db.hidden = !(live && !phoneMode);
-    const ab = $("#addPhotosBtn"); if (ab) ab.hidden = !live;
-    const sc = $("#scanBtn"); if (sc) sc.hidden = !live;                        // scan works over LAN (phone) too
-    const bk = $("#backupBtn"); if (bk) bk.hidden = !(live && !phoneMode);     // full-library download — local only
-    const lbn = $("#libraryBtn"); if (lbn) lbn.hidden = !(live && !phoneMode); // switch served library — local only
-    const pb = $("#publishBtn"); if (pb) pb.hidden = !(live && !phoneMode);   // publish uses your Netlify token — local only
-    if (live) {
-      $("#adminBadge").textContent = "● ADMIN — saving to disk";
-      const ex = $("#exportChanges"); if (ex) ex.title = "Optional — your edits are already saved to data/ by the server";
-    } else {
-      $("#adminBadge").textContent = "● ADMIN MODE";
-    }
+    const show = (id, cond) => { const e = $(id); if (e) e.hidden = !cond; };
+    show("#rebuildBtn", live);
+    show("#importMenuBtn", live);                  // add photos / scan / CSV — needs the server
+    show("#backupMenuBtn", live && !phoneMode);    // backup/restore — local only
+    show("#connectMenuBtn", live && !phoneMode);   // Discogs / Publish / Letterboxd
+    show("#libraryBtn", live && !phoneMode);       // switch served library — local only
+    show("#exportMenuBtn", isAdmin);               // exports are client-side → work even without a server
+    $("#adminBadge").textContent = live ? "● ADMIN — saving to disk" : "● ADMIN MODE";
     // Static copy (no admin server): warn that edits live only in THIS browser and won't reach
     // data/ — so opening the same library in the app won't show them. Only after the ping resolves.
     const sw = $("#staticWarn");
@@ -1079,10 +1073,80 @@
   function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "application/json" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
   function downloadCsv(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
 
-  // ⬇ Backup — stream a zip of the whole library from the local admin server.
-  function doBackup() {
+  // ⬇ Backup — stream a zip of the whole library (or data only) from the local admin server.
+  function doBackup(noPhotos) {
     if (!serverAdmin) { alert("Backup needs the local app — run:  mediahound app  (or serve --admin)."); return; }
-    const a = document.createElement("a"); a.href = "api/backup"; a.download = ""; a.click();
+    const a = document.createElement("a"); a.href = "api/backup" + (noPhotos ? "?no_photos=1" : ""); a.download = ""; a.click();
+  }
+  function showRestoreHelp() {
+    alert("Restore a library from a backup zip (command line):\n\n" +
+          "  mediahound restore <backup.zip> <new-folder>\n\n" +
+          "It re-creates the library in a NEW folder (your current one is left untouched).\n" +
+          "Then open it with the 📚 Library switcher, or:  mediahound app <new-folder>");
+  }
+  // Catalog exports (client-side, work even on a static copy)
+  function exportCatalogJson() {
+    if (!movies.length) { alert("Nothing to export."); return; }
+    download("catalog.json", JSON.stringify(movies, null, 2));
+    alert(`Exported ${movies.length} item(s) → catalog.json.`);
+  }
+  function exportCatalogCsv() {
+    if (!movies.length) { alert("Nothing to export."); return; }
+    const cols = ["media_type", "title", "artist", "director", "year", "format", "label", "studio",
+                  "genres", "rating", "my_rating", "tags", "barcode", "intro"];
+    const cell = (v) => { v = Array.isArray(v) ? v.join("; ") : String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const rows = [cols.join(",")];
+    movies.forEach((m) => rows.push(cols.map((c) => cell(m[c])).join(",")));
+    downloadCsv("catalog.csv", rows.join("\n"));
+    alert(`Exported ${movies.length} item(s) → catalog.csv.`);
+  }
+
+  // ---- consolidated action menus (Add / Connect / Export / Backup) --------
+  function openMenu(title, items) {
+    $("#menuTitle").textContent = title;
+    const box = $("#menuItems"); box.innerHTML = "";
+    items.filter((it) => !it.hide).forEach((it) => {
+      const b = document.createElement("button");
+      b.type = "button"; b.className = "menu-item";
+      b.innerHTML = `<span class="mi-ico">${esc(it.icon || "")}</span>` +
+        `<span class="mi-body"><span class="mi-label">${esc(it.label)}</span>` +
+        (it.desc ? `<span class="mi-desc">${esc(it.desc)}</span>` : "") + `</span>`;
+      b.onclick = () => { $("#menuDialog").hidden = true; it.run(); };
+      box.appendChild(b);
+    });
+    $("#menuDialog").hidden = false;
+  }
+  function openImportMenu() {
+    if (!serverAdmin) { alert("Adding to your catalog needs the local app.\n\nRun:  mediahound app"); return; }
+    openMenu("➕ Add to your catalog", [
+      { icon: "📸", label: "Add photos", desc: "Drag in cover photos to catalog automatically", run: openUpload },
+      { icon: "📷", label: "Scan barcode", desc: "Identify the exact release by UPC/EAN — no photo", run: openScan },
+      { icon: "⬆", label: "Import from a CSV list", desc: "Bulk-add titles from a spreadsheet", run: openImport },
+    ]);
+  }
+  function openConnectMenu() {
+    if (!serverAdmin) { alert("Connecting to a service needs the local app.\n\nRun:  mediahound app"); return; }
+    openMenu("🔗 Connect & share", [
+      { icon: "💿", label: "Import from Discogs", desc: "Pull a Discogs user's record/CD collection", run: openDiscogs },
+      { icon: "🌐", label: "Publish to the web", desc: "Deploy a public, read-only copy (Netlify)", run: () => doPublish(), hide: phoneMode },
+      { icon: "🎬", label: "Export to Letterboxd", desc: "Your movies as a Letterboxd import CSV", run: exportLetterboxd },
+    ]);
+  }
+  function openExportMenu() {
+    openMenu("⤓ Export", [
+      { icon: "📄", label: "Catalog (CSV)", desc: "Every title as a spreadsheet", run: exportCatalogCsv },
+      { icon: "{ }", label: "Catalog (JSON)", desc: "The full catalog as JSON", run: exportCatalogJson },
+      { icon: "✎", label: "Export changes", desc: "Your edits (corrections.json) for a rebuild", run: exportCorrections },
+      { icon: "👁", label: "Export seen/played", desc: "Your seen marks (seen-overrides.json)", run: exportSeen },
+    ]);
+  }
+  function openBackupMenu() {
+    if (!serverAdmin) { alert("Backup needs the local app.\n\nRun:  mediahound app"); return; }
+    openMenu("💾 Backup & restore", [
+      { icon: "⬇", label: "Back up library", desc: "Zip of your photos + data + config", run: () => doBackup(false) },
+      { icon: "⬇", label: "Back up data only", desc: "Just your curation — small & fast (no photos)", run: () => doBackup(true) },
+      { icon: "↩", label: "Restore…", desc: "Re-create a library from a backup zip", run: showRestoreHelp },
+    ]);
   }
   // 🎬 Letterboxd — build an import CSV of your movies (Title, Year, Rating10, WatchedDate, Tags)
   // entirely client-side from the loaded catalog + your personal ratings/tags.
@@ -1123,7 +1187,6 @@
     if ($("#helpExpand")) $("#helpExpand").onclick = () => setAllHelp(true);
     if ($("#helpCollapse")) $("#helpCollapse").onclick = () => setAllHelp(false);
     if ($("#helpSearch")) $("#helpSearch").addEventListener("input", (e) => filterHelp(e.target.value));
-    $("#exitAdmin").onclick = exitAdmin;
     $("#settingsBtn").onclick = openSettings;
     $("#settingsSave").onclick = saveSettings;
     $("#settingsExport").onclick = exportSettings;
@@ -1136,23 +1199,22 @@
       });
     });
     $("#clearImage").onclick = () => { pendingImage = ""; $("#setImagePreview").hidden = true; $("#clearImage").hidden = true; };
-    $("#exportChanges").onclick = exportCorrections;
     if ($("#staticWarnExport")) $("#staticWarnExport").onclick = exportCorrections;
     if ($("#rebuildBtn")) $("#rebuildBtn").onclick = rebuildSite;
-    if ($("#importBtn")) $("#importBtn").onclick = openImport;
-    if ($("#discogsBtn")) $("#discogsBtn").onclick = openDiscogs;
+    // consolidated action menus
+    if ($("#importMenuBtn")) $("#importMenuBtn").onclick = openImportMenu;
+    if ($("#connectMenuBtn")) $("#connectMenuBtn").onclick = openConnectMenu;
+    if ($("#exportMenuBtn")) $("#exportMenuBtn").onclick = openExportMenu;
+    if ($("#backupMenuBtn")) $("#backupMenuBtn").onclick = openBackupMenu;
     if ($("#importGo")) $("#importGo").onclick = doImport;
     if ($("#importFile")) $("#importFile").addEventListener("change", (e) => {
       const f = e.target.files[0]; if (!f) return;
       const rd = new FileReader(); rd.onload = () => { $("#importCsv").value = rd.result; }; rd.readAsText(f);
     });
-    // Add photos (upload + drag-drop)
-    if ($("#addPhotosBtn")) $("#addPhotosBtn").onclick = openUpload;
-    if ($("#scanBtn")) $("#scanBtn").onclick = openScan;
+    // Scan dialog controls (the dialog is opened from the ➕ Add menu)
     if ($("#scanCamera")) $("#scanCamera").onclick = startCamera;
     if ($("#scanGo")) $("#scanGo").onclick = submitScan;
     if ($("#scanUpc")) $("#scanUpc").addEventListener("keydown", (e) => { if (e.key === "Enter") submitScan(); });
-    if ($("#publishBtn")) $("#publishBtn").onclick = () => doPublish();
     if ($("#libraryBtn")) $("#libraryBtn").onclick = openLibrary;
     if ($("#settingsManageLib")) $("#settingsManageLib").onclick = () => { $("#settingsDialog").hidden = true; openLibrary(); };
     if ($("#libraryOpen")) $("#libraryOpen").onclick = () => { const p = $("#libraryPath").value.trim(); if (p) switchLibrary(p, false); };
@@ -1165,17 +1227,14 @@
       ["dragleave", "drop"].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove("drag"); }));
       dz.addEventListener("drop", (e) => { if (e.dataTransfer && e.dataTransfer.files) addUploadFiles(e.dataTransfer.files); });
     }
-    $("#exportSeen").onclick = exportSeen;
-    if ($("#backupBtn")) $("#backupBtn").onclick = doBackup;
-    if ($("#exportLetterboxd")) $("#exportLetterboxd").onclick = exportLetterboxd;
     $("#loginGo").onclick = tryLogin;
     $("#loginPw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
     $("#lbPrev").onclick = () => zoomStep(-1);
     $("#lbNext").onclick = () => zoomStep(1);
     // dialog + lightbox close
-    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; }));
+    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; $("#menuDialog").hidden = true; }));
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; }
+      if (e.key === "Escape") { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; $("#menuDialog").hidden = true; }
       if (zoomState && e.key === "ArrowLeft") zoomStep(-1);
       if (zoomState && e.key === "ArrowRight") zoomStep(1);
     });

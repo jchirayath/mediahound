@@ -17,6 +17,10 @@
 
 * { box-sizing: border-box; }
 
+/* The `hidden` attribute must always win — otherwise a class that sets display (e.g. a flex
+   banner/row) overrides it and JS can't hide the element (specificity tie → source order). */
+[hidden] { display: none !important; }
+
 html { scroll-behavior: smooth; }
 
 body {
@@ -48,7 +52,12 @@ a:hover { text-decoration: underline; }
   backdrop-filter: blur(6px);
   position: sticky; top: 0; z-index: 20;
 }
-.header-inner { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; gap: 16px; }
+.header-inner { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 8px; gap: 16px; }
+/* Row 2 — media tabs (left) + stats / Settings / Library (right). Sticky with the header. */
+.subbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 20px 10px; flex-wrap: wrap; }
+.subbar .media-tabs { margin: 0; }
+.subbar-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-left: auto; }
 .brand { display: flex; align-items: center; gap: 14px; }
 .brand-mark {
   display: grid; place-items: center;
@@ -81,7 +90,7 @@ select {
 .btn-ghost:hover { color: var(--text); border-color: var(--accent-2); }
 .meta-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 4px; gap: 12px; flex-wrap: wrap; }
 .result-count { color: var(--muted); font-size: 13px; }
-.meta-actions { display: flex; gap: 10px; align-items: center; }
+.meta-actions { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .pill { padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
 .pill-warn { background: rgba(242, 193, 78, 0.15); color: var(--gold); border: 1px solid rgba(242, 193, 78, 0.35); }
 .pill-warn:hover { text-decoration: none; background: rgba(242, 193, 78, 0.25); }
@@ -421,6 +430,16 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 /* The scrollable middle of a tall dialog (Settings): flexes to fill the card, so the title and
    action buttons stay pinned and reachable on any screen height. */
 .dialog-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-right: 8px; margin: 0 -2px; }
+
+/* Action-menu popups (Add / Connect / Export / Backup) */
+.menu-items { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 2px; }
+.menu-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; cursor: pointer;
+  padding: 11px 13px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-soft); color: var(--text); }
+.menu-item:hover { border-color: var(--accent-2); background: var(--card-hi); }
+.menu-item .mi-ico { flex: 0 0 1.6em; font-size: 18px; text-align: center; }
+.menu-item .mi-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.menu-item .mi-label { font-size: 13.5px; font-weight: 600; }
+.menu-item .mi-desc { font-size: 11.5px; color: var(--muted); }
 
 /* Library switcher */
 .library-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 240px; overflow: auto; }
