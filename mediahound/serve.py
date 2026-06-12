@@ -82,11 +82,12 @@ class _Handler(SimpleHTTPRequestHandler):
         self.directory = type(self).site_dir
         return super().translate_path(path)
 
-    # Never let the app shell (index.html / identify.html) be stale-cached by the webview or
-    # browser — otherwise an upgraded MediaHound keeps showing the old UI until a hard refresh.
+    # Never let the app shell (HTML/JS/CSS) be stale-cached by the webview or browser — otherwise
+    # an upgraded MediaHound keeps running the old UI (the desktop WebKit view caches aggressively).
+    # Force revalidation on the code files; posters/images may still cache normally.
     def end_headers(self):
         route = self.path.split("?", 1)[0]
-        if route.endswith((".html", "/")) or route == "":
+        if route.endswith((".html", ".js", ".css", "/")) or route == "":
             self.send_header("Cache-Control", "no-cache, must-revalidate")
         super().end_headers()
 
