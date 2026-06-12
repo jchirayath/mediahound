@@ -227,12 +227,25 @@ class _Handler(SimpleHTTPRequestHandler):
         return self._send_json({"ok": False, "error": "unknown endpoint"}, 404)
 
     # -- handlers ---------------------------------------------------------
+    def _events(self):
+        from .events import EventLog
+        return EventLog(self.cfg.data_dir)
+
     def _merge_file(self, name: str, label: str):
         patch = self._read_json_body()
         if not isinstance(patch, dict):
             return self._send_json({"ok": False, "error": "expected a JSON object"}, 400)
         merged = _merge(self._read_data(name, {}), patch)
         self._write_data(name, merged)
+        if name == "corrections.json":                 # record each edit as a compact change/remove
+            ev = self._events()
+            for mid, fields in patch.items():
+                if isinstance(fields, dict) and fields.get("delete"):
+                    ev.add("remove", mid)
+                elif isinstance(fields, dict):
+                    changed = [k for k in fields if k != "requery"]
+                    if changed:
+                        ev.add("change", mid, fields=changed)
         self.log_fn(f"  saved {len(patch)} {label} edit(s) → data/{name} ({len(merged)} total)")
         return self._send_json({"ok": True, "saved": len(patch), "total": len(merged)})
 
@@ -240,7 +253,21 @@ class _Handler(SimpleHTTPRequestHandler):
         body = self._read_json_body()
         if not isinstance(body, dict):
             return self._send_json({"ok": False, "error": "expected a JSON object"}, 400)
+        old = self._read_data(name, {})                # diff before overwriting → log only real changes
         self._write_data(name, body)
+        if name == "seen-overrides.json":
+            ev = self._events()
+            for mid, v in body.items():
+                was = (old.get(mid) or {}).get("seen")
+                now = (v or {}).get("seen")
+                if now != was:
+                    ev.add("seen", mid, value=1 if now else 0)
+        elif name == "loans.json":
+            ev = self._events()
+            for mid, v in body.items():
+                if v != old.get(mid) and isinstance(v, dict):
+                    ev.add("loan", mid, value=("back" if v.get("returned") else "out"),
+                           who=v.get("to"))
         self.log_fn(f"  saved {len(body)} {label} → data/{name}")
         return self._send_json({"ok": True, "total": len(body)})
 
@@ -385,9 +412,11 @@ class _Handler(SimpleHTTPRequestHandler):
             if mt in ("music", "book"):
                 item = (barcode.book_item_from_meta(self.cfg, match["meta"], upc) if mt == "book"
                         else barcode.music_item_from_meta(self.cfg, match["meta"], upc))
+                existed = store.find_movie(item["id"]) is not None
                 store.upsert_movie(item)
                 store.record(f"barcode-{upc}", item["source_image"], "identified",
                              item["id"], pipeline._now())
+                store.events.add("change" if existed else "add", item["id"])
                 store.save()
                 pipeline._write_site(self.cfg, store)
                 return self._send_json({"ok": True, "matched": True, "media_type": mt,

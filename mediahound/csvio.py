@@ -163,9 +163,13 @@ def import_csv(cfg, store, path: Path, online: bool, log) -> tuple[int, int]:
             continue
         if online and _enrich(cfg, item, log):
             enriched += 1
+        existed = store.find_movie(item["id"]) is not None
         store.upsert_movie(item)
         store.record(f"csv-{item['id']}", f"(csv) {item['title']}", "identified", item["id"], _now())
+        if not existed:
+            store.events.add("add", item["id"])
         added += 1
+    store.events.add("import", n=added, src="csv")
     log(f"CSV import: {added} item(s) added" + (f", {enriched} enriched online" if online else ""))
     return added, enriched
 

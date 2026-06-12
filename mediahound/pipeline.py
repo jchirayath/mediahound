@@ -318,6 +318,9 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
     if mock:
         return _build_mock(cfg, store, stats, log)
 
+    # A forced full rebuild re-adds every item; silence the change log so it doesn't record
+    # thousands of spurious "add" events for items that already existed.
+    store.events.enabled = not force
     if force:
         # full reprocess → rebuild the collection from scratch so stale fields (e.g. old
         # image paths) don't accumulate. seen/identify/corrections files are untouched.
@@ -442,6 +445,7 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
     for mid, c in list(corr.items()):
         if c.get("delete"):
             if store.delete_movie(mid):
+                store.events.add("remove", mid)
                 log(f"  correction: deleted {mid}")
             continue
         m = store.find_movie(mid)
@@ -837,10 +841,12 @@ def _finalize_media(cfg, store, img, h, ident, item, cover_url, is_manual, portr
     item.setdefault("seen", False)
     item.setdefault("date_seen", None)
     item["added_at"] = _now()
+    existed = store.find_movie(mid) is not None
     store.upsert_movie(item)
     if is_manual:
         store.remove_unidentified_by_hash(h)
     store.record(h, img.name, "identified", mid, _now())
+    store.events.add("change" if existed else "add", mid)
     return True
 
 
@@ -955,8 +961,8 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
     if queued and queued.get("delete"):
         store.remove_unidentified_by_hash(h)
         rec = store.manifest.get(h)
-        if rec and rec.get("movie_id"):
-            store.delete_movie(rec["movie_id"])
+        if rec and rec.get("movie_id") and store.delete_movie(rec["movie_id"]):
+            store.events.add("remove", rec["movie_id"])
         store.record(h, img.name, "deleted", None, _now())
         return None
     is_manual = bool(queued)
@@ -1078,10 +1084,12 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
         "date_seen": None,
         "added_at": _now(),
     }
+    existed = store.find_movie(mid) is not None
     store.upsert_movie(movie)
     if is_manual:
         store.remove_unidentified_by_hash(h)  # named via manual identification → no longer unidentified
     store.record(h, img.name, "identified", mid, _now())
+    store.events.add("change" if existed else "add", mid)
     return True
 
 

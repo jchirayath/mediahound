@@ -96,6 +96,11 @@ class Store:
 
         self._collection_by_id = {m["id"]: m for m in self.collection}
 
+        # Compact append-only change log (add/remove/change). Callers opt in by calling
+        # self.events.add(...) at genuine mutation points; nothing is logged automatically here.
+        from .events import EventLog
+        self.events = EventLog(data_dir)
+
     # -- queries -----------------------------------------------------------
     def is_processed(self, file_hash: str) -> bool:
         return file_hash in self.manifest

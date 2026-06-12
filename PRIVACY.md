@@ -22,7 +22,8 @@ data.** This document explains exactly what is stored, and the only times anythi
 | 📷 **Barcode lookup** (`--online` / Scan) | The decoded **UPC/EAN number** (not the photo) is sent to MusicBrainz/Discogs (music) or UPCItemDB (movies) to resolve the exact release/title. Decoding itself is local. |
 | 💿 **Discogs** (`import-discogs`, price) | Reads *your* Discogs collection / a release's price suggestions using your token. Nothing is written back to Discogs. |
 | Claude identification | The cover **image** is sent to the Anthropic API — only if you opt into the `claude` identifier. |
-| 🌐 **Publish** | The **generated static site** is uploaded to **Netlify** using your token. Your source photos, `.env`, `config.toml`, and your **personal data** (`corrections.json`, `loans.json`) are **never** included. |
+| 🌐 **Publish** | The **generated static site** is uploaded to **Netlify** using your token. Your source photos, `.env`, `config.toml`, your **personal data** (`corrections.json`, `loans.json`), and the **change log** (`events.jsonl`) are **never** included. |
+| 🧾 **Change log** | `data/events.jsonl` is a local, append-only audit of adds/removes/changes (compact: integer timestamp, one-char op, **field names only** for changes — never their values). Admin-only; never published. View it with `mediahound log`. |
 | ⬇ **Backup** | Writes a **local** zip of your library. Never uploaded; `.env`/secrets are excluded. |
 | 📱 **Phone upload** (`app --phone`) | Photos travel **only over your local Wi-Fi**, protected by a per-session token — never to the internet. |
 | Clicking a "watch / listen / more info / sell" link | A normal outbound link to that third-party website. |

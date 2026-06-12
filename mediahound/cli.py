@@ -177,6 +177,34 @@ def cmd_restore(args) -> int:
     return 0
 
 
+_OP_LABEL = {"+": "add   ", "-": "remove", "~": "change", "s": "seen  ", "l": "loan  ", "i": "import"}
+
+
+def cmd_log(args) -> int:
+    """Show the compact change history (data/events.jsonl) — adds, removes and changes."""
+    import time
+
+    from .events import EventLog
+    cfg = _load_or_die(args.config)
+    events = EventLog(cfg.data_dir).recent(args.limit)
+    if not events:
+        print("No events recorded yet.")
+        return 0
+    for e in events:
+        when = time.strftime("%Y-%m-%d %H:%M", time.localtime(e.get("t", 0)))
+        op = _OP_LABEL.get(e.get("o"), e.get("o", "?"))
+        extra = ""
+        if e.get("f"):
+            extra = " {" + ", ".join(e["f"]) + "}"
+        elif "v" in e:
+            extra = f" = {e['v']}" + (f" ({e['w']})" if e.get("w") else "")
+        elif e.get("n") is not None:
+            extra = f" {e['n']} item(s)" + (f" from {e['src']}" if e.get("src") else "")
+        print(f"{when}  {op}  {e.get('id', '')}{extra}")
+    print(f"\n{len(events)} event(s) — data/events.jsonl")
+    return 0
+
+
 def cmd_serve(args) -> int:
     from . import serve as serve_mod
     cfg = _load_or_die(args.config)
@@ -268,6 +296,11 @@ def main(argv=None) -> int:
     pd.add_argument("--offline", action="store_true",
                     help="skip per-release enrichment (no tracklist/barcode lookups) — faster")
     pd.set_defaults(func=cmd_import_discogs)
+
+    plog = sub.add_parser("log", help="show the change history (adds/removes/changes) from data/events.jsonl.")
+    plog.add_argument("--config", help="path to config.toml")
+    plog.add_argument("--limit", type=int, default=200, help="how many recent events to show (default 200)")
+    plog.set_defaults(func=cmd_log)
 
     ps = sub.add_parser("serve", help="preview the site locally; --admin saves edits straight to data/.")
     ps.add_argument("--config", default="config.toml", help="path to config.toml")
