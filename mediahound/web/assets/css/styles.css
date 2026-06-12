@@ -305,6 +305,7 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 
 /* Grid driven by --cols */
 .grid { grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)) !important; gap: 16px !important; }
+.grid-sentinel { width: 100%; height: 1px; }   /* progressive-render trigger; renders the next batch */
 .card { cursor: default; }
 .card:hover { transform: none; box-shadow: var(--shadow); }
 

@@ -560,6 +560,20 @@
     const n = ids.reduce((c, s) => { const el = $(s); return c + (el && el.value ? 1 : 0); }, 0);
     badge.textContent = n; badge.hidden = n === 0;
   }
+  // Progressive (virtualized) grid: paint a first chunk, then append more as the user scrolls a
+  // sentinel into view. Keeps initial render cheap on big catalogs (thousands of cards) without
+  // node-recycling, which is brittle here because card heights vary (tracklists, container queries).
+  const CHUNK_SIZE = 60;
+  let _viewList = [], _viewShown = 0, _viewIO = null, _viewSentinel = null;
+  function renderMoreCards() {
+    const grid = $("#grid");
+    const frag = document.createDocumentFragment();
+    const end = Math.min(_viewShown + CHUNK_SIZE, _viewList.length);
+    for (let i = _viewShown; i < end; i++) frag.appendChild(card(_viewList[i]));
+    grid.appendChild(frag);
+    _viewShown = end;
+    if (_viewShown >= _viewList.length) { if (_viewIO) _viewIO.disconnect(); if (_viewSentinel) _viewSentinel.hidden = true; }
+  }
   function render() {
     // First run: empty catalog → a friendly welcome instead of a bare grid.
     if (!movies.length) { showWelcome(); return; }
@@ -574,8 +588,20 @@
     $("#empty").hidden = v.length !== 0;
     // apply field-visibility flags as body classes (drives alignment via CSS)
     ALL_FIELDS.forEach(([k]) => document.body.classList.toggle(`hide-${k}`, !view.fields[k]));
-    v.forEach((m) => grid.appendChild(card(m)));
-    applyCols();
+
+    // virtualized paint: reset the window and render the first chunk; the observer fills the rest
+    _viewList = v; _viewShown = 0;
+    if (!_viewSentinel) { _viewSentinel = document.createElement("div"); _viewSentinel.className = "grid-sentinel"; grid.after(_viewSentinel); }
+    _viewSentinel.hidden = false;
+    if (!_viewIO && "IntersectionObserver" in window) {
+      _viewIO = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) renderMoreCards(); }, { rootMargin: "800px 0px" });
+    }
+    if (_viewIO) _viewIO.disconnect();
+    applyCols();                         // set --cols before first paint so card widths are correct
+    renderMoreCards();
+    if (_viewIO && _viewShown < _viewList.length) _viewIO.observe(_viewSentinel);
+    else if (!_viewIO) { while (_viewShown < _viewList.length) renderMoreCards(); }   // no IO support → render all
+
     $("#resultCount").textContent = `${v.length} of ${movies.length} titles · ${movies.filter((m) => m.seen).length} seen`;
     const tot = movies.reduce((s, m) => s + (m.resale?.mid || 0), 0);
     $("#headerStats").innerHTML = `${movies.length} titles<br>est. value ~$${Math.round(tot).toLocaleString()}`;
