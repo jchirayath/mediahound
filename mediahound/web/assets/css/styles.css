@@ -386,6 +386,14 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 .my-loan .loan-out { color: var(--gold); font-weight: 600; }
 .scan-video { width: 100%; max-height: 260px; border-radius: 10px; background: #000; margin: 6px 0; object-fit: cover; }
 
+/* Static-copy warning: shown in admin when there's no live server (edits are browser-only) */
+.static-warn { display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+  padding: 9px 18px; font-size: 12.5px; color: #f4d384;
+  background: rgba(242, 193, 78, 0.13); border-bottom: 1px solid rgba(242, 193, 78, 0.42); }
+.static-warn code { background: rgba(0, 0, 0, 0.35); padding: 1px 6px; border-radius: 4px; color: #ffe9b8; }
+.static-warn .btn-mini { flex: 0 0 auto; border-color: rgba(242, 193, 78, 0.5); color: #f4d384; }
+.static-warn .btn-mini:hover { border-color: var(--gold); color: var(--gold); }
+
 /* Inline help (how to use) — collapsible accordion */
 .help-toolbar { display: flex; gap: 8px; align-items: center; margin: 4px 0 10px; }
 .help-toolbar #helpSearch { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);

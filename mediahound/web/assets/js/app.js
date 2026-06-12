@@ -136,10 +136,10 @@
   // When the site is served by the local admin server, every edit is written
   // straight into data/ — so it survives the next `mediahound build` with no
   // "Export changes → drop file in" step. Falls back to localStorage-only.
-  let serverAdmin = false, phoneMode = false;
+  let serverAdmin = false, phoneMode = false, pingDone = false;
   function pingServer() {
     return j("api/ping", null).then((r) => {
-      serverAdmin = !!(r && r.admin); phoneMode = !!(r && r.phone); return serverAdmin;
+      serverAdmin = !!(r && r.admin); phoneMode = !!(r && r.phone); pingDone = true; return serverAdmin;
     });
   }
   function persist(endpoint, payload) {
@@ -866,6 +866,10 @@
     } else {
       $("#adminBadge").textContent = "● ADMIN MODE";
     }
+    // Static copy (no admin server): warn that edits live only in THIS browser and won't reach
+    // data/ — so opening the same library in the app won't show them. Only after the ping resolves.
+    const sw = $("#staticWarn");
+    if (sw) sw.hidden = !(isAdmin && pingDone && !serverAdmin);
   }
   function openLogin() { $("#loginErr").hidden = true; $("#loginPw").value = ""; $("#loginDialog").hidden = false; setTimeout(() => $("#loginPw").focus(), 30); }
   // ---- inline help (how to use) -------------------------------------------
@@ -1133,6 +1137,7 @@
     });
     $("#clearImage").onclick = () => { pendingImage = ""; $("#setImagePreview").hidden = true; $("#clearImage").hidden = true; };
     $("#exportChanges").onclick = exportCorrections;
+    if ($("#staticWarnExport")) $("#staticWarnExport").onclick = exportCorrections;
     if ($("#rebuildBtn")) $("#rebuildBtn").onclick = rebuildSite;
     if ($("#importBtn")) $("#importBtn").onclick = openImport;
     if ($("#discogsBtn")) $("#discogsBtn").onclick = openDiscogs;

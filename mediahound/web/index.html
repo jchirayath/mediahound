@@ -34,6 +34,13 @@
     </div>
   </header>
 
+  <div id="staticWarn" class="static-warn" hidden>
+    <span>⚠ <b>You're editing a static copy.</b> Changes are saved only in this browser and won't reach
+      <code>data/</code> — so the app won't see them. Open this library with <code>mediahound app</code>
+      to save edits to disk, or export them now.</span>
+    <button id="staticWarnExport" class="btn-mini" type="button">⬇ Export changes</button>
+  </div>
+
   <div class="controls wrap" id="controls">
     <div class="media-tabs" id="mediaTabs">
       <button class="mt-btn is-on" type="button" data-mt="all">All</button>
