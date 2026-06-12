@@ -39,10 +39,10 @@ They never talk at runtime — the CLI produces files; the site reads them.
 |---|---|
 | `cli.py` | Subcommands (argparse): `init`, `build`, `import`, `export` (incl. `--format inventory`), `serve`, **`app`** (the one-command easy path), **`gui`** (native desktop window), **`log`** (view the change log). |
 | `config.py` | Loads `config.toml`, merges defaults, loads `.env` secrets **then fills any unset key from the OS keychain** (`keystore.load_into_env()`), resolves paths. |
-| `pipeline.py` | Orchestration: scan → identify → enrich → intro/resale/streaming → write. Also `--mock`, corrections, offline/online gating, and the metadata cache + plausibility guard. The shared **`_finalize_media`** helper is the common per-type tail (cover, resale, links, write), so each media type is a thin enrich function, not a duplicated branch. |
+| `pipeline.py` | Orchestration: scan → identify → enrich → intro/resale/streaming → write. Also `--mock`, corrections, offline/online gating, and the metadata cache + plausibility guard. The shared **`_finalize_media`** helper is the common per-type tail (cover, resale, links, write), so each media type is a thin enrich function, not a duplicated branch. **`stamp_cache_bust`** stamps a content version (a hash of the data bundle **plus** `app.js`/`styles.css`) onto the HTML asset URLs and the service-worker cache name, so any rebuild — data **or** UI — invalidates stale browser/SW caches. |
 | `store.py` | The incremental `manifest.json` and the JSON the website reads (collection / unidentified). Merges duplicate photos into one gallery; applies seen/corrections. |
 | `imaging.py` | Pillow helpers: prepare a compact JPEG for OCR/vision, save thumbnails, auto-upright landscape covers, rotate, placeholder posters for `--mock`. |
-| `serve.py` | `serve` previews the site; `serve --admin` exposes a **localhost-only write API** so admin edits save straight to `data/` (+ photo upload, CSV import, rebuild, API-keys, publish). `--phone` binds to the LAN with a **per-session token + QR** for uploading from a phone. |
+| `serve.py` | `serve` previews the site; on start it refreshes the app shell from the installed package (`sync_web_assets`) **then re-applies `stamp_cache_bust`** so the service worker doesn't pin to the template's un-stamped version. `serve --admin` exposes a **localhost-only write API** so admin edits save straight to `data/` (+ photo upload, CSV import, rebuild, API-keys, publish). `--phone` binds to the LAN with a **per-session token + QR** for uploading from a phone. |
 | `desktop.py` | The desktop app: sets up `~/MediaHound Library`, starts the admin server, opens it in a **native webview window** (browser fallback). PyInstaller entry point for the `.app`/`.exe`. |
 | `keystore.py` | Provider/publish secrets in the **OS keychain** (`keyring`): TMDB/OMDb/Anthropic + the Netlify token. Write-only from the UI; status is booleans only. |
 | `publish.py` | One-click **Netlify** deploy (file-digest protocol): only the generated site is uploaded; the site id is remembered so the URL stays stable. |
@@ -73,7 +73,7 @@ Generated (the site reads these):
 - `manifest.json` — `sha256 → {file, status, movie_id}`; drives incremental builds.
 - `site.json` — title, subtitle, counts, admin password **hash** (never the plaintext).
 - `view-config.json` — admin-owned: fields shown, default columns, library name/logo/description.
-- `bundle.js` — all of the above embedded as `window.MEDIAHOUND_DATA` so `index.html` works from `file://`.
+- `bundle.js` — all of the above embedded as `window.MEDIAHOUND_DATA` so `index.html` works from `file://`. Its sha (with the shell assets) is the cache-bust version stamped into the HTML `?v=` query strings and the service-worker cache name.
 
 Audit / on-demand outputs:
 - `events.jsonl` — the compact append-only change log (see `events.py`); **excluded from publish**.
@@ -93,6 +93,22 @@ Vanilla JS + CSS, **no framework, no build step**:
 - `index.html` + `assets/js/app.js` — the catalog, filters, image gallery/zoom, and the admin tools.
 - `identify.html` + `assets/js/identify.js` — manual identification.
 - `assets/css/styles.css` — the dark, responsive theme.
+- `sw.js` + `manifest.json` — the PWA service worker (offline shell) and install manifest.
+
+Rendering & layout details:
+- **Virtualized grid** — `render()` paints a 60-card chunk and appends more via an
+  `IntersectionObserver` sentinel as the user scrolls, so a multi-thousand-item catalog starts with
+  ~60 DOM nodes instead of all of them (covers are also `loading="lazy"`). Filtering/search resets the
+  window; absent `IntersectionObserver` it renders everything.
+- **Container-query cards** — `.card` is a query container; the fixed row heights that keep cards
+  aligned across columns apply only in the dense grid (`@container (max-width: 320px)`), while wide /
+  single-column cards flow at natural height with one uniform gap and empty optional rows collapse.
+- **A–Z jump rail** — for title-sorted lists of 80+ items; clicking a letter renders up to that item
+  and scrolls it below the sticky header (buckets by raw first char to match the `localeCompare` sort).
+- **Mobile-first chrome** — below 640px the filter row collapses behind a **Filters** toggle, the
+  header condenses, tap targets are ≥44px, and the grid is two columns (one below 380px).
+- **Consistent icons** — per-card creator/label icons are an inline-SVG set (not OS-dependent emoji).
+- Per-card field rows and where-to-X links are driven by the shared **`TYPES`** registry (see below).
 
 Two modes: a read-only **default** view, and an **admin** view unlocked by SHA-256-comparing the
 typed password against `site.admin_password_sha256`. When the site is opened through
@@ -108,6 +124,20 @@ A small same-origin-guarded HTTP API, **bound to `127.0.0.1`**: `/api/correction
 `/api/keys` (store API keys in the keychain — localhost only), `/api/publish` (deploy to Netlify —
 localhost only). `--phone` adds a **per-session token** required on every write (constant-time
 compare) so a phone on the LAN can upload without opening the API to other devices.
+
+## Tooling (`tools/`)
+
+Standalone maintenance scripts (not part of the installed package) for bulk-importing a large existing
+music collection from disk and improving its metadata:
+- `music_to_mediahound_csv_clean.py` — walk a tagged music library and emit a clean import CSV:
+  balanced-bracket title cleanup, **global** artist canonicalization, genre normalization,
+  audiobook/placeholder detection (routed to a review CSV), and folder-name recovery for `(Single)` /
+  `[non-album]` album tags.
+- `enrich_music_library.py` — resumable MusicBrainz/Cover-Art-Archive pass that fills missing
+  covers/year/genre on an existing library, saving incrementally and skipping already-enriched items.
+- `fetch_covers_itunes.py` — validated iTunes-Search cover fallback for albums MusicBrainz missed;
+  accepts a result only when album+artist validate by token overlap (no wrong covers), unmatched items
+  go to `covers-residual.csv`.
 
 ## Design principles
 

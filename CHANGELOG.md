@@ -6,12 +6,48 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
-### Added — 🖨 Printable inventory (PDF)
-- `mediahound export --format inventory` writes a clean, self-contained `inventory.html` — grouped by
-  media type with a per-type and grand-total estimated value — that prints (or **Save as PDF**) for
-  insurance / offline sharing. Zero dependencies (the browser makes the PDF). The admin **⤓ Export**
-  menu gains a one-click **🖨 Printable inventory (PDF)** button that builds the same page client-side
-  (works on a static copy too). New `mediahound/inventory.py`.
+## [0.7.0] — 2026-06-12
+
+### Added
+- **🖨 Printable inventory (PDF)** — `mediahound export --format inventory` writes a clean,
+  self-contained `inventory.html` (grouped by media type with per-type and grand-total estimated
+  value) that prints or **Save-as-PDF** for insurance / offline sharing — zero dependencies (the
+  browser makes the PDF). The admin **⤓ Export** menu has a one-click button that builds the same
+  page client-side (works on a static copy too). New `mediahound/inventory.py`.
+- **A–Z jump rail** — for title-sorted lists of 80+ items a fixed alphabet rail (iOS-contacts style)
+  appears; clicking a letter renders up to that item (cooperating with the virtualized grid) and
+  scrolls it below the sticky header. Letters bucket by the raw first character to match the
+  `localeCompare` sort (punctuation/number-leading titles sit in `#`); empty letters are dimmed.
+- **Mobile-first chrome** — the filter row collapses behind a **Filters** toggle (with an
+  active-filter count badge), the header condenses (logo + title, tagline hidden), tap targets grow to
+  44px, the grid drops to two columns (one on the smallest phones), and the per-row stepper is hidden.
+  Fixes horizontal overflow; the search row wraps and fills the width.
+- **Data tooling (`tools/`)** for large music imports: `music_to_mediahound_csv_clean.py` (scanner
+  cleanup — balanced-bracket titles, global artist canonicalization, genre normalization,
+  audiobook/placeholder detection, folder-name recovery of `(Single)`/placeholder album tags),
+  `enrich_music_library.py` (resumable MusicBrainz cover/field enrichment), and
+  `fetch_covers_itunes.py` (validated iTunes cover fallback — accepts a match only when album+artist
+  validate, so a vague "Various Artists / Hits" can't grab a random soundtrack).
+
+### Changed
+- **Virtualized grid** — `render()` now paints a 60-card chunk and appends more via an
+  `IntersectionObserver` sentinel as you scroll, cutting the initial DOM from thousands of cards to
+  ~60 (falls back to rendering everything where `IntersectionObserver` is unavailable).
+- **Card layout via container queries** — the fixed row heights that align cards across columns now
+  apply only in the dense grid; wide / single-column cards flow at natural height with one uniform gap,
+  empty optional rows collapse (no phantom gaps), and the music tracklist moved directly under the
+  artist.
+- **Consistent icons + cleaner controls** — per-card color emoji (🎤🏷…) replaced with an inline-SVG
+  icon set that renders identically across OSes/browsers; filter labels now match the active media type
+  with irrelevant filters auto-hidden; secondary toolbar actions (Connect/Export/Backup/Rebuild)
+  grouped under a **⋯ More** menu; the duplicated format (poster badge + meta row) de-duplicated;
+  genre/format chips restyled as clear, tappable filter buttons.
+
+### Fixed
+- **Service-worker cache staleness** — `serve` re-applies the content-version stamp **after**
+  `sync_web_assets` (which copied the package's un-stamped template `sw.js`/`index.html`, pinning the
+  SW cache to a constant name → stale forever). The version now also hashes `app.js`/`styles.css`, so
+  editing the UI — not just the data — invalidates the cache. New reusable `pipeline.stamp_cache_bust`.
 
 ## [0.6.0] — 2026-06-12
 

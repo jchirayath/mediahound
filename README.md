@@ -198,7 +198,10 @@ rebuilt in place.
   genres, the creator(s), studio/label/publisher, where-to-watch/listen/find/play, intro hook, and
   estimated resale value. Music cards expand to a **collapsible tracklist**.
 - **Clickable everything**: a genre, person, studio, or narrator filters the grid to matching titles.
-- **Adjustable density** — viewers pick how many per row; responsive on web & mobile.
+- **Adjustable density** — viewers pick how many per row; **mobile-first** below 640px (filters behind
+  a toggle, condensed header, big tap targets, a two-column grid).
+- **Built for big libraries** — the grid is **virtualized** (renders as you scroll), and large
+  title-sorted lists get an **A–Z jump rail** so you never scroll through thousands of items.
 
 ### Photos
 - **Multi-photo galleries** — flip through every photo of a title with ‹ › arrows.

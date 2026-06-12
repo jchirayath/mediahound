@@ -79,8 +79,15 @@ A segmented **`All · 🎬 Movies · 🎵 Music · 📚 Books · 🎮 Games · �
 existing filter framework; cards render a per-`media_type` field set (director/cast/studio/runtime +
 ▶ watch · artist/label/tracklist + ♫ listen · author/publisher/ISBN + 📖 read · developer/platform +
 🎮 play · author/narrator/duration + 🎧 listen); filters become type-aware. Music cards show a
-collapsible tracklist and a song search surfaces its album with the matched track highlighted. The
-admin view-config becomes one field set per type, driven by the shared `TYPES` registry.
+collapsible tracklist (under the artist) and a song search surfaces its album with the matched track
+highlighted. The admin view-config becomes one field set per type, driven by the shared `TYPES`
+registry. Per-card creator/label icons are an inline-SVG set (not OS-dependent emoji).
+
+The grid is **virtualized** (paint a chunk, append more on scroll) so multi-thousand-item catalogs
+stay responsive, with an **A–Z jump rail** for long title-sorted lists. Card spacing uses **container
+queries** — alignment heights apply only in the dense grid, so wide / single-column cards flow
+naturally. Below 640px the chrome goes mobile-first: filters behind a toggle, condensed header, ≥44px
+tap targets, a two-column grid.
 
 ## Phases
 
@@ -91,12 +98,14 @@ admin view-config becomes one field set per type, driven by the shared `TYPES` r
 4. UI: media tab, per-type cards/fields, listen badges, mixed-media demo.
 5. Polish: tests, docs, migration script for existing movie data.
 
-> **Status (shipped, as of v0.6.0).** All phases landed and the type axis grew past movies + music to
+> **Status (shipped, as of v0.7.0).** All phases landed and the type axis grew past movies + music to
 > **five** types: books (Open Library), 🎮 video games (Wikidata; PriceCharting resale) and 🎧
 > audiobooks (Open Library + LibriVox) were added via the shared media-type registry. Also shipped
 > since: album track-info + song search, a compact change log (`events.jsonl`, `mediahound log`), a
 > printable inventory PDF (`export --format inventory` / `inventory.py`), Discogs import + price
-> suggestions, and real demo cover art for every type.
+> suggestions, and real demo cover art for every type. **v0.7.0** added a virtualized grid + A–Z jump
+> rail, container-query card layout, a mobile-first chrome pass, an inline-SVG icon set, a
+> service-worker cache-bust fix, and `tools/` for bulk music-library import/cleanup/cover enrichment.
 
 ## Risks / decisions
 
