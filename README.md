@@ -337,6 +337,13 @@ and S3 instructions. The live demo above is itself hosted free on GitHub Pages v
 It even works by **double-clicking `index.html`** — the build embeds the catalog in `data/bundle.js`
 so it loads without a web server.
 
+### 📱 Install it on your phone (PWA)
+
+A published catalog is a **Progressive Web App**. Open it in your phone's browser and **Add to Home
+Screen** (on iPhone: the **Share** button in Safari) — you get an app icon, a full-screen view, and
+**offline** access (the catalog is cached). It **auto-updates** every time you republish. Browsing is
+read-only; editing happens in the local app (`mediahound app`) and is then published.
+
 ---
 
 ## Architecture

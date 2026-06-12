@@ -4,16 +4,27 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
-## [0.4.0] — 2026-06-11
+## [0.4.0] — 2026-06-12
 
 ### Changed
 - **New brand** — a beagle in headphones inside a retro **TV over an open book**, with the
   **media**(orange) **hound**(ink) wordmark. New icon everywhere (web favicon/apple-touch, macOS
   `.icns`, Windows `.ico`, README, wiki), brand palette (orange `#E97B0C` + ink `#16232A`) as the UI
   accent, and **Fredoka** as the brand/heading font. See [docs/brand/](docs/brand/).
-- **Inline Help** panel (❓) with searchable, collapsible sections; **Settings** dialog now scrolls.
+- **Decluttered UI** — a two-row **sticky header** (brand/Help/Admin on top; media tabs + stats +
+  Settings + Library below) that stays locked while scrolling, and the admin actions consolidated into
+  popup menus: **➕ Add** (photos/scan/CSV), **🔗 Connect** (Discogs/Publish/Letterboxd),
+  **⤓ Export** (catalog CSV/JSON, changes, seen), **💾 Backup** (backup/restore). Action rows wrap on
+  narrow screens.
+- **Inline Help** panel (❓) with searchable, collapsible sections; **Settings** dialog now scrolls and
+  exposes the **Library & data folder** control.
 - Desktop app slimmed **370 MB → 45 MB** by using the native macOS **WebKit** backend (excluded Qt +
   unused scientific libs in the PyInstaller spec); the bundle version is stamped from the package.
+
+### Added — installable on your phone
+- **📱 PWA** — published catalogs are now an installable, offline Progressive Web App (`manifest.json`
+  + a service worker). Add it to your phone's home screen for a full-screen, offline-capable app that
+  **auto-updates** on every republish (the SW cache is stamped with the build content-version).
 
 ### Added — the four design proposals ([docs/design/](docs/design/))
 - **📷 Barcode / UPC scanning** — identify the *exact* release from the barcode instead of fuzzy OCR.
@@ -38,6 +49,19 @@ All notable changes to this project are documented here. The format is based on
   with no restart. Backed by a recents list (`~/.config/mediahound/recent.json`); `GET /api/libraries`,
   `POST /api/switch-library`, `POST /api/create-library` (all localhost-only). This is where the **data
   directory is chosen** — per library via `config.toml` `[paths]` — surfaced in the UI.
+
+### Fixed
+- **Upgrades now take effect** — an existing library kept its own copy of the web UI, so upgrading
+  MediaHound left the old interface in place. `build`/app-open now refreshes the app shell from the
+  installed package (`sync_web_assets`), and the server sends `no-cache` on HTML/JS/CSS so a webview
+  can't run stale code.
+- **`hidden` always wins** — a class that set `display` (e.g. the static-copy banner) overrode the
+  HTML `hidden` attribute, so JS couldn't hide it. Added a global `[hidden] { display: none !important }`.
+- **Static-copy guard** — editing a static copy (no admin server) now shows a clear banner that changes
+  live only in that browser, with one-click Export.
+- **Unidentified thumbnails** — the mock/demo build generates real placeholder tiles, and `identify.js`
+  falls back gracefully when a thumbnail file is missing (no more blank/broken images).
+- CI: green again (fixed Ruff lint in test helpers) and GitHub Actions bumped to Node-24 majors.
 
 ## [0.3.1] — 2026-06-11
 
