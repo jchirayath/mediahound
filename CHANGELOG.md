@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-06-12
+
 ### Added — 📚 Books (new media type)
 - A third media type alongside movies & music. Books resolve by **ISBN** (an EAN-13 with the 978/979
   prefix auto-routes as a book) or by title + author via **[Open Library](https://openlibrary.org)** —
@@ -13,7 +15,30 @@ All notable changes to this project are documented here. The format is based on
   pages, ISBN, subjects), a `📚 Books` tab, book card layout (author / publisher / pages / where-to-find
   links), a book inline editor, `RawImages/books/`, CSV import/export columns, `[book.metadata]` config,
   and `_MOCK_BOOKS` demo data. The movie/music field-clearing on a type-move generalised to N types.
-  See [docs/design/05-new-media-types.md](docs/design/05-new-media-types.md). (Video games next.)
+  See [docs/design/05-new-media-types.md](docs/design/05-new-media-types.md).
+
+### Added — 🎮 Video games (new media type)
+- A fourth media type. Games resolve **by title** (or a scanned UPC → product name) via the
+  **Wikidata Query Service** (SPARQL, P31 = video game) — open data, CC0, **no API key**. New
+  `metadata/games.py` (`GameMeta`); **platform is the `format` dimension** (Switch / PS5 / PS4 / Xbox /
+  PC / Retro, normalised from Wikidata platform labels); where-to-play links (`links.play_links`) that
+  pick the storefront by platform (eShop / PS Store / Xbox / Steam + MobyGames). A `🎮 Games` tab, game
+  card + inline editor (developer / publisher / platforms), `RawImages/games/`, CSV columns
+  (`developer`, `platforms`), `[game.metadata]` config, UPC scan routing, and `_MOCK_GAMES`. The SPARQL
+  title is escaped (no query injection). See [docs/design/05](docs/design/05-new-media-types.md).
+
+### Added — 🧾 Compact change log
+- `data/events.jsonl` — an append-only audit of every **add / remove / change**, tuned for size:
+  integer unix-second timestamp, single-character op (`+ - ~ s l i`), and a *change* records only the
+  **names** of the fields that changed (smallest record, and personal notes/ratings are never copied
+  into a second file). Self-trims to a cap; **excluded from publish** (admin/audit only). View it with
+  the new `mediahound log` command. See [`mediahound/events.py`](mediahound/events.py) and PRIVACY.md.
+
+### Changed — shared media-type registry (internal)
+- New media types are now added via a shared registry instead of copy-pasted branches: a frontend
+  `TYPES` map drives the card meta/people/studio/where-to-X rows, a backend `_finalize_media` tail is
+  shared across music/book/game, and the type-move field-clearing preserves fields the destination type
+  also uses (e.g. `publisher` across book ↔ game). No new API keys (games stay zero-key by default).
 
 ## [0.4.0] — 2026-06-12
 
