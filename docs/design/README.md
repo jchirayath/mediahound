@@ -10,6 +10,7 @@ Planned integrations, designed against MediaHound's existing architecture (the i
 | 02 | [Discogs integration](02-discogs-integration.md) | Make the music half best-in-class: import + pricing | Implemented |
 | 03 | [Interop & safety](03-interop-and-safety.md) | Backup/restore, exports (Letterboxd…), feeds, multi-library | Implemented |
 | 04 | [Personal catalog](04-personal-catalog.md) | Ratings, notes, shelves/tags, lending, "surprise me" | Implemented |
+| 05 | [New media types: Books & Video games](05-new-media-types.md) | ISBN/UPC → Open Library / Wikidata / IGDB; a media-type registry | Planned |
 
 > **Status note (shipped).** All four are implemented. Delivered: barcode decode (`mediahound/barcode.py`,
 > optional `mediahound[barcode]`) + music UPC→MusicBrainz/Discogs + movie UPC→UPCItemDB + a `📷 Scan barcode`
