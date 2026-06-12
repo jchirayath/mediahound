@@ -6,6 +6,33 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.6.0] — 2026-06-12
+
+### Added — 🎧 Audiobooks (new media type)
+- A fifth media type via the shared registry. Audiobooks resolve their book metadata
+  (author/year/publisher/ISBN/cover) from **Open Library** and their audio bits (total **duration** +
+  overview) from the **LibriVox** public catalogue — both **no API key**; narrator comes from the
+  cover/CSV/manual. New `metadata/audiobook.py` (`AudiobookMeta`), a `🎧 Audiobooks` tab + card
+  (duration "Xh Ym", narrator chip) + inline editor, `RawImages/audiobooks/`, CSV columns
+  (`narrator`, `duration`), where-to-listen links (Audible / Libro.fm / LibriVox / Open Library), the
+  Audible/CD/MP3-CD/Cassette/Digital medium dimension, `[audiobook.metadata]` config, and demo data.
+
+### Added — 🎵 Album track-info & song search
+- Each music card now shows a collapsible **tracklist**. Search already matched song titles; now when
+  a query hits a track the album's tracklist **auto-opens** with the matched song highlighted — so you
+  can find an album by any track on it. CSV round-trips tracklists (added to the export columns).
+
+### Added — 🎮 Game resale (PriceCharting)
+- Platform-aware used-value baselines (Switch / PS5 / PS4 / Xbox / PC / Retro — retro and Switch hold
+  value; retro pre-2000 appreciates) and a **PriceCharting** price-check link (loose / CIB / sealed)
+  alongside the eBay sold-listings link.
+
+### Changed
+- **Real demo cover art** for every media type (hotlinked, no copyrighted files stored): books &
+  audiobooks via Open Library covers, games via Steam capsules (demo games are now The Witcher 3,
+  Hades, Stardew Valley so each has real box art).
+- CI: `softprops/action-gh-release` v2 → v3 (Node 24; clears the Node 20 deprecation warning).
+
 ## [0.5.0] — 2026-06-12
 
 ### Added — 📚 Books (new media type)
