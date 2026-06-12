@@ -58,7 +58,10 @@ def test_corrections_and_loans_excluded_from_publish(built):
 # -- /api/loans persistence ----------------------------------------------
 def _free_port():
     import socket
-    s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close()
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    p = s.getsockname()[1]
+    s.close()
     return p
 
 
@@ -83,7 +86,8 @@ def test_api_loans_persists(built):
     base = f"http://127.0.0.1:{port}"
     for _ in range(50):
         try:
-            urllib.request.urlopen(base + "/api/ping", timeout=1).read(); break
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            break
         except OSError:
             time.sleep(0.05)
     status, body = _post(base + "/api/loans",

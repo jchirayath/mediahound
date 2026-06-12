@@ -22,7 +22,7 @@ def decode_image(path: str | Path) -> list[str]:
     """Decode every UPC-A / EAN-13 barcode found in an image. Returns [] if the optional
     `zxing-cpp` decoder isn't installed or nothing decodes (never raises)."""
     try:
-        import zxingcpp                                  # optional: mediahound[barcode]
+        import zxingcpp  # optional: mediahound[barcode]
     except ImportError:
         return []
     try:

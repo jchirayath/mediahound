@@ -45,7 +45,10 @@ def test_remove_recent(tmp_path):
 # -- live switch over the admin server -----------------------------------
 def _free_port():
     import socket
-    s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close()
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    p = s.getsockname()[1]
+    s.close()
     return p
 
 
@@ -57,7 +60,8 @@ def _serve(cfg, port, token=None):
     base = f"http://127.0.0.1:{port}"
     for _ in range(60):
         try:
-            urllib.request.urlopen(base + "/api/ping", timeout=1).read(); return base
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            return base
         except OSError:
             time.sleep(0.05)
     raise RuntimeError("server didn't start")
@@ -123,7 +127,8 @@ def test_switch_refused_over_phone_lan(tmp_path):
     base = f"http://127.0.0.1:{port}"
     for _ in range(60):
         try:
-            urllib.request.urlopen(base + "/api/ping", timeout=1).read(); break
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            break
         except OSError:
             time.sleep(0.05)
     token = re.search(r"\?t=([A-Za-z0-9_-]+)", "\n".join(lines)).group(1)

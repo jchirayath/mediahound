@@ -117,7 +117,10 @@ def test_pipeline_prefers_barcode_for_music(monkeypatch, tmp_path):
 # -- /api/identify-barcode ------------------------------------------------
 def _free_port():
     import socket
-    s = socket.socket(); s.bind(("127.0.0.1", 0)); p = s.getsockname()[1]; s.close()
+    s = socket.socket()
+    s.bind(("127.0.0.1", 0))
+    p = s.getsockname()[1]
+    s.close()
     return p
 
 
@@ -141,7 +144,8 @@ def test_api_identify_barcode_adds_music(monkeypatch, tmp_path):
     base = f"http://127.0.0.1:{port}"
     for _ in range(50):
         try:
-            urllib.request.urlopen(base + "/api/ping", timeout=1).read(); break
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            break
         except OSError:
             time.sleep(0.05)
     req = urllib.request.Request(base + "/api/identify-barcode",
