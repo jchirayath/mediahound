@@ -553,6 +553,15 @@ def serve(cfg: Config, host: str = "127.0.0.1", port: int = 8765, admin: bool = 
         log(f"No index.html in {site} — run `mediahound build` first.")
         return 2
 
+    # Refresh the static app shell (index.html / assets / favicon) from the installed package so a
+    # library built by an OLDER MediaHound still serves the current UI — e.g. the sticky media-type
+    # header. Only the shell is overwritten; data/, posters/, config.toml are never touched.
+    try:
+        from .pipeline import sync_web_assets
+        sync_web_assets(cfg, log)
+    except Exception as exc:                       # noqa: BLE001 - never block serving on a sync hiccup
+        log(f"  (web sync skipped: {exc})")
+
     token = None
     lan = _lan_ip()
     if phone:
