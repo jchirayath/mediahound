@@ -1,6 +1,6 @@
 # 01 — Barcode / UPC scanning
 
-**Status:** Planned · **Effort:** M · **Depends on:** nothing (pairs with [Discogs](02-discogs-integration.md))
+**Status:** ✅ Shipped (0.4.0) · **Effort:** M · **Depends on:** nothing (pairs with [Discogs](02-discogs-integration.md))
 
 ## Why
 

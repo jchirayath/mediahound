@@ -1,6 +1,6 @@
 # 02 — Discogs integration
 
-**Status:** Planned · **Effort:** M · **Depends on:** keystore (done); pairs with [Barcode](01-barcode-scanning.md)
+**Status:** ✅ Shipped (0.4.0) · **Effort:** M · **Depends on:** keystore (done); pairs with [Barcode](01-barcode-scanning.md)
 
 ## Why
 

@@ -10,33 +10,36 @@ They never talk at runtime — the CLI produces files; the site reads them.
 ```
 ┌─────────────────────────── mediahound build ───────────────────────────┐
 │  RawImages/video/*.jpg → movie     RawImages/audio/*.jpg → music        │
+│  (+ book / game / audiobook covers, by folder / type hint)              │
 │      │  sha256 → data/manifest.json   (incremental: skip already-done)  │
 │      ▼                                                                   │
 │  identify  ──────────────►  Identification(title, year, format, …)      │
 │  (tesseract | claude | ollama)                                          │
 │      │  confidence ≥ threshold?  no → data/unidentified.json            │
-│      ▼  route by media_type                                             │
-│   ┌──────────────┴───────────────┐                                      │
-│   ▼ movie                         ▼ music                               │
-│  enrich (wikidata|tmdb|omdb)     enrich (musicbrainz + Cover Art Archive)│
-│  MovieMeta(poster,cast,studio)   MusicMeta(cover,artist,label,tracklist) │
-│   │  + plausible-title guard      │  + keyless listen links             │
-│   └──────────────┬───────────────┘                                      │
-│      ▼  intro (hook) + resale (eBay / Discogs)                          │
+│      ▼  route by media_type  →  _finalize_media (shared per-type tail)  │
+│   ┌────────┴────────┬──────────┬──────────┬──────────────┐              │
+│   ▼ movie            ▼ music    ▼ book      ▼ game         ▼ audiobook   │
+│  wikidata|tmdb|omdb  musicbrainz openlibrary wikidata      openlibrary  │
+│  + Cover Art Archive +CoverArtArc (P31=game) +librivox                  │
+│  MovieMeta           MusicMeta   BookMeta   GameMeta       AudiobookMeta │
+│   │  + plausible-title guard / shared-field preservation on type moves  │
+│   └──────────────────────────┬──────────────────────────────┘          │
+│      ▼  intro (hook) + resale(eBay / Discogs / PriceCharting) + links   │
 │  data/collection.json   posters/   originals/   data/bundle.js          │
+│  data/events.jsonl  (append-only audit; excluded from publish)          │
 └─────────────────────────────────────────────────────────────────────────┘
                                    │
                                    ▼
-            web/index.html + assets/js/app.js  (🎬 Movies / 🎵 Music tabs)
+   web/index.html + assets/js/app.js  (🎬 / 🎵 / 📚 / 🎮 / 🎧 type tabs, TYPES registry)
 ```
 
 ## Python package (`mediahound/`)
 
 | Module | Responsibility |
 |---|---|
-| `cli.py` | Subcommands (argparse): `init`, `build`, `import`, `export`, `serve`, **`app`** (the one-command easy path), **`gui`** (native desktop window). |
+| `cli.py` | Subcommands (argparse): `init`, `build`, `import`, `export` (incl. `--format inventory`), `serve`, **`app`** (the one-command easy path), **`gui`** (native desktop window), **`log`** (view the change log). |
 | `config.py` | Loads `config.toml`, merges defaults, loads `.env` secrets **then fills any unset key from the OS keychain** (`keystore.load_into_env()`), resolves paths. |
-| `pipeline.py` | Orchestration: scan → identify → enrich → intro/resale/streaming → write. Also `--mock`, corrections, offline/online gating, and the metadata cache + plausibility guard. |
+| `pipeline.py` | Orchestration: scan → identify → enrich → intro/resale/streaming → write. Also `--mock`, corrections, offline/online gating, and the metadata cache + plausibility guard. The shared **`_finalize_media`** helper is the common per-type tail (cover, resale, links, write), so each media type is a thin enrich function, not a duplicated branch. |
 | `store.py` | The incremental `manifest.json` and the JSON the website reads (collection / unidentified). Merges duplicate photos into one gallery; applies seen/corrections. |
 | `imaging.py` | Pillow helpers: prepare a compact JPEG for OCR/vision, save thumbnails, auto-upright landscape covers, rotate, placeholder posters for `--mock`. |
 | `serve.py` | `serve` previews the site; `serve --admin` exposes a **localhost-only write API** so admin edits save straight to `data/` (+ photo upload, CSV import, rebuild, API-keys, publish). `--phone` binds to the LAN with a **per-session token + QR** for uploading from a phone. |
@@ -44,16 +47,23 @@ They never talk at runtime — the CLI produces files; the site reads them.
 | `keystore.py` | Provider/publish secrets in the **OS keychain** (`keyring`): TMDB/OMDb/Anthropic + the Netlify token. Write-only from the UI; status is booleans only. |
 | `publish.py` | One-click **Netlify** deploy (file-digest protocol): only the generated site is uploaded; the site id is remembered so the URL stays stable. |
 | `identify/` | **Identifier** providers → `Identification`. `tesseract` (default), `claude`, `ollama`. |
-| `metadata/` | **MetadataProvider** providers → `MovieMeta`. `wikidata` (default), `tmdb`, `omdb`. |
+| `metadata/` | **MetadataProvider** providers → a per-type `*Meta`. Movies: `wikidata` (default), `tmdb`, `omdb`. Music: `musicbrainz` + Cover Art Archive, `discogs`. Books: `openlibrary`. Games: `games.py` (`GameMeta`, Wikidata `P31`=video game, platform → `format`). Audiobooks: `audiobook.py` (`AudiobookMeta`, Open Library + LibriVox). `upcitemdb` resolves movie UPCs. |
+| `inventory.py` | Builds the self-contained, print-ready **`inventory.html`** (`export --format inventory`) — grouped by media type with per-type and grand-total estimated value; the browser's Print → Save-as-PDF makes the PDF (zero deps). |
+| `events.py` | The compact, append-only change log (`data/events.jsonl`): integer timestamps, one-char ops, field-*names*-only for changes; self-trims; **excluded from publish**. Backs the `mediahound log` subcommand. |
+| `links.py` | Where-to-watch/-listen/-play deep-links per media type (incl. platform-aware game storefronts: eShop / PS Store / Xbox / Steam + MobyGames). |
 | `intro.py` | The enticing 1–2 sentence hook (identifier-written → tagline → templated). |
-| `resale.py` | Heuristic used-value estimate + eBay sold-listings link. |
+| `resale.py` | Heuristic used-value estimate + eBay sold-listings link; `estimate(..., media_type=...)` adds platform-aware game baselines and a **PriceCharting** price-check link, and Discogs price suggestions for music. |
 | `streaming.py` | Where-to-watch via JustWatch's public GraphQL (no key). |
 
 ### Provider interfaces (extension points)
 - `identify.base.Identifier.identify(image_path, jpeg_bytes) -> Identification`
-- `metadata.base.MetadataProvider.lookup(title, year) -> MovieMeta`
+- `metadata.base.MetadataProvider.lookup(title, year) -> *Meta`
 
-Register a new one in the matching `__init__.py` factory. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Register a new one in the matching `__init__.py` factory. Adding a **media type** is deliberately
+small: a provider here plus one entry in the shared media-type registry (the frontend's `TYPES` map in
+`web/assets/js/app.js` and the backend's `_finalize_media` tail) — not a new branch in every module.
+Moving an item between types preserves shared fields (e.g. `publisher` across book↔game) and clears
+the old type's exclusive ones. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## The data folder (`<site>/data/`)
 
@@ -64,6 +74,11 @@ Generated (the site reads these):
 - `site.json` — title, subtitle, counts, admin password **hash** (never the plaintext).
 - `view-config.json` — admin-owned: fields shown, default columns, library name/logo/description.
 - `bundle.js` — all of the above embedded as `window.MEDIAHOUND_DATA` so `index.html` works from `file://`.
+
+Audit / on-demand outputs:
+- `events.jsonl` — the compact append-only change log (see `events.py`); **excluded from publish**.
+- `inventory.html` — the printable inventory written by `export --format inventory` (or the admin
+  Export menu's "🖨 Printable inventory (PDF)", built client-side); not part of the catalog bundle.
 
 Round-trip files (exported by the admin UI, dropped back into `data/`, applied on next build):
 - `corrections.json` — renames, format/studio edits, deletes, rotations, default-image, re-query flags.

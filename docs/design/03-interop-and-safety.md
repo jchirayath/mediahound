@@ -1,6 +1,6 @@
 # 03 — Interop & safety
 
-**Status:** Planned · **Effort:** S–M · **Depends on:** nothing
+**Status:** ✅ Shipped (0.4.0) · **Effort:** S–M · **Depends on:** nothing
 
 Four related capabilities: **backup/restore** (protect curation work), **exports** (Letterboxd /
 Discogs / generic JSON), **feeds** (JSON/RSS), and **multiple libraries** (switcher in the app).

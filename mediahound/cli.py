@@ -24,7 +24,7 @@ _NETLIFY_TOML = """# Deploy this folder as a static site.
 def cmd_init(args) -> int:
     dest = Path(args.directory).resolve()
     dest.mkdir(parents=True, exist_ok=True)
-    # Raw-image folders, split by media type: video → movies, audio → music.
+    # Raw-image folders, split by media type: video→movies, audio→music, books, games, audiobooks.
     (dest / "RawImages").mkdir(exist_ok=True)
     for sub in ("video", "audio", "books", "games", "audiobooks"):
         (dest / "RawImages" / sub).mkdir(exist_ok=True)
@@ -247,7 +247,8 @@ def cmd_gui(args) -> int:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mediahound",
-                                description="Catalog a movie & music collection from cover photos or CSV.")
+                                description="Catalog movies, music, books, games & audiobooks from "
+                                            "cover photos or CSV.")
     p.add_argument("--version", action="version", version=f"mediahound {__version__}")
     sub = p.add_subparsers(dest="command", required=True)
 

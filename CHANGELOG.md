@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added — 🖨 Printable inventory (PDF)
+- `mediahound export --format inventory` writes a clean, self-contained `inventory.html` — grouped by
+  media type with a per-type and grand-total estimated value — that prints (or **Save as PDF**) for
+  insurance / offline sharing. Zero dependencies (the browser makes the PDF). The admin **⤓ Export**
+  menu gains a one-click **🖨 Printable inventory (PDF)** button that builds the same page client-side
+  (works on a static copy too). New `mediahound/inventory.py`.
+
 ## [0.6.0] — 2026-06-12
 
 ### Added — 🎧 Audiobooks (new media type)

@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Movie Collection</title>
-  <meta name="description" content="A searchable catalog of a DVD & VHS collection." />
+  <title>Media Collection</title>
+  <meta name="description" content="A searchable catalog of movies, music, books, games & audiobooks." />
   <link rel="icon" href="favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="assets/img/mediahound-icon.png" />
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
@@ -257,8 +257,9 @@
             <li><b>Search</b> matches title, artist, genre, cast, studio/label, even track names.</li>
             <li><b>Sort</b> by title, year, recently-added, estimated value, rating — or <b>My rating</b> in admin.</li>
             <li><b>Filters</b>: format, genre, studio/label, streaming service, language, category, seen/unseen. <b>Clear</b> resets them.</li>
-            <li><b>🎬 Movies / 🎵 Music</b> tabs appear when your catalog has both; they narrow the filters to that type.</li>
-            <li><b>🎲 Surprise me</b> picks something to watch/listen to from whatever's currently filtered (preferring unseen).</li>
+            <li><b>🎬 Movies / 🎵 Music / 📚 Books / 🎮 Games / 🎧 Audiobooks</b> tabs appear once your catalog has more than one type; they narrow the filters to that type.</li>
+            <li>Searching a <b>song</b> surfaces the album it's on — the matching track is highlighted in the album's tracklist.</li>
+            <li><b>🎲 Surprise me</b> picks something from whatever's currently filtered (preferring unseen).</li>
             <li><b>Per row</b> (− / +) changes how many cards show per row; it's remembered on this device.</li>
           </ul>
         </details>
@@ -267,8 +268,8 @@
           <summary>🖼️ On each card</summary>
           <ul>
             <li>Click the cover to <b>zoom</b>; use ‹ › to flip through multiple photos of a title.</li>
-            <li><b>▶ / ♫ pills</b> link to where to watch or listen; the <b>resale</b> figure links to live eBay sold listings.</li>
-            <li>Click a <b>genre, person, or studio</b> to filter the grid to it.</li>
+            <li><b>▶ / ♫ / 📖 / 🎮 / 🎧 pills</b> link to where to watch, listen, find, play or hear it; the <b>resale</b> figure links to live eBay sold listings (and <b>📊 PriceCharting</b> for games).</li>
+            <li>Music cards expand to a <b>tracklist</b> (♫ N tracks); click a <b>genre, person, studio, or narrator</b> to filter the grid to it.</li>
           </ul>
         </details>
 
@@ -278,7 +279,7 @@
           <details class="help-sec">
             <summary>✎ Editing your catalog</summary>
             <ul>
-              <li>Click a title (or <b>✎ Edit</b>) to fix name, year, format, studio/artist, or <b>move a title between 🎬 Movies and 🎵 Music</b>. Tick <i>re-query</i> to re-fetch metadata online on the next rebuild.</li>
+              <li>Click a title (or <b>✎ Edit</b>) to fix name, year, format, and the type-specific fields (artist / author / narrator / developer, studio / label / publisher), or <b>move a title between any media type</b>. Tick <i>re-query</i> to re-fetch metadata online on the next rebuild.</li>
               <li><b>Mark as seen</b>, <b>⟳ Rotate</b>, set a photo as the default (★), delete a photo (🗑), or delete the title.</li>
               <li><b>↻ Rebuild</b> re-bakes the catalog from your edits and reloads.</li>
             </ul>
@@ -306,9 +307,9 @@
           <details class="help-sec">
             <summary>💾 Backup, share &amp; libraries</summary>
             <ul>
-              <li><b>⬇ Backup</b> downloads a zip of your whole library; <b>🎬 Letterboxd</b> exports your movies as an import CSV.</li>
+              <li><b>⤓ Export</b> → a <b>🖨 printable inventory (PDF)</b> (grouped + valued, great for insurance), CSV, JSON, or <b>🎬 Letterboxd</b>; <b>⬇ Backup</b> downloads a zip of your whole library.</li>
               <li><b>🌐 Publish</b> deploys a public, read-only copy of your catalog to the web (Netlify).</li>
-              <li><b>📚 Library</b> opens, creates, or switches between catalogs (e.g. movies vs. music) without restarting.</li>
+              <li><b>📚 Library</b> opens, creates, or switches between catalogs (e.g. movies vs. music vs. games) without restarting.</li>
               <li><b>⚙ Settings</b> sets the library name, logo, which fields show, columns, the admin password, and provider API keys.</li>
             </ul>
           </details>

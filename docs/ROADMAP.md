@@ -20,7 +20,8 @@ platform-as-format, where-to-play, PriceCharting resale) · 🎧 **Audiobooks** 
 narrator/duration, where-to-listen) — all zero-key, all built on a **shared media-type registry**
 (card widgets + per-type fields are data-driven, so a new type is one registry entry, not a new branch
 everywhere). Plus 🎵 **album track-info** (tracklists shown + searchable by song), a compact **change
-log** (`events.jsonl`), and **real demo cover art** for every type.
+log** (`events.jsonl`), a **printable PDF inventory** (`export --format inventory`), and **real demo
+cover art** for every type.
 
 ## 🔜 Designed, planned next
 
@@ -43,7 +44,6 @@ Captured for later. Roughly highest-value first.
 | **Condition & purchase tracking** | Per-item condition, purchase price/date → appreciation + insurance export | Collectors & insurance | S |
 | **Wishlist / "want" list** | Track media you want to acquire, separate from owned | Natural companion to a collection | S |
 | **Local vision identify (Ollama)** | Offline cover identification via a local model | Fully-offline accuracy without cloud keys | M |
-| **PDF / printable inventory** | A printable catalog/inventory export | Insurance, sharing offline | S |
 | **Dark/light theme + a11y pass** | Theme toggle and accessibility audit | Polish | S |
 | **Loan reminders / notifications** | "Out for 90 days" nudges (needs a notification surface) | Follow-on to lending tracker | M |
 

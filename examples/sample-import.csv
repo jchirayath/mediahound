@@ -1,4 +1,7 @@
-media_type,title,artist,director,year,format,label,studio,genres,rating,barcode,cover_url,intro
-movie,The Goonies,,Richard Donner,1985,VHS,,Warner Bros.,Adventure; Family,7.7,,,A pirate map sends a band of kids on one last great adventure.
-music,Abbey Road,The Beatles,,1969,Vinyl,Apple Records,,Rock; Pop,9.3,,,"The Beatles' farewell — side two is one long, perfect medley."
-music,OK Computer,Radiohead,,1997,CD,Parlophone,,Alternative Rock,9.0,,,Paranoia and beauty for the dawn of the digital age.
+media_type,title,artist,director,author,narrator,developer,publisher,studio,year,format,platforms,label,genres,rating,barcode,isbn,pages,duration,tracklist,cover_url,intro
+movie,The Goonies,,Richard Donner,,,,,Warner Bros.,1985,VHS,,,Adventure; Family,7.7,,,,,,,A pirate map sends a band of kids on one last great adventure.
+music,Abbey Road,The Beatles,,,,,,,1969,Vinyl,,Apple Records,Rock; Pop,9.3,,,,,"Come Together; Something; Here Comes the Sun",,"The Beatles' farewell — side two is one long, perfect medley."
+music,OK Computer,Radiohead,,,,,,,1997,CD,,Parlophone,Alternative Rock,9.0,,,,,,,Paranoia and beauty for the dawn of the digital age.
+book,Dune,,,Frank Herbert,,,Chilton Books,,1965,Hardcover,,,Science Fiction,8.8,,9780801950773,412,,,,The desert planet Arrakis and the spice that everyone will kill for.
+game,The Legend of Zelda: Breath of the Wild,,,,,Nintendo,Nintendo,,2017,Switch,Switch,,Action-Adventure,9.5,,,,,,,"A vast, ruined Hyrule to explore in any order you like."
+audiobook,Project Hail Mary,,,Andy Weir,Ray Porter,,Audible Studios,,2021,Audible,,,Science Fiction,9.1,,,,970,,,A lone astronaut wakes with amnesia and the fate of Earth on his shoulders.

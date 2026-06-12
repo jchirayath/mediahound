@@ -3,9 +3,11 @@
 Status: **accepted** · Supersedes the movie-only scope · Target: v0.2
 
 MediaHound generalizes MediaHound from a DVD/VHS movie catalog into a **multi-media** physical-
-collection catalog covering **movies** (DVD/VHS/Blu-ray/LaserDisc) and **music** (CD/Vinyl/Cassette),
-from photos of the covers **or** a CSV import, identified via public data sources, with where-to-watch
-/ where-to-listen links.
+collection catalog. It started with **movies** (DVD/VHS/Blu-ray/LaserDisc) and **music** (CD/Vinyl/
+Cassette) and now also covers **books**, **video games** (Switch/PS5/PS4/Xbox/PC/Retro) and
+**audiobooks** (Audible/CD/MP3-CD/Cassette/Digital) — five media types in all — from photos of the
+covers **or** a CSV import, identified via zero-key public data sources, with where-to-watch /
+-listen / -play / -read links.
 
 ## Why it's tractable
 
@@ -19,9 +21,9 @@ switches). Only the *schema* and the *providers* are movie-coupled. So MediaHoun
 
 ```jsonc
 MediaItem {
-  "id", "media_type": "movie" | "music",
-  "title", "year", "format",        // DVD/VHS/Blu-ray/LaserDisc | CD/Vinyl/Cassette
-  "creators": [{"role","name"}],     // director/cast | artist/composer
+  "id", "media_type": "movie" | "music" | "book" | "game" | "audiobook",
+  "title", "year", "format",        // DVD/VHS/Blu-ray | CD/Vinyl | book | platform (Switch/PS5/…) | medium
+  "creators": [{"role","name"}],     // director/cast | artist | author | developer | author/narrator
   "label", "genres": [...], "rating",
   "cover_images": [...], "intro",
   "value": {low,mid,high,sold_url},
@@ -32,8 +34,11 @@ MediaItem {
 }
 ```
 
-Implemented as a `MediaMeta` base with `MovieMeta` / `MusicMeta` subclasses. `media_type` = content
-domain; `format` = physical carrier. (LaserDisc is video → `media_type: movie`.)
+Implemented as a `MediaMeta` base with `MovieMeta` / `MusicMeta` / `BookMeta` / `GameMeta` /
+`AudiobookMeta` subclasses. `media_type` = content domain; `format` = physical carrier (for games it's
+the **platform**, for audiobooks the **medium**). (LaserDisc is video → `media_type: movie`.) A shared
+media-type **registry** (frontend `TYPES` map + backend `_finalize_media` tail) means adding a type is
+~one registry entry + a provider, and moving an item between types preserves shared fields.
 
 ## Providers — add a media-type axis
 
@@ -42,12 +47,19 @@ domain; `format` = physical carrier. (LaserDisc is video → `media_type: movie`
 
 | Capability | Zero-key default | Premium (free key) |
 |---|---|---|
-| Music metadata | **MusicBrainz** (CC0, no key) | **Discogs** (format/label/catalog#/pressing) |
+| Music metadata | **MusicBrainz** (CC0, no key) | **Discogs** (format/label/catalog#/pressing) — *shipped* |
 | Music cover art | **Cover Art Archive** | Discogs images |
 | Where-to-listen | keyless search deep-links (Spotify / Apple Music / YouTube Music) | Spotify / Apple MusicKit exact links |
-| Music resale | eBay sold listings | **Discogs price suggestions** |
+| Music resale | eBay sold listings | **Discogs price suggestions** — *shipped* |
+| Book / audiobook metadata | **Open Library** (author/cover/publisher/ISBN, no key) | — |
+| Audiobook duration / overview | **LibriVox** (public-domain catalogue, no key) | — |
+| Where-to-listen (audiobook) | Audible / Libro.fm / LibriVox / Open Library links | — |
+| Game metadata | **Wikidata** query service (`P31`=video game; UPC→title; platform→`format`) | — |
+| Where-to-play (game) | platform storefront (eShop / PS Store / Xbox / Steam) + MobyGames | — |
+| Game resale | eBay sold listings + **PriceCharting** price-check link | — |
 
-Movie providers (TMDB/OMDb/Wikidata, JustWatch, eBay) are unchanged.
+Movie providers (TMDB/OMDb/Wikidata, JustWatch, eBay) are unchanged. The book/game/audiobook
+providers (`metadata/openlibrary.py`, `metadata/games.py`, `metadata/audiobook.py`) are all zero-key.
 
 ## Identifying movie vs music from a photo
 
@@ -63,9 +75,12 @@ enrichment (covers from Cover Art Archive / TMDB). De-duped by barcode or `media
 
 ## Frontend
 
-A segmented **`All · 🎬 Movies · 🎵 Music`** control over the existing filter framework; cards render a
-per-`media_type` field set (director/cast/studio/runtime + ▶ watch · artist/label/tracklist + ♫ listen);
-filters become type-aware. The admin view-config becomes two field sets keyed by type.
+A segmented **`All · 🎬 Movies · 🎵 Music · 📚 Books · 🎮 Games · 🎧 Audiobooks`** control over the
+existing filter framework; cards render a per-`media_type` field set (director/cast/studio/runtime +
+▶ watch · artist/label/tracklist + ♫ listen · author/publisher/ISBN + 📖 read · developer/platform +
+🎮 play · author/narrator/duration + 🎧 listen); filters become type-aware. Music cards show a
+collapsible tracklist and a song search surfaces its album with the matched track highlighted. The
+admin view-config becomes one field set per type, driven by the shared `TYPES` registry.
 
 ## Phases
 
@@ -75,6 +90,13 @@ filters become type-aware. The admin view-config becomes two field sets keyed by
 3. Routing + CSV import/export.
 4. UI: media tab, per-type cards/fields, listen badges, mixed-media demo.
 5. Polish: tests, docs, migration script for existing movie data.
+
+> **Status (shipped, as of v0.6.0).** All phases landed and the type axis grew past movies + music to
+> **five** types: books (Open Library), 🎮 video games (Wikidata; PriceCharting resale) and 🎧
+> audiobooks (Open Library + LibriVox) were added via the shared media-type registry. Also shipped
+> since: album track-info + song search, a compact change log (`events.jsonl`, `mediahound log`), a
+> printable inventory PDF (`export --format inventory` / `inventory.py`), Discogs import + price
+> suggestions, and real demo cover art for every type.
 
 ## Risks / decisions
 

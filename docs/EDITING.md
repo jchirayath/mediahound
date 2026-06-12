@@ -13,9 +13,12 @@ To add many titles at once from a CSV (no photos needed):
 
 **Only `title` is required.** The importer is tolerant of partial data: missing columns are left
 blank or — with online enrichment — filled from the provider; unknown columns are ignored; headers
-are case-insensitive; `media_type` is inferred (`music` if an `artist` is present, else `movie`).
-So a one-column list of titles works, and so does a fully-specified sheet. See
-[`examples/sample-import.csv`](../examples/sample-import.csv) for the recognised columns.
+are case-insensitive; `media_type` is inferred from the columns present (`music` if an `artist` is
+given, `book`/`audiobook` if an `author` is, `game` if a `developer`/`platforms` is, else `movie`) —
+or set it explicitly. So a one-column list of titles works, and so does a fully-specified sheet across
+any of the five media types. See [`examples/sample-import.csv`](../examples/sample-import.csv) for the
+recognised columns (including `author`, `narrator`, `developer`, `platforms`, `isbn`, `pages`,
+`duration`, and `tracklist`).
 
 ## How edits are stored
 
@@ -115,31 +118,40 @@ Under `serve --admin` / the desktop app, open **⚙ Settings → API keys**, pas
 
 ---
 
-## Moving a title between Movies and Music
+## Moving a title between media types
 
-Sometimes a disc is catalogued under the wrong type — e.g. a concert DVD that's really a
-**music** release, or a spoken-word CD that belongs under **movies**. To move it:
+Sometimes an item is catalogued under the wrong type — e.g. a concert DVD that's really a **music**
+release, a spoken-word CD that belongs under **audiobooks**, or a tie-in that's actually a **book** or
+**video game**. You can move a title between any of the five types (🎬 Movies / 🎵 Music / 📚 Books /
+🎮 Video games / 🎧 Audiobooks). To move it:
 
 1. In admin view, click the title to open the inline editor.
-2. Change the **🎬 Movie / 🎵 Music** dropdown.
-   - Switching to **Music** reveals an **Artist** field; the format list changes to CD / Vinyl /
-     Cassette.
-   - Switching to **Movie** shows the Studio / Distributor fields and DVD / VHS / … formats.
+2. Change the **media-type** dropdown. The editor swaps in the new type's fields and format list:
+   - **Music** → **Artist** + tracklist; CD / Vinyl / Cassette.
+   - **Movie** → Studio / Distributor; DVD / VHS / Blu-ray / …
+   - **Book** → **Author** / publisher / ISBN / pages.
+   - **Video game** → **Developer** / publisher; the format becomes the **platform** (Switch / PS5 /
+     PS4 / Xbox / PC / Retro).
+   - **Audiobook** → **Author** + **Narrator** / publisher / ISBN; medium Audible / CD / MP3-CD /
+     Cassette / Digital.
 3. **Re-query** is auto-ticked when you change the type — so the next `mediahound build --online`
-   re-enriches the item with the **correct provider** (MusicBrainz + Cover Art Archive for music,
-   TMDB / Wikidata / OMDb for movies): artist, label, tracklist & cover art, or director, cast & poster.
+   re-enriches the item with the **correct zero-key provider**: MusicBrainz + Cover Art Archive
+   (music), TMDB / Wikidata / OMDb (movies), Open Library (books), Wikidata (games), Open Library +
+   LibriVox (audiobooks).
 4. Save. The card immediately moves to the right tab; the change persists like any other correction
    (via `serve --admin` or **Export changes**).
 
-Behind the scenes the move sets a `media_type` correction and **clears the previous type's
-exclusive fields** (a movie's director/cast/studio, or a music item's artist/label/tracklist) so the
-record stays clean. Until you run an online re-query, music-specific fields stay empty.
+Behind the scenes the move sets a `media_type` correction and **clears the previous type's exclusive
+fields** (a movie's director/cast/studio, a music item's artist/label/tracklist, a game's developer/
+platform, an audiobook's narrator, …) so the record stays clean. **Shared fields are preserved** —
+e.g. a `publisher` carries across a book↔game move rather than being wiped. Until you run an online
+re-query, the new type's specific fields stay empty.
 
 On the next `mediahound build` (e.g. **↻ Rebuild** under `serve --admin`), the move also **relocates
 the source cover photo** into the matching `RawImages/` subfolder (`video/` for movies, `audio/` for
-music) so the item is correct *at the source* too — it won't snap back to the old type even if
-`corrections.json` is ever cleared. This is idempotent (a photo already in place is left alone) and
-only ever moves files **inside** `RawImages/`.
+music, and the per-type folders for books / games / audiobooks) so the item is correct *at the source*
+too — it won't snap back to the old type even if `corrections.json` is ever cleared. This is
+idempotent (a photo already in place is left alone) and only ever moves files **inside** `RawImages/`.
 
 ## Re-query vs. manual title
 

@@ -2,7 +2,7 @@
   <img alt="MediaHound" src="docs/brand/mediahound-logo.png" height="150">
 </p>
 
-# 🎬🎵 MediaHound
+# 🎬🎵📚🎮🎧 MediaHound
 
 [![CI](https://github.com/jchirayath/mediahound/actions/workflows/ci.yml/badge.svg)](https://github.com/jchirayath/mediahound/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/jchirayath/mediahound/actions/workflows/codeql.yml/badge.svg)](https://github.com/jchirayath/mediahound/actions/workflows/codeql.yml)
@@ -45,11 +45,10 @@ throughout. Adding a new media type is one entry in a **shared registry** — no
 
 <sub><i>The live demo runs the same static output MediaHound generates. <a href="docs/screenshot.jpg">Full-size screenshot</a>.</i></sub>
 
-> ℹ️ The demo shows **real movie posters and album covers** (hotlinked from IMDb/OMDb and Cover Art
-> Archive / Apple) so you can see what a finished catalog looks like — no cover images are stored in
-> this repo. Extra gallery photos are generated placeholders standing in for *your own* photos. Your
-> real catalog pulls art from TMDB / OMDb / Wikidata (movies) and MusicBrainz / Cover Art Archive
-> (music), or falls back to the photos you take.
+> ℹ️ The demo shows **real cover art for every type** — movie posters (IMDb/OMDb), album covers (Cover
+> Art Archive / Apple), book & audiobook covers (Open Library), and game box art (Steam) — all
+> hotlinked so you can see what a finished catalog looks like; no cover images are stored in this repo.
+> Your real catalog pulls art from each type's provider, or falls back to the photos you take.
 
 - **Runs for anybody with zero API keys** — open-source OCR + open data by default.
 - **Offline-first** — never contacts the internet unless you explicitly ask (`--online`).
@@ -132,7 +131,7 @@ pip install "mediahound[ocr]"   # adds the default OCR identifier
 #   macOS:  brew install tesseract
 #   Debian: sudo apt-get install tesseract-ocr
 
-mediahound init mysite      # scaffolds mysite/ (RawImages/{video,audio}/, config.toml, web template)
+mediahound init mysite      # scaffolds mysite/ (RawImages/{video,audio,books,games,audiobooks}/, config.toml, web template)
 
 # Sort your cover photos by media type:
 cp ~/Pictures/dvd-covers/*.jpg    mysite/RawImages/video/       # 🎬 movies (DVD/VHS/Blu-ray/LaserDisc)
@@ -185,24 +184,36 @@ rebuilt in place.
 
 ## Features
 
+### Five media types, one catalog
+- **🎬 Movies · 🎵 Music · 📚 Books · 🎮 Video games · 🎧 Audiobooks** — segmented tabs appear once your
+  catalog has more than one type. Each renders the right fields (cast vs. artist vs. author vs.
+  developer vs. narrator; studio vs. label vs. publisher; runtime vs. tracklist vs. duration) from a
+  **shared media-type registry** — and you can **move a title between any types** in admin.
+
 ### The catalog
-- **Search** title / genre / cast / studio / intro, **sort** by title, year, recently-added, value or rating.
+- **Search** title / creator / genre / studio / intro — **and song titles** (a track on an album
+  surfaces it); **sort** by title, year, recently-added, value or rating.
 - **Filters**: format, genre, studio, **streaming service**, language, category, seen / unseen.
-- **Dense, aligned cards** showing poster, title·year, ★rating · format · runtime · language,
-  genres, director + cast, studio, where-to-watch, intro hook, and estimated resale value.
-- **Clickable everything**: a genre, person, or studio filters the grid to matching titles.
-- **Adjustable density** — viewers pick how many movies per row; responsive on web & mobile.
+- **Dense, aligned cards** showing cover, title·year, ★rating · format · (runtime/tracks/duration),
+  genres, the creator(s), studio/label/publisher, where-to-watch/listen/find/play, intro hook, and
+  estimated resale value. Music cards expand to a **collapsible tracklist**.
+- **Clickable everything**: a genre, person, studio, or narrator filters the grid to matching titles.
+- **Adjustable density** — viewers pick how many per row; responsive on web & mobile.
 
 ### Photos
 - **Multi-photo galleries** — flip through every photo of a title with ‹ › arrows.
 - **Click-to-zoom** lightbox; set any photo as the default; rotate photos (baked in on rebuild).
 - Auto-uprights sideways/landscape cover photos to portrait.
 
-### Where to watch & resale
+### Where to watch / listen / find / play & resale
 - **Where to watch** — is it on Netflix / Amazon Prime / Hulu? A clickable ▶ badge + pills link
   straight to the title (via JustWatch, no key). A filter narrows to a specific service.
-- **Resale value** — a heuristic estimate plus a live link to eBay sold/completed listings. For music
-  with a Discogs release id, a condition-based **Discogs price suggestion** (token-gated).
+- **Where to listen / find / play / hear** — keyless deep links per type: music → Spotify / Apple /
+  YouTube Music; books → Open Library / Goodreads / Google Books; games → Steam / eShop / PS Store /
+  Xbox / MobyGames (chosen by platform); audiobooks → Audible / Libro.fm / LibriVox / Open Library.
+- **Resale value** — a heuristic estimate plus a live link to eBay sold/completed listings. Music with
+  a Discogs release id gets a condition-based **Discogs price suggestion** (token-gated); **video games
+  get a PriceCharting** price-check link with platform-aware baselines (retro and Switch hold value).
 
 ### 📷 Barcode scanning (exact, not fuzzy)
 - Identify the **exact release** from the UPC/EAN barcode instead of fuzzy OCR. In the admin view,
@@ -220,20 +231,32 @@ rebuilt in place.
   returned), filter **On loan / Available**, and hit **🎲 Surprise me** to pick something for tonight.
   All of this is **stripped from the published site** — it shows only in your local admin view.
 
+### 🖨 Printable inventory (PDF)
+- **`mediahound export --format inventory`** writes a clean, self-contained `inventory.html` — grouped
+  by media type, with a per-type and grand-total estimated value — that you **Print → Save as PDF**
+  (great for insurance or offline sharing). The admin **⤓ Export** menu has a one-click **🖨 Printable
+  inventory (PDF)** button that does the same from the app (works on a static copy, zero dependencies).
+
+### 🧾 Change log
+- Every add / remove / change is recorded in a compact, append-only **`data/events.jsonl`** (integer
+  timestamp, one-char op, changed-field names only — tiny and privacy-safe; admin-only, never
+  published). Review it with **`mediahound log`**.
+
 ### 🛟 Backup, export & feeds
 - **`mediahound backup` / `restore`** zip up (and re-create) your whole library — `--no-photos` for a
   quick curation-only backup; secrets are never included. A **⬇ Backup** button does the same from the app.
-- **Export** to **Letterboxd** (movies) or **JSON**: `mediahound export --format letterboxd|json`
-  (or the **🎬 Letterboxd** button). The published site also emits **`feed.json` + `feed.xml`** of
-  recently-added items so anyone can subscribe.
+- **Export** to **Letterboxd** (movies), **JSON**, **CSV**, or a **printable inventory**:
+  `mediahound export --format letterboxd|json|csv|inventory` (or the **⤓ Export** menu). The published
+  site also emits **`feed.json` + `feed.xml`** of recently-added items so anyone can subscribe.
 - **📚 Library switcher** — keep separate catalogs (e.g. movies vs. music, or per-family-member) and
   **open / create / switch between them from the admin UI** with no restart (a recents list lives in
   `~/.config/mediahound/`). Each library's **data directory** is set by its own `config.toml` `[paths]`.
 
 ### Two views
 - **Default view** — public, read-only.
-- **Admin view** — password-protected, read/write. Edit a title's name, year, format, studio &
-  distributor; **move a title between 🎬 Movies and 🎵 Music**; mark seen; rotate / set-default /
+- **Admin view** — password-protected, read/write. Edit a title's name, year, format, and the
+  type-specific fields (artist/author/narrator/developer, studio/label/publisher); **move a title
+  between any media type** (🎬 / 🎵 / 📚 / 🎮 / 🎧); mark seen/played/read; rotate / set-default /
   delete a photo; delete a title; and configure the **library name, description, logo, which fields
   are shown, and default columns**.
 
@@ -300,9 +323,12 @@ Both paths are first-class — pick them per-site in `config.toml`. The default 
 |---|---|---|
 | **Identify** title from a cover | `tesseract` — open-source OCR | `claude` (Anthropic vision, also writes the intro) · `ollama` (local model) |
 | **Movie** metadata + poster | `wikidata` — Wikidata + Wikipedia + Wikimedia | `tmdb` (free key) · `omdb` (free key) |
-| **Music** metadata + cover art | `musicbrainz` — MusicBrainz + Cover Art Archive | `discogs` *(planned)* |
-| **Where to watch / listen** | `justwatch` (movies) · keyless Spotify/Apple/YouTube search (music) | Spotify / Apple Music keys *(planned)* |
-| **Resale** | eBay sold-listings link + estimate | Discogs price *(planned, music)* |
+| **Music** metadata + cover art | `musicbrainz` — MusicBrainz + Cover Art Archive | `discogs` (token: higher rate limit + price suggestions) |
+| **Book** metadata + cover | `openlibrary` — Open Library (ISBN or title+author) | — |
+| **Game** metadata + box art | `wikidata` — Wikidata query service (title/UPC) | — |
+| **Audiobook** metadata | `openlibrary` + `librivox` (narrator/length) | — |
+| **Where to watch / listen / play** | `justwatch` (movies) · keyless Spotify/Apple/YouTube, Open Library/Goodreads, Steam/eShop/PS Store, Audible/Libro.fm search | Spotify / Apple Music keys *(planned)* |
+| **Resale** | eBay sold-listings link + estimate · **PriceCharting** for games | Discogs price suggestion (token, music) |
 
 Switch to a premium provider in `config.toml`:
 
@@ -404,7 +430,9 @@ hash ships. All rendered data is HTML-escaped and links are scheme-restricted. S
 and keys stay on your computer; data leaves only when you opt into online metadata, Publish, or phone
 upload. See **[PRIVACY.md](PRIVACY.md)**.
 
-**Roadmap:** what's next (barcode scanning, Discogs, backup/exports, personal catalog) is designed in
-[docs/design/](docs/design/); the full backlog is in [docs/ROADMAP.md](docs/ROADMAP.md).
+**Roadmap:** shipped so far — barcode scanning, Discogs, backup/exports, personal catalog, **Books /
+Video games / Audiobooks**, album track-info, a printable PDF inventory, and a compact change log
+(designed in [docs/design/](docs/design/)). What's next (a value/insights dashboard, "for sale" mode,
+duplicate detection, …) is in [docs/ROADMAP.md](docs/ROADMAP.md).
 
 Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).

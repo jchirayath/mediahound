@@ -1,6 +1,6 @@
 # 04 — Personal catalog
 
-**Status:** Planned · **Effort:** S–M · **Depends on:** nothing (frontend + override files)
+**Status:** ✅ Shipped (0.4.0) · **Effort:** S–M · **Depends on:** nothing (frontend + override files)
 
 Turn the inventory into a **personal** catalog: your ratings, notes, shelves/tags, who you've lent
 things to, and a "surprise me" picker. Almost all of this extends the existing override-file +

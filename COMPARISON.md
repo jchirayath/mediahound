@@ -9,13 +9,14 @@ pricing and project status change — corrections welcome via PR.*
 Almost every existing tool adds items by **barcode scan, online title search, or manual entry**, and
 keeps your catalog in **their cloud app** or a **dated desktop database**. MediaHound takes a different
 path: it identifies titles from **photos of the covers** (OCR / optional AI vision) and generates a
-**modern static website you own and host for free** — offline-first and open-source.
+**modern static website you own and host for free** — offline-first and open-source. It catalogs five
+media types in one place: 🎬 movies, 🎵 music, 📚 books, 🎮 video games, and 🎧 audiobooks.
 
 ## Comparison
 
 | Tool | Type / Platform | Open source | Price | Add items by | Catalog lives in | Self-host / own data |
 |---|---|---|---|---|---|---|
-| **MediaHound** | CLI → static website (any OS) | ✅ MIT | Free | **Photo of cover (OCR/AI)**, or manual | A static site you host (or open `index.html`) | ✅ Fully — plain files, host anywhere |
+| **MediaHound** | CLI → static website (any OS); movies, music, books, games & audiobooks | ✅ MIT | Free | **Photo of cover (OCR/AI)**, or manual | A static site you host (or open `index.html`) | ✅ Fully — plain files, host anywhere |
 | CLZ Movies | Web + iOS/Android (cloud) | ❌ | ~$20–40/yr (per category) | Barcode, title search | CLZ Cloud + share page | ❌ (CSV export only) |
 | Libib | Web + iOS/Android (cloud) | ❌ | Free ≤5k items; Pro $99/yr | Barcode, title search | Libib Cloud + public OPAC (Pro) | ❌ (CSV export only) |
 | My Movies | Windows desktop + mobile/web | ❌ | Free basic; ~$100 one-time | Barcode, title search, folder import | Local Windows DB + online view | ◻︎ Local DB, but cloud for online/sync |
@@ -42,8 +43,12 @@ path: it identifies titles from **photos of the covers** (OCR / optional AI visi
 4. **Right category for a *physical* shelf.** Plex and Jellyfin are excellent — but for **digital media
    files**, not an inventory of physical cases. DVD Profiler was the purpose-built physical-disc tool,
    but it appears end-of-life in 2026 (its server has been unresponsive).
-5. **Extras the catalogers don't combine:** where-to-watch (Netflix/Prime/Hulu), used **resale value**
-   with eBay sold-listings links, and a built-in admin/curation UI.
+5. **One catalog, five media types.** Most rivals are single-category (and CLZ charges *per* category).
+   MediaHound covers 🎬 movies, 🎵 music, 📚 books, 🎮 video games, and 🎧 audiobooks side by side, all
+   resolved from **zero-key public data** (Wikidata/TMDB/OMDb, MusicBrainz, Open Library, LibriVox).
+6. **Extras the catalogers don't combine:** where-to-watch / -listen / -play links, used **resale value**
+   with eBay sold-listings links (plus PriceCharting for games and Discogs for music), a built-in
+   admin/curation UI, and a one-click **printable inventory (PDF)** with per-type and grand-total value.
 
 ## Where MediaHound is *not* the best choice — pick the right tool
 
@@ -63,7 +68,8 @@ path: it identifies titles from **photos of the covers** (OCR / optional AI visi
 - **No native mobile app** — it's a CLI plus a website (the website is mobile-responsive).
 - **Identification needs review** — OCR/AI can misread a cover; MediaHound flags low-confidence ones for
   manual fix, but it's not the near-100% of a barcode lookup for known discs.
-- **Younger and smaller** than CLZ/Libib, with a smaller metadata ecosystem (Wikidata/OMDb/TMDB).
+- **Younger and smaller** than CLZ/Libib, leaning on free public sources (Wikidata/OMDb/TMDB,
+  MusicBrainz/Discogs, Open Library, LibriVox) rather than a single curated commercial database.
 - **Editing is rebuild-based**, not a always-live app (edits export to JSON and apply on the next build).
 
 If accuracy from photos, owning your data, a free modern website, and VHS support matter more than
