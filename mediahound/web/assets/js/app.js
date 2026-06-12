@@ -49,11 +49,11 @@
     },
     music: {
       emoji: "🎵", label: "Music",
-      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, (m.tracklist && m.tracklist.length) ? m.tracklist.length + " tracks" : null],
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format],   // track count → tracklist disclosure
       creator: (m) => (m.artist ? { icon: "🎤", name: m.artist } : null),
       cast: () => [],
       org: (m) => (m.label ? { icon: "🏷", value: m.label } : null),
-      tooltip: (m) => (m.tracklist && m.tracklist.length ? m.tracklist.join("  ·  ") : ""),
+      tooltip: () => "",
       pills: (m) => listenPills(m),
     },
     book: {
@@ -613,6 +613,29 @@
         (m.resale.price_check_url ? ` <a class="sell" target="_blank" rel="noopener" title="${esc(m.resale.price_check_label || "Price guide")}" href="${esc(safeUrl(m.resale.price_check_url))}">📊</a>` : "") + `</span>`);
     }
     b.appendChild(foot);
+
+    // music: a collapsible tracklist (the album's songs). When a search matches a song, the list
+    // auto-opens and the matched track(s) are highlighted — so you can find an album by a track on it.
+    if (isMusic(m) && (m.tracklist || []).length) {
+      const tl = m.tracklist;
+      const q = ($("#search").value || "").trim().toLowerCase();
+      const hits = q ? tl.filter((t) => (t || "").toLowerCase().includes(q)) : [];
+      const det = document.createElement("details"); det.className = "tracks";
+      if (hits.length) det.open = true;
+      const sum = document.createElement("summary");
+      sum.innerHTML = `♫ ${tl.length} track${tl.length > 1 ? "s" : ""}` +
+        (hits.length ? ` · <span class="track-hit">matches “${esc(hits[0])}”${hits.length > 1 ? ` +${hits.length - 1}` : ""}</span>` : "");
+      det.appendChild(sum);
+      const ol = document.createElement("ol"); ol.className = "tracklist";
+      tl.forEach((t) => {
+        const li = document.createElement("li");
+        if (q && (t || "").toLowerCase().includes(q)) li.className = "is-hit";
+        li.textContent = t;
+        ol.appendChild(li);
+      });
+      det.appendChild(ol);
+      b.appendChild(det);
+    }
 
     if (isAdmin) { b.appendChild(personalEl(m)); b.appendChild(seenToggle(m)); b.appendChild(adminBar(m, el)); }
     el.appendChild(b);
@@ -1190,8 +1213,8 @@
   function exportCatalogCsv() {
     if (!movies.length) { alert("Nothing to export."); return; }
     const cols = ["media_type", "title", "artist", "author", "narrator", "developer", "director",
-                  "year", "format", "label", "studio", "publisher", "platforms", "duration",
-                  "genres", "rating", "my_rating", "tags", "barcode", "intro"];
+                  "year", "format", "label", "studio", "publisher", "platforms", "tracklist",
+                  "duration", "genres", "rating", "my_rating", "tags", "barcode", "intro"];
     const cell = (v) => { v = Array.isArray(v) ? v.join("; ") : String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const rows = [cols.join(",")];
     movies.forEach((m) => rows.push(cols.map((c) => cell(m[c])).join(",")));

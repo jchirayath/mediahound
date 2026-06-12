@@ -43,8 +43,8 @@ def _float(s) -> float | None:
 
 # Columns recognised (case-insensitive); any extras are ignored.
 EXPORT_COLUMNS = ["media_type", "title", "artist", "author", "narrator", "developer", "director",
-                  "year", "format", "label", "publisher", "studio", "platforms", "genres", "rating",
-                  "barcode", "isbn", "pages", "duration", "cover_url", "intro"]
+                  "year", "format", "label", "publisher", "studio", "platforms", "tracklist",
+                  "genres", "rating", "barcode", "isbn", "pages", "duration", "cover_url", "intro"]
 
 _DEFAULT_FMT = {"music": "CD", "book": "Paperback", "game": "PC", "audiobook": "Audible"}
 
@@ -208,6 +208,7 @@ def export_csv(store, path: Path) -> int:
                 "year": m.get("year"), "format": m.get("format"), "label": m.get("label"),
                 "publisher": m.get("publisher"), "studio": m.get("studio"),
                 "platforms": "; ".join(m.get("platforms") or []),
+                "tracklist": "; ".join(m.get("tracklist") or []),
                 "genres": "; ".join(m.get("genres") or []), "rating": m.get("rating"),
                 "barcode": m.get("barcode"), "isbn": m.get("isbn"), "pages": m.get("page_count"),
                 "duration": m.get("duration"),
