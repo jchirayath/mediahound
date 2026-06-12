@@ -625,6 +625,14 @@ def _write_site(cfg: Config, store: Store) -> None:
                                 page.read_text(encoding="utf-8"))
             page.write_text(html, encoding="utf-8")
 
+    # PWA: stamp the same content version into the service worker so its cache name changes on a
+    # rebuild — the browser then activates the new SW, drops the old cache, and the app updates.
+    sw = cfg.output_dir / "sw.js"
+    if sw.is_file():
+        text = re.sub(r'const VERSION = "[^"]*"', f'const VERSION = "{ver}"',
+                      sw.read_text(encoding="utf-8"))
+        sw.write_text(text, encoding="utf-8")
+
 
 def _write_feeds(cfg: Config, site: dict, collection: list, limit: int = 30) -> None:
     """Emit feed.json (JSON Feed 1.1) and feed.xml (RSS 2.0) of the most recently-added items."""

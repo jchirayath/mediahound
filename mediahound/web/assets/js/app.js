@@ -32,6 +32,12 @@
 
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
+  // PWA: register the service worker (installable + offline) when served over http(s).
+  // No-op on file:// and where service workers aren't available.
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+  }
+
   // Phone mode: an access token may arrive in the URL (?t=…). Stash it for write calls,
   // then strip it from the address bar so it isn't left visible or shared by accident.
   const TOKEN_KEY = "mediahound:token";

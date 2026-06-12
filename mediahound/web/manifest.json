@@ -1,0 +1,15 @@
+{
+  "name": "MediaHound",
+  "short_name": "MediaHound",
+  "description": "Your movie & music collection — searchable, offline.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0b0c10",
+  "theme_color": "#e97b0c",
+  "icons": [
+    { "src": "assets/img/mediahound-icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/img/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}
