@@ -1,0 +1,108 @@
+> Canonical copy lives in [docs/EDITING.md](https://github.com/jchirayath/mediahound/blob/main/docs/EDITING.md). This wiki page mirrors it.
+
+# Editing & curating your catalog
+
+This guide covers how to fix titles, mark items seen, manage photos, and — most importantly —
+how to make those edits **stick** so they survive every future `mediahound build`.
+
+## How edits are stored
+
+Every change you make in the **admin view** is recorded as a small **correction**, keyed by the
+title's id, in:
+
+```
+data/
+  corrections.json     ← title / year / format / studio / delete / rotate / set-default / re-query
+  seen-overrides.json  ← which titles are marked seen (and when)
+  view-config.json     ← library name, logo, visible fields, default columns
+```
+
+`mediahound build` regenerates the catalog (`collection.json`) from your photos **plus these
+files**. So **`data/corrections.json` is the source of truth** for your manual fixes.
+
+> ⚠️ **The #1 gotcha:** if you fix a title in the browser but it never reaches
+> `data/corrections.json`, it shows locally but **reverts on the next build** — because the build
+> rebuilds the catalog from `data/`. The two workflows below make sure your edits land in that file.
+
+---
+
+## Option A — Live admin server (recommended)
+
+Zero manual steps: edits are written to `data/` *as you make them*.
+
+```bash
+mediahound serve --admin
+# → http://127.0.0.1:8765   [ADMIN — saving to disk]
+```
+
+1. The site opens in your browser. Click **🔒 Admin** and enter your admin password.
+2. Edit titles, years, formats; mark seen; rotate / set-default / delete photos.
+   Each change shows a **“✓ Saved to disk”** badge — it's already in `data/corrections.json`.
+3. Click **↻ Rebuild** to re-bake the catalog and reload (or just run `mediahound build` later).
+
+Because the edit is already persisted, **it survives every future build and re-query** — this is the
+fix for "my manual title rename reverted."
+
+### Options
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `--admin` | off | Enable the write API (edits persist to `data/`). Without it, `serve` is a read-only preview. |
+| `--port N` | `8765` | Port to listen on. |
+| `--host H` | `127.0.0.1` | Bind address. **Keep it on localhost** — the write API is for you, not the public. |
+| `--no-open` | off | Don't auto-open a browser. |
+| `--config` | `config.toml` | Path to the site config. |
+
+### Security
+
+The write API is **bound to `127.0.0.1`** and **refuses cross-origin requests** (the `Origin` must
+match the server). It's a local authoring tool — **never expose `--admin` on a public address or
+reverse-proxy it to the internet.** Public hosting should always serve the plain static files
+(Option B). The portal's admin password still gates the editing UI itself.
+
+### Endpoints (for reference)
+
+| Method & path | Body | Effect |
+| --- | --- | --- |
+| `GET /api/ping` | — | `{ok, admin, version}` — the portal uses this to detect server-admin mode |
+| `POST /api/corrections` | `{ id: {patch}, … }` | merge into `data/corrections.json` |
+| `POST /api/seen` | `{ id: {seen,date_seen}, … }` | replace `data/seen-overrides.json` |
+| `POST /api/identify` | `{ hash: {title,…}, … }` | merge into `data/identify-queue.json` |
+| `POST /api/rebuild` | `{}` | run an offline `build` and regenerate the site |
+
+---
+
+## Option B — Static export (for CDN / read-only hosting)
+
+If you host the site as plain files (Netlify, GitHub Pages, S3…), there's no server to write to, so
+edits live in your browser until you export them:
+
+1. In admin view, make your edits.
+2. Click **Export changes** (titles/formats/deletes…) and **Export seen** (watch state).
+   The download is **merged with the site's existing `data/corrections.json`**, so it can never drop
+   a previously-saved fix.
+3. Move the downloaded `corrections.json` / `seen-overrides.json` into the site's `data/` folder.
+4. Run `mediahound build` and redeploy.
+
+---
+
+## Re-query vs. manual title
+
+- A **manual title** you set always wins and is kept verbatim.
+- Ticking **“re-query”** on an item asks the next `--online` build to refetch metadata for it. A
+  re-query only replaces your title if the result is a *plausible* match; otherwise your title is
+  kept. To freeze a title so nothing ever changes it, set it manually and leave re-query **off**.
+
+## Recovering edits that already reverted
+
+If titles you fixed reverted on a rebuild, they were never saved to `data/corrections.json`. If the
+edits are **still in the browser** where you made them, open that browser, go to admin view, and
+click **Export changes** — the merge-safe export captures everything still in `localStorage`. Drop it
+into `data/`, rebuild, and they're permanent. Going forward, use `serve --admin` to avoid the manual
+step entirely.
+
+## See also
+
+- **[[Adding Media]]** — drag-and-drop, phone upload, CSV import.
+- **[[Configuration and API Keys]]** — TMDB / OMDb / Anthropic keys (stored in the OS keychain).
+- **[[Publishing Your Catalog]]** — share your catalog on the web.
