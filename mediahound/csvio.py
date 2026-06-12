@@ -69,7 +69,7 @@ def _row_to_item(row: dict) -> dict:
         "poster": cover, "images": [cover] if cover else [],
         "source": {"name": "csv", "url": None},
         "resale": estimate(title, year, fmt or _DEFAULT_FMT.get(mt, "DVD"),
-                           _float(r.get("rating")), "com"),
+                           _float(r.get("rating")), "com", media_type=mt),
         "seen": False, "date_seen": None, "added_at": _now(),
     }
     if mt == "music":

@@ -90,9 +90,11 @@ def test_mock_build_has_games(tmp_path):
     coll = json.loads((site / "data" / "collection.json").read_text())
     games = [m for m in coll if m.get("media_type") == "game"]
     assert len(games) == 3
-    zelda = next(g for g in games if g["title"].startswith("The Legend of Zelda"))
-    assert zelda["developer"] == "Nintendo EPD" and zelda["format"] == "Switch"
-    assert zelda["play"]["providers"]                      # where-to-play links present
+    witcher = next(g for g in games if g["title"].startswith("The Witcher 3"))
+    assert witcher["developer"] == "CD Projekt Red" and witcher["format"] == "PC"
+    assert witcher["play"]["providers"]                    # where-to-play links present
+    assert witcher["resale"].get("price_check_url")        # PriceCharting link present
+    assert all(g["images"] and str(g["images"][0]).startswith("http") for g in games)  # real box art
 
 
 def test_init_creates_games_folder(tmp_path):

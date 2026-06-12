@@ -76,6 +76,7 @@ def test_mock_build_has_audiobooks(tmp_path):
     noah = next(a for a in abooks if a["author"] == "Trevor Noah")
     assert noah["narrator"] == "Trevor Noah" and noah["duration"] == 534
     assert noah["listen"]["providers"]                       # where-to-listen links present
+    assert all(a["images"] and str(a["images"][0]).startswith("http") for a in abooks)  # real covers
 
 
 def test_init_creates_audiobooks_folder(tmp_path):

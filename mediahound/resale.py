@@ -11,24 +11,32 @@ from urllib.parse import quote_plus
 _BASE = {"VHS": 8.0, "DVD": 6.0, "Blu-ray": 9.0, "Unknown": 6.0,
          "Hardcover": 8.0, "Paperback": 4.0, "Mass Market": 3.0, "eBook": 2.0, "Audiobook": 6.0,
          # audiobook media: physical sets resell modestly; digital downloads aren't resellable
-         "CD": 6.0, "MP3-CD": 7.0, "Cassette": 3.0, "Audible": 0.0, "Digital": 0.0}
+         "CD": 6.0, "MP3-CD": 7.0, "Cassette": 3.0, "Audible": 0.0, "Digital": 0.0,
+         # video games by platform: retro/Switch hold value; PC is mostly digital → low physical resale
+         "Switch": 22.0, "PS5": 18.0, "PS4": 12.0, "Xbox": 14.0, "PC": 6.0, "Retro": 20.0}
+
+# platforms whose carts/discs are genuinely collectible (sealed/retro can soar)
+_GAME_PLATFORMS = frozenset({"Switch", "PS5", "PS4", "Xbox", "PC", "Retro"})
 
 
 def estimate(title: str, year: int | None, fmt: str, rating: float | None,
-             tld: str = "com") -> dict:
+             tld: str = "com", media_type: str | None = None) -> dict:
     base = _BASE.get(fmt, 6.0)
     factor = 1.0
+    is_game = media_type == "game" or fmt in _GAME_PLATFORMS
 
-    # Age: older tapes/discs trend collectible; very recent ones are cheap.
+    # Age: older tapes/discs/carts trend collectible; very recent ones are cheap.
     if year:
         if fmt == "VHS" and year < 1995:
             factor *= 1.8
+        elif is_game and fmt == "Retro" and year < 2000:
+            factor *= 1.5            # retro carts/discs appreciate, esp. complete-in-box
         elif year < 1985:
             factor *= 1.6
         elif year < 2000:
             factor *= 1.25
-        elif year >= 2015:
-            factor *= 0.8
+        elif year >= 2015 and not is_game:
+            factor *= 0.8            # new-ish discs/books are cheap; games hold value better
     # Well-loved titles hold value a bit better.
     if rating and rating >= 7.5:
         factor *= 1.2
@@ -37,7 +45,7 @@ def estimate(title: str, year: int | None, fmt: str, rating: float | None,
     high = round(base * factor * 1.8, 0)
     mid = round(base * factor, 0)
 
-    return {
+    out = {
         "currency": "USD" if tld in ("com", "ca", "com.au") else "local",
         "low": low,
         "mid": mid,
@@ -46,6 +54,11 @@ def estimate(title: str, year: int | None, fmt: str, rating: float | None,
         "sold_listings_url": _ebay_sold_url(title, year, fmt, tld),
         "note": "heuristic estimate — click to see real recent sold prices",
     }
+    # Games: PriceCharting is the standard used-price reference (loose / CIB / sealed, by console).
+    if is_game:
+        out["price_check_url"] = _pricecharting_url(title, fmt)
+        out["price_check_label"] = "PriceCharting"
+    return out
 
 
 def discogs_price(release_id: str, condition: str = "Very Good Plus (VG+)",
@@ -67,6 +80,14 @@ def discogs_price(release_id: str, condition: str = "Very Good Plus (VG+)",
         "discogs_release_id": str(release_id),
         "note": f"Discogs price suggestion ({condition})",
     }
+
+
+def _pricecharting_url(title: str, platform: str | None = None) -> str:
+    """A PriceCharting search link (the standard used-game price reference: loose / CIB / sealed)."""
+    terms = title or ""
+    if platform and platform not in ("Unknown", "PC"):
+        terms += f" {platform}"
+    return f"https://www.pricecharting.com/search-products?q={quote_plus(terms.strip())}&type=prices"
 
 
 def _ebay_sold_url(title: str, year: int | None, fmt: str, tld: str) -> str:

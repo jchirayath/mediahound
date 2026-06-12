@@ -227,46 +227,57 @@ _MOCK_MUSIC = [
 ]
 
 # Sample books for --mock (generated placeholder covers; no copyrighted jackets stored).
+_OL_COVER = "https://covers.openlibrary.org/b/isbn/{}-L.jpg"      # real book covers, hotlinked (CC)
+_STEAM_CAP = "https://cdn.cloudflare.steamstatic.com/steam/apps/{}/library_600x900.jpg"  # game box art
+
 _MOCK_BOOKS = [
     dict(title="Dune", author="Frank Herbert", year=1965, format="Paperback", publisher="Ace",
-         genres=["Science Fiction"], rating=8.7, page_count=688, color=(54, 38, 18),
+         genres=["Science Fiction"], rating=8.7, page_count=688, isbn="9780441013593",
+         cover_url=_OL_COVER.format("9780441013593"), color=(54, 38, 18),
          intro="Spice, sandworms and prophecy — the desert epic that defined a genre."),
     dict(title="The Left Hand of Darkness", author="Ursula K. Le Guin", year=1969, format="Paperback",
-         publisher="Ace", genres=["Science Fiction"], rating=8.4, page_count=304, color=(28, 40, 58),
+         publisher="Ace", genres=["Science Fiction"], rating=8.4, page_count=304, isbn="9780441478125",
+         cover_url=_OL_COVER.format("9780441478125"), color=(28, 40, 58),
          intro="A lone envoy on a frozen world where gender is fluid — quietly revolutionary."),
     dict(title="Pride and Prejudice", author="Jane Austen", year=1813, format="Hardcover",
          publisher="T. Egerton", genres=["Classic", "Romance"], rating=8.6, page_count=432,
-         color=(64, 44, 30),
+         isbn="9780141439518", cover_url=_OL_COVER.format("9780141439518"), color=(64, 44, 30),
          intro="Wit, manners and Mr. Darcy — the comedy of misjudgement that never ages."),
 ]
 
 _MOCK_GAMES = [
-    dict(title="The Legend of Zelda: Breath of the Wild", year=2017, format="Switch",
-         developer="Nintendo EPD", publisher="Nintendo", genres=["Action-adventure"],
-         platforms=["Switch"], players="1", esrb="E10+", rating=9.7, color=(26, 52, 46),
-         intro="An open Hyrule you can climb anywhere — the game that reinvented the series."),
     dict(title="The Witcher 3: Wild Hunt", year=2015, format="PC",
          developer="CD Projekt Red", publisher="CD Projekt", genres=["RPG"],
-         platforms=["PC", "PS5", "Xbox"], players="1", esrb="M", rating=9.3, color=(40, 20, 18),
+         platforms=["PC", "PS5", "Xbox"], players="1", esrb="M", rating=9.3,
+         cover_url=_STEAM_CAP.format("292030"), color=(40, 20, 18),
          intro="A vast, story-rich hunt across a war-torn world — choices that actually bite."),
-    dict(title="Super Mario Bros.", year=1985, format="Retro",
-         developer="Nintendo R&D4", publisher="Nintendo", genres=["Platformer"],
-         platforms=["Retro"], players="1-2", esrb="E", rating=9.0, color=(36, 40, 64),
-         intro="Where it all started — the jump-and-stomp that built a console empire."),
+    dict(title="Hades", year=2020, format="Switch",
+         developer="Supergiant Games", publisher="Supergiant Games", genres=["Roguelike"],
+         platforms=["Switch", "PC", "PS5", "Xbox"], players="1", esrb="T", rating=9.3,
+         cover_url=_STEAM_CAP.format("1145360"), color=(28, 18, 40),
+         intro="Fight out of hell, die, learn, repeat — a roguelike where the story keeps going."),
+    dict(title="Stardew Valley", year=2016, format="PS4",
+         developer="ConcernedApe", publisher="ConcernedApe", genres=["Simulation", "RPG"],
+         platforms=["PC", "Switch", "PS4", "Xbox"], players="1-4", esrb="E10+", rating=8.9,
+         cover_url=_STEAM_CAP.format("413150"), color=(26, 44, 30),
+         intro="Inherit a run-down farm and quietly fall in love with small-town life."),
 ]
 
 _MOCK_AUDIOBOOKS = [
     dict(title="Project Hail Mary", author="Andy Weir", narrator="Ray Porter", year=2021,
          format="Audible", duration=970, publisher="Audible Studios", genres=["Science Fiction"],
-         rating=8.9, color=(20, 36, 52),
+         rating=8.9, isbn="9780593135204", cover_url=_OL_COVER.format("9780593135204"),
+         color=(20, 36, 52),
          intro="A lone astronaut, an amnesiac mystery, and a buddy comedy across the stars."),
     dict(title="Born a Crime", author="Trevor Noah", narrator="Trevor Noah", year=2016,
          format="Audible", duration=534, publisher="Audible Studios", genres=["Memoir"],
-         rating=9.1, color=(48, 30, 18),
+         rating=9.1, isbn="9780399588174", cover_url=_OL_COVER.format("9780399588174"),
+         color=(48, 30, 18),
          intro="Read by the author — funnier and sharper for it; a childhood under apartheid."),
     dict(title="Becoming", author="Michelle Obama", narrator="Michelle Obama", year=2018,
          format="CD", duration=1140, publisher="Random House Audio", genres=["Memoir"],
-         rating=8.8, color=(60, 44, 30),
+         rating=8.8, isbn="9781524763138", cover_url=_OL_COVER.format("9781524763138"),
+         color=(60, 44, 30),
          intro="The former First Lady reads her own story — intimate, and better for her voice."),
 ]
 
@@ -985,7 +996,8 @@ def _process_game(cfg, store, img, h, ident, provider, is_manual) -> bool:
         "rating": meta.rating, "intro": intro, "overview": meta.overview,
         "play": _play_links(title, fmt),
         "source": {"name": meta.source, "url": meta.source_url},
-        "resale": estimate(title, year, fmt, meta.rating, cfg.resale.get("ebay_tld", "com")),
+        "resale": estimate(title, year, fmt, meta.rating, cfg.resale.get("ebay_tld", "com"),
+                           media_type="game"),
     }
     return _finalize_media(cfg, store, img, h, ident, item, meta.cover_url, is_manual, portrait=True)
 
@@ -1292,15 +1304,20 @@ def _build_mock(cfg, store, stats, log) -> Stats:
     for i, mk in enumerate(_MOCK_BOOKS):
         title, author, year, fmt = mk["title"], mk["author"], mk["year"], mk["format"]
         mid = f"{_slug(author)}-{_slug(title)}-{year}"
-        cover = cfg.posters_dir / f"{mid}.jpg"
-        make_placeholder_poster(f"{title}", cover, color=mk.get("color", (40, 36, 28)),
-                                subtitle=author)
-        images = [f"posters/{cover.name}"]
+        # real cover hotlinked from Open Library (no copyrighted files in the repo); falls back to
+        # a generated placeholder if no cover_url is set.
+        if mk.get("cover_url"):
+            images = [mk["cover_url"]]
+        else:
+            cover = cfg.posters_dir / f"{mid}.jpg"
+            make_placeholder_poster(f"{title}", cover, color=mk.get("color", (40, 36, 28)),
+                                    subtitle=author)
+            images = [f"posters/{cover.name}"]
         read = (i % 2 == 0)
         item = {
             "id": mid, "media_type": "book", "title": title, "author": author,
             "year": year, "format": fmt, "publisher": mk.get("publisher"), "genres": mk["genres"],
-            "rating": mk["rating"], "page_count": mk.get("page_count"), "isbn": None,
+            "rating": mk["rating"], "page_count": mk.get("page_count"), "isbn": mk.get("isbn"),
             "intro": mk["intro"], "overview": mk["intro"],
             "poster": images[0], "images": images,
             "read": _read_links(author, title),
@@ -1318,10 +1335,15 @@ def _build_mock(cfg, store, stats, log) -> Stats:
     for i, mk in enumerate(_MOCK_GAMES):
         title, year, fmt = mk["title"], mk["year"], mk["format"]
         mid = f"{_slug(title)}-{year}"
-        cover = cfg.posters_dir / f"{mid}.jpg"
-        make_placeholder_poster(f"{title}", cover, color=mk.get("color", (24, 28, 40)),
-                                subtitle=fmt)
-        images = [f"posters/{cover.name}"]
+        # real box art hotlinked from the Steam capsule CDN (no copyrighted files in the repo);
+        # falls back to a generated placeholder if no cover_url is set.
+        if mk.get("cover_url"):
+            images = [mk["cover_url"]]
+        else:
+            cover = cfg.posters_dir / f"{mid}.jpg"
+            make_placeholder_poster(f"{title}", cover, color=mk.get("color", (24, 28, 40)),
+                                    subtitle=fmt)
+            images = [f"posters/{cover.name}"]
         played = (i % 2 == 0)
         item = {
             "id": mid, "media_type": "game", "title": title, "developer": mk.get("developer"),
@@ -1332,7 +1354,7 @@ def _build_mock(cfg, store, stats, log) -> Stats:
             "poster": images[0], "images": images,
             "play": _play_links(title, fmt),
             "source": {"name": "mock", "url": None},
-            "resale": estimate(title, year, fmt, mk["rating"], tld),
+            "resale": estimate(title, year, fmt, mk["rating"], tld, media_type="game"),
             "source_image": f"(demo) {title}", "confidence": 0.99,
             "seen": played, "date_seen": ("2024-05-01" if played else None), "added_at": _now(),
         }
@@ -1345,16 +1367,21 @@ def _build_mock(cfg, store, stats, log) -> Stats:
     for i, mk in enumerate(_MOCK_AUDIOBOOKS):
         title, author, year, fmt = mk["title"], mk["author"], mk["year"], mk["format"]
         mid = f"{_slug(author)}-{_slug(title)}-{year}"
-        cover = cfg.posters_dir / f"{mid}.jpg"
-        make_placeholder_poster(f"{title}", cover, color=mk.get("color", (22, 34, 44)),
-                                subtitle=f"🎧 {mk.get('narrator') or author}")
-        images = [f"posters/{cover.name}"]
+        # real cover hotlinked from Open Library (no copyrighted files in the repo); falls back to
+        # a generated placeholder if no cover_url is set.
+        if mk.get("cover_url"):
+            images = [mk["cover_url"]]
+        else:
+            cover = cfg.posters_dir / f"{mid}.jpg"
+            make_placeholder_poster(f"{title}", cover, color=mk.get("color", (22, 34, 44)),
+                                    subtitle=f"🎧 {mk.get('narrator') or author}")
+            images = [f"posters/{cover.name}"]
         heard = (i % 2 == 0)
         item = {
             "id": mid, "media_type": "audiobook", "title": title, "author": author,
             "narrator": mk.get("narrator"), "year": year, "format": fmt,
             "duration": mk.get("duration"), "publisher": mk.get("publisher"), "genres": mk["genres"],
-            "rating": mk["rating"], "intro": mk["intro"], "overview": mk["intro"],
+            "isbn": mk.get("isbn"), "rating": mk["rating"], "intro": mk["intro"], "overview": mk["intro"],
             "poster": images[0], "images": images,
             "listen": _hear_links(author, title),
             "source": {"name": "mock", "url": None},

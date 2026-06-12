@@ -84,6 +84,8 @@ def test_mock_build_has_books(tmp_path):
     dune = next(b for b in books if b["title"] == "Dune")
     assert dune["author"] == "Frank Herbert" and dune["page_count"] == 688
     assert dune["read"]["providers"]                       # where-to-read links present
+    assert dune["isbn"] and str(dune["poster"]).startswith("http")   # real Open Library cover
+    assert all(b["images"] and str(b["images"][0]).startswith("http") for b in books)
 
 
 def test_init_creates_books_folder(tmp_path):

@@ -609,7 +609,8 @@
     if (fieldOn("resale") && m.resale) {
       foot.insertAdjacentHTML("beforeend",
         `<span class="value">${esc(m.resale.display || "")}` +
-        (m.resale.sold_listings_url ? ` <a class="sell" target="_blank" rel="noopener" href="${esc(safeUrl(m.resale.sold_listings_url))}">↗</a>` : "") + `</span>`);
+        (m.resale.sold_listings_url ? ` <a class="sell" target="_blank" rel="noopener" title="Recent eBay sold listings" href="${esc(safeUrl(m.resale.sold_listings_url))}">↗</a>` : "") +
+        (m.resale.price_check_url ? ` <a class="sell" target="_blank" rel="noopener" title="${esc(m.resale.price_check_label || "Price guide")}" href="${esc(safeUrl(m.resale.price_check_url))}">📊</a>` : "") + `</span>`);
     }
     b.appendChild(foot);
 
