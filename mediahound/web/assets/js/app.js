@@ -86,6 +86,8 @@
     },
   };
   const typeOf = (m) => TYPES[mtype(m)] || TYPES.movie;
+  // short label for the "where to …" foot row, per media type
+  const WHERE_LABEL = { movie: "Watch", music: "Listen", book: "Find", game: "Buy", audiobook: "Listen" };
 
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
@@ -561,7 +563,7 @@
 
   function card(m) {
     const el = document.createElement("article");
-    el.className = "card";
+    el.className = "card t-" + mtype(m);     // type class scopes per-type layout (e.g. people-row height)
 
     if (fieldOn("poster")) el.appendChild(posterEl(m));
 
@@ -603,14 +605,24 @@
     if (fieldOn("intro")) b.appendChild(line("intro", m.intro || "", true));
     if (fieldOn("overview")) b.appendChild(line("overview", m.overview || "", true));
 
-    // foot: where-to-watch/listen/read/play (left) + resale (right) on one line
+    // foot (bottom-anchored): where-to-watch/listen/find/buy on its own labelled row, resale on its
+    // own — keeps the streaming pills and the price from crowding each other on one line.
     const foot = lineEl("foot");
-    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = T.pills(m); foot.appendChild(w); }
+    if (fieldOn("watch")) {
+      const pills = T.pills(m);
+      if (pills) {
+        const w = document.createElement("div"); w.className = "foot-row foot-where";
+        w.innerHTML = `<span class="foot-label">${esc(WHERE_LABEL[mtype(m)] || "Find")}</span>` +
+          `<span class="watch-inline">${pills}</span>`;
+        foot.appendChild(w);
+      }
+    }
     if (fieldOn("resale") && m.resale) {
-      foot.insertAdjacentHTML("beforeend",
-        `<span class="value">${esc(m.resale.display || "")}` +
+      const r = document.createElement("div"); r.className = "foot-row foot-price";
+      r.innerHTML = `<span class="foot-label">Resale</span><span class="value">${esc(m.resale.display || "")}</span>` +
         (m.resale.sold_listings_url ? ` <a class="sell" target="_blank" rel="noopener" title="Recent eBay sold listings" href="${esc(safeUrl(m.resale.sold_listings_url))}">↗</a>` : "") +
-        (m.resale.price_check_url ? ` <a class="sell" target="_blank" rel="noopener" title="${esc(m.resale.price_check_label || "Price guide")}" href="${esc(safeUrl(m.resale.price_check_url))}">📊</a>` : "") + `</span>`);
+        (m.resale.price_check_url ? ` <a class="sell" target="_blank" rel="noopener" title="${esc(m.resale.price_check_label || "Price guide")}" href="${esc(safeUrl(m.resale.price_check_url))}">📊</a>` : "");
+      foot.appendChild(r);
     }
     b.appendChild(foot);
 
