@@ -574,6 +574,38 @@
     _viewShown = end;
     if (_viewShown >= _viewList.length) { if (_viewIO) _viewIO.disconnect(); if (_viewSentinel) _viewSentinel.hidden = true; }
   }
+  // A-Z jump rail for big title-sorted lists — bucket each title by its first alphanumeric
+  // character (matching the localeCompare order, which ignores leading punctuation). Clicking a
+  // letter renders up to that item (virtualization) and scrolls it to the top.
+  const AZ_MIN = 80;   // only worth showing once the list is long enough to be tedious to scroll
+  function azLetter(title) {
+    // Bucket by the RAW first character so buckets line up with the localeCompare title sort,
+    // which clusters punctuation/number-leading titles (e.g. "Heroes", ...Baby, 50 Cent) ahead
+    // of A–Z rather than distributing them by their first letter.
+    const c = ((title || "")[0] || "#").toUpperCase();
+    return /[A-Z]/.test(c) ? c : "#";
+  }
+  function jumpToIndex(idx) {
+    while (_viewShown <= idx && _viewShown < _viewList.length) renderMoreCards();
+    const el = $("#grid").children[idx];
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  function buildAzIndex() {
+    let rail = $("#azIndex");
+    const show = $("#sort").value === "title" && _viewList.length >= AZ_MIN;
+    if (!show) { if (rail) rail.hidden = true; document.body.classList.remove("az-on"); return; }
+    if (!rail) { rail = document.createElement("nav"); rail.id = "azIndex"; rail.className = "az-index";
+      rail.setAttribute("aria-label", "Jump to letter"); document.body.appendChild(rail); }
+    const firstIdx = {};
+    for (let i = 0; i < _viewList.length; i++) { const L = azLetter(_viewList[i].title); if (firstIdx[L] === undefined) firstIdx[L] = i; }
+    rail.innerHTML = "";
+    ["#", ..."ABCDEFGHIJKLMNOPQRSTUVWXYZ"].forEach((L) => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "az-letter"; b.textContent = L;
+      if (firstIdx[L] === undefined) b.disabled = true; else b.onclick = () => jumpToIndex(firstIdx[L]);
+      rail.appendChild(b);
+    });
+    rail.hidden = false; document.body.classList.add("az-on");
+  }
   function render() {
     // First run: empty catalog → a friendly welcome instead of a bare grid.
     if (!movies.length) { showWelcome(); return; }
@@ -601,6 +633,7 @@
     renderMoreCards();
     if (_viewIO && _viewShown < _viewList.length) _viewIO.observe(_viewSentinel);
     else if (!_viewIO) { while (_viewShown < _viewList.length) renderMoreCards(); }   // no IO support → render all
+    buildAzIndex();
 
     $("#resultCount").textContent = `${v.length} of ${movies.length} titles · ${movies.filter((m) => m.seen).length} seen`;
     const tot = movies.reduce((s, m) => s + (m.resale?.mid || 0), 0);
