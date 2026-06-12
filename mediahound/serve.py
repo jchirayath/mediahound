@@ -557,8 +557,11 @@ def serve(cfg: Config, host: str = "127.0.0.1", port: int = 8765, admin: bool = 
     # library built by an OLDER MediaHound still serves the current UI — e.g. the sticky media-type
     # header. Only the shell is overwritten; data/, posters/, config.toml are never touched.
     try:
-        from .pipeline import sync_web_assets
+        from .pipeline import sync_web_assets, stamp_cache_bust
         sync_web_assets(cfg, log)
+        # sync_web_assets copies the un-stamped template index.html / sw.js, which would pin the
+        # service-worker cache to a constant name (stale forever) — re-stamp the content version.
+        stamp_cache_bust(cfg)
     except Exception as exc:                       # noqa: BLE001 - never block serving on a sync hiccup
         log(f"  (web sync skipped: {exc})")
 

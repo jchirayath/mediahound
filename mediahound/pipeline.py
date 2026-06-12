@@ -1,6 +1,7 @@
 """Orchestration: scan input, identify → enrich → value → write, incrementally."""
 from __future__ import annotations
 
+import hashlib
 import re
 from datetime import UTC, datetime
 from pathlib import Path
@@ -737,7 +738,6 @@ def _public_item(m: dict) -> dict:
 
 
 def _write_site(cfg: Config, store: Store) -> None:
-    import hashlib
     import json
     pw = str(cfg.admin.get("password", "changeme"))
     site = {
@@ -784,9 +784,28 @@ def _write_site(cfg: Config, store: Store) -> None:
     if cfg.feeds.get("enabled", True):
         _write_feeds(cfg, site, public_collection)
 
-    # Cache-bust: stamp a content version onto the asset URLs in the HTML so browsers (and
-    # CDNs like GitHub Pages) always fetch the latest data/JS/CSS after a rebuild.
-    ver = hashlib.sha256(bundle.encode("utf-8")).hexdigest()[:10]
+    stamp_cache_bust(cfg, bundle)
+
+
+def stamp_cache_bust(cfg: Config, bundle: str | None = None) -> None:
+    """Stamp a content version onto the HTML asset URLs (?v=) and the service-worker
+    cache name so browsers always fetch the latest data/JS/CSS after a rebuild.
+
+    Must run AFTER `sync_web_assets`, which copies the package's template index.html /
+    sw.js (carrying the raw `__MH_VERSION__` placeholder and no ?v= stamps) and would
+    otherwise leave the service worker pinned to a constant cache name → stale forever.
+    """
+    if bundle is None:
+        bundle_path = cfg.data_dir / "bundle.js"
+        bundle = bundle_path.read_text(encoding="utf-8") if bundle_path.is_file() else ""
+    # Hash the data bundle AND the shell assets (app.js / styles.css) so editing the UI — not just
+    # the data — changes the version and invalidates the service-worker cache.
+    h = hashlib.sha256(bundle.encode("utf-8"))
+    for asset in ("assets/js/app.js", "assets/css/styles.css"):
+        p = cfg.output_dir / asset
+        if p.is_file():
+            h.update(p.read_bytes())
+    ver = h.hexdigest()[:10]
     asset_re = re.compile(r'(href|src)="(assets/[^"?]+\.(?:css|js)|data/bundle\.js)(?:\?v=[0-9a-f]+)?"')
     for name in ("index.html", "identify.html"):
         page = cfg.output_dir / name

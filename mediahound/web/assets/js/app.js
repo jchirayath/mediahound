@@ -40,47 +40,48 @@
   const TYPES = {
     movie: {
       emoji: "🎬", label: "Movies",
-      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language],
-      creator: (m) => (m.director ? { icon: "🎬", name: m.director } : null),
+      // format is shown as the poster badge — don't repeat it in the meta row
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.runtime ? m.runtime + " min" : null, m.language],
+      creator: (m) => (m.director ? { icon: "film", name: m.director } : null),
       cast: (m) => m.actors || [],
-      org: (m) => (m.studio ? { icon: "🏛", value: m.studio } : null),
+      org: (m) => (m.studio ? { icon: "building", value: m.studio } : null),
       tooltip: (m) => [m.director ? "Dir: " + m.director : null, (m.actors || []).join(", ") || null].filter(Boolean).join("  ·  "),
       pills: (m) => watchPills(m),
     },
     music: {
       emoji: "🎵", label: "Music",
-      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format],   // track count → tracklist disclosure
-      creator: (m) => (m.artist ? { icon: "🎤", name: m.artist } : null),
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null],   // format → poster badge; track count → tracklist disclosure
+      creator: (m) => (m.artist ? { icon: "mic", name: m.artist } : null),
       cast: () => [],
-      org: (m) => (m.label ? { icon: "🏷", value: m.label } : null),
+      org: (m) => (m.label ? { icon: "tag", value: m.label } : null),
       tooltip: () => "",
       pills: (m) => listenPills(m),
     },
     book: {
       emoji: "📚", label: "Books",
-      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, m.page_count ? m.page_count + " pp" : null, m.language],
-      creator: (m) => (m.author ? { icon: "🖊", name: m.author } : null),
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.page_count ? m.page_count + " pp" : null, m.language],
+      creator: (m) => (m.author ? { icon: "pen", name: m.author } : null),
       cast: () => [],
-      org: (m) => (m.publisher ? { icon: "📖", value: m.publisher } : null),
+      org: (m) => (m.publisher ? { icon: "book", value: m.publisher } : null),
       tooltip: () => "",
       pills: (m) => readPills(m),
     },
     game: {
       emoji: "🎮", label: "Games",
-      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, m.esrb ? "ESRB " + m.esrb : null, m.players ? m.players + " players" : null],
-      creator: (m) => (m.developer ? { icon: "🕹", name: m.developer } : null),
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.esrb ? "ESRB " + m.esrb : null, m.players ? m.players + " players" : null],
+      creator: (m) => (m.developer ? { icon: "game", name: m.developer } : null),
       cast: () => [],
-      org: (m) => (m.publisher ? { icon: "🏢", value: m.publisher } : null),
+      org: (m) => (m.publisher ? { icon: "factory", value: m.publisher } : null),
       tooltip: (m) => ((m.platforms || []).length ? "Platforms: " + m.platforms.join(", ") : ""),
       pills: (m) => playPills(m),
     },
     audiobook: {
       emoji: "🎧", label: "Audiobooks",
-      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, fmtDuration(m.duration)],
-      creator: (m) => (m.author ? { icon: "🖊", name: m.author } : null),
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, fmtDuration(m.duration)],
+      creator: (m) => (m.author ? { icon: "pen", name: m.author } : null),
       // narrator → a clickable chip (like a movie's cast), so it filters to their other readings
       cast: (m) => (m.narrator ? [m.narrator] : []),
-      org: (m) => (m.publisher ? { icon: "🎧", value: m.publisher } : null),
+      org: (m) => (m.publisher ? { icon: "headphones", value: m.publisher } : null),
       tooltip: (m) => (m.narrator ? "Narrated by " + m.narrator : ""),
       pills: (m) => hearPills(m),
     },
@@ -485,7 +486,20 @@
     const ss = clearOptions($("#filterStream"));
     [["any", "▶ On any service"]].concat(provs.map((p) => [p, "▶ " + p])).concat([["none", "Not streaming"]])
       .forEach(([v, l]) => { const o = document.createElement("option"); o.value = v; o.textContent = l; ss.appendChild(o); });
+
+    // Match the filter vocabulary to the active media type — "Labels" not "Studios" on a music shelf —
+    // and hide any filter that has nothing to offer for this type, so the row stays uncluttered.
+    const ORG_LABEL = { movie: "All studios", music: "All labels", book: "All publishers",
+                        game: "All publishers", audiobook: "All publishers", all: "All studios / labels" };
+    const isAudio = mediaType === "music" || mediaType === "audiobook";
+    setPlaceholder("#filterStudio", ORG_LABEL[mediaType] || ORG_LABEL.all);
+    setPlaceholder("#filterStream", isAudio ? "Anywhere to listen" : "Anywhere to watch");
+    ["#filterFormat", "#filterStudio", "#filterLanguage", "#filterCategory"].forEach((s) => {
+      const el = $(s); if (el) el.hidden = el.options.length <= 1;        // only the "All …" placeholder left
+    });
+    if ($("#filterStream")) $("#filterStream").hidden = provs.length === 0;
   }
+  function setPlaceholder(sel, text) { const el = $(sel); if (el && el.options[0]) el.options[0].textContent = text; }
   function clearOptions(el) { while (el.options.length > 1) el.remove(1); return el; }  // keep the "All …" placeholder
   function fill(sel, vals) {
     const el = clearOptions($(sel));
@@ -538,9 +552,18 @@
     return v.sort(cmp);
   }
 
+  // Badge on the mobile "Filters" button: how many filters are narrowing the grid right now.
+  function updateFilterCount() {
+    const badge = $("#filterCount"); if (!badge) return;
+    const ids = ["#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage",
+                 "#filterCategory", "#filterSeen", "#filterTag", "#filterLoan"];
+    const n = ids.reduce((c, s) => { const el = $(s); return c + (el && el.value ? 1 : 0); }, 0);
+    badge.textContent = n; badge.hidden = n === 0;
+  }
   function render() {
     // First run: empty catalog → a friendly welcome instead of a bare grid.
     if (!movies.length) { showWelcome(); return; }
+    updateFilterCount();
     $("#welcome") && ($("#welcome").hidden = true);
     // show the 🎬/🎵 switch only when the catalog actually mixes types (recomputed after edits)
     $("#mediaTabs").hidden = new Set(movies.map((m) => m.media_type || "movie")).size < 2;
@@ -588,16 +611,38 @@
     if (fieldOn("people")) {
       const p = lineEl("people");
       const c = T.creator(m);
-      if (c) p.appendChild(person(c.icon + " " + c.name, c.name));
-      T.cast(m).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
+      if (c) p.appendChild(person(c.icon, c.name, c.name));
+      T.cast(m).slice(0, 4).forEach((a) => p.appendChild(person(null, a, a)));
       const tip = T.tooltip(m);
       if (tip) p.title = tip;
       b.appendChild(p);
     }
+    // music: a collapsible tracklist placed right under the artist (the album's songs). A search
+    // match auto-opens the list and highlights the track — so you can find an album by a song on it.
+    if (isMusic(m) && (m.tracklist || []).length) {
+      const tl = m.tracklist;
+      const q = ($("#search").value || "").trim().toLowerCase();
+      const hits = q ? tl.filter((t) => (t || "").toLowerCase().includes(q)) : [];
+      const det = document.createElement("details"); det.className = "tracks";
+      if (hits.length) det.open = true;
+      const sum = document.createElement("summary");
+      sum.innerHTML = `♫ ${tl.length} track${tl.length > 1 ? "s" : ""}` +
+        (hits.length ? ` · <span class="track-hit">matches “${esc(hits[0])}”${hits.length > 1 ? ` +${hits.length - 1}` : ""}</span>` : "");
+      det.appendChild(sum);
+      const ol = document.createElement("ol"); ol.className = "tracklist";
+      tl.forEach((t) => {
+        const li = document.createElement("li");
+        if (q && (t || "").toLowerCase().includes(q)) li.className = "is-hit";
+        li.textContent = t;
+        ol.appendChild(li);
+      });
+      det.appendChild(ol);
+      b.appendChild(det);
+    }
     if (fieldOn("studio")) {
       const s = lineEl("studio");
       const o = T.org(m);
-      if (o) { const x = person(o.icon + " " + o.value, null); x.onclick = () => setFilter("#filterStudio", o.value); s.appendChild(x); }
+      if (o) { const x = person(o.icon, o.value, null); x.onclick = () => setFilter("#filterStudio", o.value); s.appendChild(x); }
       if (mtype(m) === "movie" && m.distributor)
         s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
       b.appendChild(s);
@@ -625,29 +670,6 @@
       foot.appendChild(r);
     }
     b.appendChild(foot);
-
-    // music: a collapsible tracklist (the album's songs). When a search matches a song, the list
-    // auto-opens and the matched track(s) are highlighted — so you can find an album by a track on it.
-    if (isMusic(m) && (m.tracklist || []).length) {
-      const tl = m.tracklist;
-      const q = ($("#search").value || "").trim().toLowerCase();
-      const hits = q ? tl.filter((t) => (t || "").toLowerCase().includes(q)) : [];
-      const det = document.createElement("details"); det.className = "tracks";
-      if (hits.length) det.open = true;
-      const sum = document.createElement("summary");
-      sum.innerHTML = `♫ ${tl.length} track${tl.length > 1 ? "s" : ""}` +
-        (hits.length ? ` · <span class="track-hit">matches “${esc(hits[0])}”${hits.length > 1 ? ` +${hits.length - 1}` : ""}</span>` : "");
-      det.appendChild(sum);
-      const ol = document.createElement("ol"); ol.className = "tracklist";
-      tl.forEach((t) => {
-        const li = document.createElement("li");
-        if (q && (t || "").toLowerCase().includes(q)) li.className = "is-hit";
-        li.textContent = t;
-        ol.appendChild(li);
-      });
-      det.appendChild(ol);
-      b.appendChild(det);
-    }
 
     if (isAdmin) { b.appendChild(personalEl(m)); b.appendChild(seenToggle(m)); b.appendChild(adminBar(m, el)); }
     el.appendChild(b);
@@ -735,8 +757,26 @@
     d.textContent = text; if (clamp && text) d.title = text; return d;
   }
   function chip(text, on) { const c = document.createElement("button"); c.className = "chip chip-btn"; c.textContent = text; c.onclick = on; return c; }
-  function person(label, name) {
-    const x = document.createElement("button"); x.className = "person-link"; x.textContent = label;
+  // A small inline-SVG icon set — replaces per-card color emoji (🎤🏷…) which render
+  // differently across OSes/browsers. Stroke uses currentColor so they inherit link colour.
+  function svgIcon(name) {
+    const P = {
+      film: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
+      mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3"/>',
+      pen: '<path d="M16 3l5 5L8 21H3v-5L16 3z"/>',
+      game: '<rect x="2" y="7" width="20" height="11" rx="4"/><path d="M7 11v3M5.5 12.5h3M15 12h.01M18 14h.01"/>',
+      headphones: '<path d="M4 14v-2a8 8 0 0 1 16 0v2"/><rect x="3" y="13" width="4" height="6" rx="2"/><rect x="17" y="13" width="4" height="6" rx="2"/>',
+      tag: '<path d="M20 13l-7 7-9-9V4h7l9 9z"/><circle cx="7.5" cy="7.5" r="1"/>',
+      building: '<path d="M4 21V6l8-4 8 4v15"/><path d="M2 21h20M9 9h.01M15 9h.01M9 13h.01M15 13h.01M9 21v-4h6v4"/>',
+      book: '<path d="M5 4a2 2 0 0 1 2-2h12v18H7a2 2 0 0 0-2 2V4z"/>',
+      factory: '<path d="M3 21V11l6 4V11l6 4V7l6 4v10z"/><path d="M2 21h20"/>',
+    };
+    const d = P[name]; if (!d) return "";
+    return '<svg class="lico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
+  }
+  function person(iconName, text, name) {
+    const x = document.createElement("button"); x.className = "person-link";
+    x.innerHTML = (iconName ? svgIcon(iconName) : "") + `<span>${esc(text)}</span>`;
     if (name) { x.title = name; x.onclick = () => { $("#filterGenre").value = ""; $("#filterStudio").value = ""; $("#search").value = name; render(); scrollTop(); }; }
     return x;
   }
@@ -985,12 +1025,9 @@
     const live = isAdmin && serverAdmin;
     document.body.classList.toggle("server-admin", live);
     const show = (id, cond) => { const e = $(id); if (e) e.hidden = !cond; };
-    show("#rebuildBtn", live);
     show("#importMenuBtn", live);                  // add photos / scan / CSV — needs the server
-    show("#backupMenuBtn", live && !phoneMode);    // backup/restore — local only
-    show("#connectMenuBtn", live && !phoneMode);   // Discogs / Publish / Letterboxd
+    show("#moreMenuBtn", isAdmin);                 // connect / export / backup / rebuild grouped here
     show("#libraryBtn", live && !phoneMode);       // switch served library — local only
-    show("#exportMenuBtn", isAdmin);               // exports are client-side → work even without a server
     $("#adminBadge").textContent = live ? "● ADMIN — saving to disk" : "● ADMIN MODE";
     // Static copy (no admin server): warn that edits live only in THIS browser and won't reach
     // data/ — so opening the same library in the app won't show them. Only after the ping resolves.
@@ -1337,6 +1374,16 @@
       { icon: "👁", label: "Export seen/played", desc: "Your seen marks (seen-overrides.json)", run: exportSeen },
     ]);
   }
+  // ⋯ More — groups the secondary admin actions so the toolbar shows just Add + More.
+  function openMoreMenu() {
+    const live = serverAdmin;
+    openMenu("⋯ More", [
+      { icon: "🔗", label: "Connect & share", desc: "Discogs, publish to the web, Letterboxd", run: openConnectMenu, hide: !live || phoneMode },
+      { icon: "⤓", label: "Export", desc: "PDF inventory, CSV, JSON, your edits", run: openExportMenu },
+      { icon: "💾", label: "Backup & restore", desc: "Zip your library or restore one", run: openBackupMenu, hide: !live || phoneMode },
+      { icon: "↻", label: "Rebuild catalog", desc: "Re-bake from your saved edits and reload", run: rebuildSite, hide: !live },
+    ]);
+  }
   function openBackupMenu() {
     if (!serverAdmin) { alert("Backup needs the local app.\n\nRun:  mediahound app"); return; }
     openMenu("💾 Backup & restore", [
@@ -1397,12 +1444,13 @@
     });
     $("#clearImage").onclick = () => { pendingImage = ""; $("#setImagePreview").hidden = true; $("#clearImage").hidden = true; };
     if ($("#staticWarnExport")) $("#staticWarnExport").onclick = exportCorrections;
-    if ($("#rebuildBtn")) $("#rebuildBtn").onclick = rebuildSite;
     // consolidated action menus
     if ($("#importMenuBtn")) $("#importMenuBtn").onclick = openImportMenu;
-    if ($("#connectMenuBtn")) $("#connectMenuBtn").onclick = openConnectMenu;
-    if ($("#exportMenuBtn")) $("#exportMenuBtn").onclick = openExportMenu;
-    if ($("#backupMenuBtn")) $("#backupMenuBtn").onclick = openBackupMenu;
+    if ($("#moreMenuBtn")) $("#moreMenuBtn").onclick = openMoreMenu;
+    if ($("#filtersToggle")) $("#filtersToggle").onclick = () => {
+      const open = $("#controls").classList.toggle("filters-open");
+      $("#filtersToggle").setAttribute("aria-expanded", open ? "true" : "false");
+    };
     if ($("#importGo")) $("#importGo").onclick = doImport;
     if ($("#importFile")) $("#importFile").addEventListener("change", (e) => {
       const f = e.target.files[0]; if (!f) return;

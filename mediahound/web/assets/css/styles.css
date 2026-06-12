@@ -88,6 +88,9 @@ select {
   background: transparent; color: var(--muted); cursor: pointer; font-size: 13px;
 }
 .btn-ghost:hover { color: var(--text); border-color: var(--accent-2); }
+.filters-toggle { display: none; }           /* mobile-only — the filter row is always visible on desktop */
+.filters-toggle .ft-count { margin-left: 6px; padding: 0 6px; border-radius: 999px;
+  background: var(--accent); color: #fff; font-size: 11px; font-weight: 700; }
 .meta-row { display: flex; align-items: center; justify-content: space-between; margin: 14px 0 4px; gap: 12px; flex-wrap: wrap; }
 .result-count { color: var(--muted); font-size: 13px; }
 .meta-actions { display: flex; gap: 8px 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
@@ -104,6 +107,7 @@ select {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   overflow: hidden; cursor: pointer; display: flex; flex-direction: column;
   transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+  container-type: inline-size;  /* card width drives the row-height query below */
 }
 .card:hover { transform: translateY(-4px); border-color: var(--accent-2); box-shadow: var(--shadow); }
 .poster-wrap { position: relative; aspect-ratio: 2 / 3; background: var(--card-hi); }
@@ -145,7 +149,8 @@ select {
 .card-title { font-size: 15px; font-weight: 650; line-height: 1.25; }
 .card-title .yr { color: var(--muted); font-weight: 500; }
 .genres { display: flex; flex-wrap: wrap; gap: 5px; }
-.chip { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: var(--card-hi); color: var(--muted); }
+.chip { font-size: 11px; padding: 3px 9px; border-radius: 999px; background: var(--card-hi); color: var(--text);
+  border: 1px solid var(--line); line-height: 1.45; }
 .intro { font-size: 12.5px; color: #c7cbd6; line-height: 1.45; font-style: italic; }
 .card-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .value { font-size: 12.5px; color: var(--gold); font-weight: 600; }
@@ -162,15 +167,18 @@ select {
 .card-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
 .card-title { margin: 0; font-size: 15px; font-weight: 650; line-height: 1.2; cursor: pointer; }
 .card-title:hover { color: var(--accent-2); }
-.chip-btn { border: none; cursor: pointer; font-family: inherit; }
-.chip-btn:hover { background: var(--accent-2); color: #06222b; }
+.chip-btn { cursor: pointer; font-family: inherit; transition: background .12s, border-color .12s, color .12s; }
+.chip-btn:hover, .chip-btn:focus-visible { background: var(--accent-2); border-color: var(--accent-2); color: #06222b; outline: none; }
+.chip-btn:active { transform: scale(0.97); }
 .card-meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 11.5px; color: var(--muted); }
 .card-cast { display: flex; flex-wrap: wrap; gap: 4px 8px; }
 .person-link {
   background: none; border: none; padding: 0; cursor: pointer; font: inherit;
   font-size: 11.5px; color: var(--accent-2); opacity: 0.92;
 }
+.person-link { display: inline-flex; align-items: center; gap: 4px; }
 .person-link:hover { text-decoration: underline; opacity: 1; }
+.lico { width: 13px; height: 13px; flex: 0 0 auto; opacity: 0.8; }
 .watch-card { margin: 2px 0 0; gap: 6px; }
 .watch-card .watch-pill { padding: 4px 9px; font-size: 11.5px; }
 .card-foot { display: flex; align-items: center; justify-content: space-between; }
@@ -265,11 +273,6 @@ select {
 /* Embed mode hides chrome */
 body.embed .site-header, body.embed .site-footer { display: none; }
 
-@media (max-width: 560px) {
-  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-  .header-stats { display: none; }
-}
-
 /* ===== v2: read-only/admin, all-fields aligned cards ===== */
 .header-right { display: flex; align-items: center; gap: 14px; }
 #adminBtn.active { color: var(--gold); border-color: var(--gold); background: rgba(242,193,78,0.12); }
@@ -305,32 +308,42 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 .card { cursor: default; }
 .card:hover { transform: none; box-shadow: var(--shadow); }
 
-/* Compact, combined field rows — fewer lines, tight spacing, no reserved empties */
+/* Compact, combined field rows. Base styling here applies at EVERY card width and uses
+   natural height + one uniform 3px gap (no reserved dead space). The fixed row heights
+   that keep cards aligned ACROSS columns live in the @container block below, so they
+   apply only in the dense multi-column grid; wide / single-column cards flow naturally. */
 .card-body { gap: 3px; padding: 9px 11px 10px; flex: 1; }
 .f { margin: 0; }
-.f-title { font-size: 13.5px; font-weight: 650; line-height: 1.2; height: 2.4em;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.f-title { font-size: 13.5px; font-weight: 650; line-height: 1.2; }
 .f-title .yr { color: var(--muted); font-weight: 500; }
 .is-admin .f-title .ttl:hover { color: var(--accent-2); }
-/* single-line rows */
-.f-meta, .f-genres, .f-studio {
-  height: 1.55em; line-height: 1.55em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .f-meta { font-size: 11.5px; color: var(--muted); }
-.f-genres { display: flex; gap: 5px; align-items: center; }
-.f-studio { display: flex; gap: 3px 9px; align-items: center; }
-/* creator row: single-creator types (music/book/game) fit one line — no reserved gap.
-   Movies (director + cast) reserve up to 2 lines so names aren't cut off. */
-.f-people { min-height: 1.55em; line-height: 1.4em; display: flex; flex-wrap: wrap; gap: 1px 9px;
-  align-content: flex-start; overflow: hidden; }
-.t-movie .f-people { height: 3em; }
+.f-genres { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.f-studio { display: flex; flex-wrap: wrap; gap: 3px 9px; align-items: center; }
+.f-people { line-height: 1.4em; display: flex; flex-wrap: wrap; gap: 1px 9px; align-content: flex-start; }
 .f-genres > *, .f-people > *, .f-studio > * { flex: 0 0 auto; }
 .f-studio .dist { color: var(--muted); font-size: 11px; font-weight: 400; }
-.f-intro { font-size: 11.5px; font-style: italic; color: #c4c8d4; line-height: 1.3; height: 2.6em; margin-top: 1px;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.f-overview { font-size: 11px; color: #b3b8c5; line-height: 1.3; height: 3.9em;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.f-intro { font-size: 11.5px; font-style: italic; color: #c4c8d4; line-height: 1.3; margin-top: 1px; }
+.f-overview { font-size: 11px; color: #b3b8c5; line-height: 1.3; }
 /* foot: two stacked, labelled rows (where-to-X · resale) so pills + price never overlap */
-.f-foot { margin-top: auto; padding-top: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; }
+.f-foot { margin-top: 8px; padding-top: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; }
+
+/* An optional field that came back empty must NOT reserve space — this was the ~30px
+   phantom gap (e.g. a music album with no "intro" pushing the foot down). */
+.f-meta:empty, .f-genres:empty, .f-studio:empty, .f-people:empty, .f-intro:empty, .f-overview:empty { display: none; }
+
+/* Dense grid only: reserve fixed heights + clamp/truncate so populated rows line up
+   across columns. Above this width (single / few columns) rows use natural height. */
+@container (max-width: 320px) {
+  .f-title { height: 2.4em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .f-meta, .f-genres, .f-studio {
+    height: 1.55em; line-height: 1.55em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-wrap: nowrap; }
+  .f-people { min-height: 1.55em; overflow: hidden; }
+  .t-movie .f-people { height: 3em; }
+  .f-intro { height: 2.6em; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .f-overview { height: 3.9em; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .f-foot { margin-top: auto; }  /* bottom-anchor the foot so cards' feet align in the grid */
+}
 .f-foot .foot-row { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
 .f-foot .foot-label { flex: 0 0 auto; min-width: 44px; color: var(--muted); font-size: 9px; font-weight: 700;
   text-transform: uppercase; letter-spacing: .04em; opacity: .7; }
@@ -556,3 +569,43 @@ body.server-admin #exportChanges, body.server-admin #exportSeen { opacity: .6; }
 .key-state.is-set { color: #1a7f4b; }
 .key-state.is-unset { color: #9aa5b1; }
 #apiKeysBlock { border-top: 1px solid #eef1f5; margin-top: 14px; padding-top: 6px; }
+
+/* ===== Mobile (kept LAST so it overrides the base grid/control rules above) ===== */
+@media (max-width: 640px) {
+  /* Tighter chrome so the first cards aren't pushed below the fold. */
+  .header-inner { padding: 10px 14px 6px; gap: 10px; }
+  .brand { gap: 10px; }
+  .brand-mark, .brand-img { width: 34px; height: 34px; }
+  .site-header h1 { font-size: 17px; }
+  .subtitle { display: none; }                 /* the long tagline wastes ~4 lines on a phone */
+  .header-stats { display: none; }
+  .wrap, .header-inner, .subbar { padding-left: 14px; padding-right: 14px; }
+  .controls { padding: 12px 14px 6px; }
+
+  /* Media tabs scroll horizontally instead of wrapping into a tall block. */
+  .media-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  .media-tabs::-webkit-scrollbar { display: none; }
+
+  /* Search + sort stack and fill the width — nothing overflows sideways. */
+  .search-row { flex-wrap: wrap; gap: 8px; }
+  #search { flex: 1 1 100%; min-height: 44px; }
+  .search-row select, .search-row .btn-ghost { flex: 1 1 0; min-height: 44px; }
+
+  /* Filters collapse behind a toggle to reclaim vertical space. */
+  .filters-toggle { display: inline-flex; align-items: center; }
+  .filter-row { display: none; }
+  #controls.filters-open .filter-row { display: flex; margin-top: 4px; }
+  .filter-row select, .filter-row .btn-ghost { flex: 1 1 44%; min-height: 44px; }
+
+  /* Per-row stepper is meaningless on a phone (the grid is forced below). */
+  .cols-control { display: none; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
+
+  /* Comfortable tap sizes for secondary controls. */
+  .mt-btn { min-height: 38px; }
+  .watch-pill { padding: 6px 11px; font-size: 12px; }
+  .chip { font-size: 12px; padding: 4px 11px; }
+}
+@media (max-width: 380px) {
+  .grid { grid-template-columns: 1fr !important; }   /* one comfortable column on the smallest phones */
+}

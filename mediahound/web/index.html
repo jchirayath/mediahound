@@ -74,6 +74,7 @@
         <option value="myrating-desc">My rating (high)</option>
       </select>
       <button id="surpriseBtn" class="btn-ghost" type="button" title="Pick something to watch/listen to tonight">🎲 Surprise me</button>
+      <button id="filtersToggle" class="btn-ghost filters-toggle" type="button" aria-expanded="false" aria-controls="filters">⚙ Filters<span id="filterCount" class="ft-count" hidden></span></button>
     </div>
     <div class="filter-row" id="filters">
       <select id="filterFormat"><option value="">All formats</option></select>
@@ -106,10 +107,7 @@
         </span>
         <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
         <button id="importMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Add photos, scan a barcode, or import a list">➕ Add ▾</button>
-        <button id="connectMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Discogs, publish to the web, Letterboxd">🔗 Connect ▾</button>
-        <button id="exportMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Export your catalog and edits">⤓ Export ▾</button>
-        <button id="backupMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Back up or restore your library">💾 Backup ▾</button>
-        <button id="rebuildBtn" class="btn-ghost admin-only" type="button" hidden title="Re-bake the catalog from your saved edits and reload">↻ Rebuild</button>
+        <button id="moreMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Connect, export, back up, or rebuild">⋯ More ▾</button>
       </span>
     </div>
   </div>
