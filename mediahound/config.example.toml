@@ -3,7 +3,7 @@
 
 [site]
 title    = "My Media Collection"
-subtitle = "Movies & music — photographed, catalogued, and searchable"
+subtitle = "Movies, music, books & games — photographed, catalogued, searchable"
 
 [paths]
 # Cover photos, sorted by media type: RawImages/video/ → movies, RawImages/audio/ → music.
