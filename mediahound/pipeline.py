@@ -315,7 +315,7 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
         processed += 1
         log(f"[{idx}/{len(images)}] {img.name} …")
         try:
-            ok = _process_one(cfg, store, img, h, get_ident, providers, threshold, mtype)
+            ok = _process_one(cfg, store, img, h, get_ident, providers, threshold, mtype, online)
             if ok is None:
                 pass  # discarded
             elif ok:
@@ -529,6 +529,17 @@ _DEFAULT_VIEW = {
     },
 }
 
+# Personal/admin-only fields that must NEVER appear in the published catalog. Stripped from
+# collection.json + bundle.js at build time; rendered only in the admin view (applied there
+# client-side from corrections.json / loans.json, which `publish.py` also excludes). See
+# docs/design/04-personal-catalog.md and PRIVACY.md.
+PRIVATE_FIELDS = ("my_rating", "my_note", "tags", "loan")
+
+
+def _public_item(m: dict) -> dict:
+    """A copy of a catalog item with personal fields removed (safe to publish)."""
+    return {k: v for k, v in m.items() if k not in PRIVATE_FIELDS}
+
 
 def _write_site(cfg: Config, store: Store) -> None:
     import hashlib
@@ -557,14 +568,26 @@ def _write_site(cfg: Config, store: Store) -> None:
         view["columns"] = int(cfg.view.get("columns", 4))
         view_path.write_text(json.dumps(view, indent=2, ensure_ascii=False), encoding="utf-8")
 
+    # Public catalog: strip personal/admin-only fields so they can never leak into a
+    # published site (bundle.js + collection.json are both deployed). The admin view applies
+    # ratings/notes/tags/loans client-side from the (publish-excluded) corrections/loans files.
+    public_collection = [_public_item(m) for m in store.collection]
+    (cfg.data_dir / "collection.json").write_text(
+        json.dumps(public_collection, indent=2, ensure_ascii=False), encoding="utf-8")
+
     # Also emit a JS bundle so index.html works when opened directly (file://),
     # where browsers block fetch() of local JSON. The page prefers this global and
     # falls back to fetching the JSON when served over http(s).
     view = json.loads((cfg.data_dir / "view-config.json").read_text(encoding="utf-8"))
-    payload = {"site": site, "collection": store.collection,
+    payload = {"site": site, "collection": public_collection,
                "unidentified": store.unidentified, "view": view}
     bundle = "window.MEDIAHOUND_DATA = " + json.dumps(payload, ensure_ascii=False) + ";"
     (cfg.data_dir / "bundle.js").write_text(bundle, encoding="utf-8")
+
+    # Syndication feeds (JSON Feed + RSS) of recently-added items — published with the site so
+    # anyone can subscribe. Off with [feeds] enabled = false. Uses public items only.
+    if cfg.feeds.get("enabled", True):
+        _write_feeds(cfg, site, public_collection)
 
     # Cache-bust: stamp a content version onto the asset URLs in the HTML so browsers (and
     # CDNs like GitHub Pages) always fetch the latest data/JS/CSS after a rebuild.
@@ -576,6 +599,66 @@ def _write_site(cfg: Config, store: Store) -> None:
             html = asset_re.sub(lambda m: f'{m.group(1)}="{m.group(2)}?v={ver}"',
                                 page.read_text(encoding="utf-8"))
             page.write_text(html, encoding="utf-8")
+
+
+def _write_feeds(cfg: Config, site: dict, collection: list, limit: int = 30) -> None:
+    """Emit feed.json (JSON Feed 1.1) and feed.xml (RSS 2.0) of the most recently-added items."""
+    import json
+    from email.utils import format_datetime
+    from xml.sax.saxutils import escape
+
+    base = str(cfg.feeds.get("site_url", "") or "").rstrip("/")
+    recent = sorted(collection, key=lambda m: str(m.get("added_at") or ""), reverse=True)[:limit]
+    title = site.get("title") or "My Media Collection"
+
+    def _line(m: dict) -> str:
+        who = m.get("artist") if (m.get("media_type") == "music") else m.get("director")
+        bits = [str(m.get("year")) if m.get("year") else None, m.get("format"), who]
+        return " · ".join(b for b in bits if b)
+
+    items = [{
+        "id": base + "/#" + str(m.get("id")) if base else str(m.get("id")),
+        "title": m.get("title") or "Untitled",
+        "content_text": (m.get("intro") or m.get("overview") or _line(m) or "").strip(),
+        "image": (base + "/" + m["poster"]) if (base and m.get("poster") and not str(m["poster"]).startswith("http")) else m.get("poster"),
+        "date_published": m.get("added_at"),
+        "_summary": _line(m),
+    } for m in recent]
+
+    feed_json = {
+        "version": "https://jsonfeed.org/version/1.1",
+        "title": title,
+        "description": site.get("subtitle") or "",
+        "home_page_url": base or None,
+        "feed_url": (base + "/data/feed.json") if base else None,
+        "items": [{k: v for k, v in it.items() if not k.startswith("_") and v is not None}
+                  for it in items],
+    }
+    (cfg.data_dir / "feed.json").write_text(
+        json.dumps(feed_json, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    def _rss_item(it: dict) -> str:
+        desc = it["content_text"] or it.get("_summary") or ""
+        when = ""
+        if it.get("date_published"):
+            try:
+                when = f"<pubDate>{format_datetime(datetime.fromisoformat(it['date_published']))}</pubDate>"
+            except ValueError:
+                when = ""
+        return (f"    <item><title>{escape(it['title'])}</title>"
+                f"<guid isPermaLink=\"false\">{escape(it['id'])}</guid>"
+                f"<description>{escape(desc)}</description>{when}</item>")
+
+    rss = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0"><channel>\n'
+        f"  <title>{escape(title)}</title>\n"
+        f"  <link>{escape(base or 'about:blank')}</link>\n"
+        f"  <description>{escape(site.get('subtitle') or '')}</description>\n"
+        + "\n".join(_rss_item(it) for it in items)
+        + "\n</channel></rss>\n"
+    )
+    (cfg.data_dir / "feed.xml").write_text(rss, encoding="utf-8")
 
 
 def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
@@ -638,7 +721,20 @@ def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
     return True
 
 
-def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type="movie") -> bool:
+class _FixedMusicProvider:
+    """One-shot music provider that returns an already-resolved MusicMeta (used when a barcode
+    has pinned the exact release, so we skip the fuzzy title search entirely)."""
+    name = "barcode"
+
+    def __init__(self, meta):
+        self.meta = meta
+
+    def lookup(self, title, year=None, artist=None):
+        return self.meta
+
+
+def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type="movie",
+                 online=False) -> bool:
     queued = store.queued_identity(h)
     # discard: the user deleted this item in manual identification
     if queued and queued.get("delete"):
@@ -655,8 +751,19 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
             queued.get("format", "Unknown"), queued.get("language"),
             0.99, queued.get("intro"), queued.get("artist"))
     else:
-        jpeg = prepared_jpeg(img)
-        ident = get_ident().identify(img, jpeg)
+        # Barcode first (exact > fuzzy OCR): decode locally, resolve online. Music barcodes pin
+        # the exact release — write it straight away, skipping OCR and the plausibility guard.
+        bm = _try_barcode(cfg, img, media_type) if online else None
+        if bm and media_type == "music":
+            ident = Identification(True, bm["title"], bm["year"], "Unknown", None, 0.99,
+                                   None, bm["artist"])
+            return _process_music(cfg, store, img, h, ident, _FixedMusicProvider(bm["meta"]), True)
+        if bm:                                  # movie: trust the UPC product title, then enrich
+            is_manual = True
+            ident = Identification(True, bm["title"], bm.get("year"), "Unknown", None, 0.99)
+        else:
+            jpeg = prepared_jpeg(img)
+            ident = get_ident().identify(img, jpeg)
 
     if not ident.identified or ident.confidence < threshold:
         return _record_unidentified(cfg, store, img, h, ident)
@@ -747,6 +854,20 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
         store.remove_unidentified_by_hash(h)  # named via manual identification → no longer unidentified
     store.record(h, img.name, "identified", mid, _now())
     return True
+
+
+def _try_barcode(cfg: Config, img: Path, media_type: str) -> dict | None:
+    """Decode a barcode from the cover photo and resolve it (music release / movie product).
+    Returns None on no barcode / no match / decoder unavailable — never raises."""
+    from . import barcode
+    try:
+        for upc in barcode.decode_image(img):
+            match = barcode.lookup(cfg, upc, media_type)
+            if match:
+                return match
+    except Exception:                                    # noqa: BLE001 - never break a build
+        return None
+    return None
 
 
 def _record_unidentified(cfg, store, img, h, ident: Identification, reason="low confidence") -> bool:

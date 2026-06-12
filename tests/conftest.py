@@ -3,6 +3,14 @@ import pytest
 import requests
 
 
+@pytest.fixture(autouse=True)
+def _isolated_app_config(tmp_path, monkeypatch):
+    """Point per-user app config (the library recents file) at a throwaway dir so the suite
+    never reads or writes the developer's real ~/.config/mediahound/. Any test that starts an
+    admin server records a recent — without this, those paths would leak into the real file."""
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "_appcfg"))
+
+
 @pytest.fixture
 def mem_keyring():
     """Swap in an in-memory keyring so tests never touch the real OS keychain."""

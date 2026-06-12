@@ -16,7 +16,7 @@ import os
 _SERVICE = "mediahound"
 
 # Metadata provider keys — these are the ones surfaced in the admin "API keys" panel.
-KEY_NAMES = ("TMDB_API_KEY", "OMDB_API_KEY", "ANTHROPIC_API_KEY")
+KEY_NAMES = ("TMDB_API_KEY", "OMDB_API_KEY", "ANTHROPIC_API_KEY", "DISCOGS_TOKEN")
 # Every name that may be stored at all (publish token included) — guards arbitrary writes.
 _ALLOWED = (*KEY_NAMES, "NETLIFY_AUTH_TOKEN")
 

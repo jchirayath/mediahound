@@ -1,39 +1,45 @@
 # MediaHound brand assets
 
-The mark is a friendly **hound** whose nose is a **play button** — tying "Hound" to "Media."
+The mark is a friendly **beagle wearing headphones**, framed by a **retro TV** (with antennas) over
+an **open book** — movies + music + the catalog, in one image. The wordmark sets **media** in brand
+orange and **hound** in brand ink.
+
+![MediaHound logo](mediahound-logo.png)
 
 ## Files
 
 | File | Use |
 | --- | --- |
-| [`mediahound-icon.svg`](mediahound-icon.svg) | The icon mark (app icon, favicon, avatar). Scales to any size. |
-| [`mediahound-logo.svg`](mediahound-logo.svg) | Horizontal lockup (icon + wordmark) for **light** backgrounds. |
-| [`mediahound-logo-dark.svg`](mediahound-logo-dark.svg) | Horizontal lockup for **dark** backgrounds. |
-| [`mediahound-icon.png`](mediahound-icon.png) | 512×512 raster of the icon. |
-| `../../mediahound/web/favicon.ico` | Web favicon (16/32/48), shipped in every generated site. |
+| [`mediahound-icon.png`](mediahound-icon.png) | The icon mark — TV + hound, no wordmark (app icon, favicon, avatar). 512×512, transparent. |
+| [`mediahound-logo.png`](mediahound-logo.png) | Full horizontal lockup (icon + wordmark) for **light** backgrounds (README, wiki, docs). |
+| `../../mediahound/web/favicon.ico` | Web favicon (16/32/48/64), shipped in every generated site. |
+| `../../mediahound/web/assets/img/apple-touch-icon.png` | iOS home-screen icon (180×180, opaque). |
 | `../../packaging/mediahound.icns` · `mediahound.ico` | macOS / Windows desktop-app icons (wired into the PyInstaller build). |
 
-Need other raster sizes? Open `mediahound-icon.svg` in a browser and export, or
-`magick mediahound-icon.png -resize 128 out.png` — but **SVG fills/gradients only render
-correctly in a real browser** (ImageMagick drops the gradient), so prefer the SVG as the source.
+All raster assets derive from the master artwork. To regenerate other sizes:
+`magick mediahound-icon.png -resize 128 out.png`.
 
 ## Palette
 
 | Token | Hex | Where |
 | --- | --- | --- |
-| Headphones | `#2A2F3A` | band + ear cups |
-| Ear-cup | `#FF8E73` | inner cup |
-| Antenna/ear | `#FFE3D7` · `#F4E4D9` | TV antennas + floppy ears |
-| Coral | `#FF7A5C` | gradient top |
-| Red | `#E11D48` | gradient bottom, nose, "Hound" (light bg) |
-| Red (bright) | `#FF6B81` | "Hound" on dark backgrounds |
-| Cream | `#F4E4D9` | ears |
-| Muzzle | `#F0D5C9` | snout |
-| Eye ink | `#3A1020` | eyes |
-| Ink | `#1F2430` | "Media" wordmark (light bg) |
+| Brand orange | `#E97B0C` | TV frame, "media" wordmark, UI accent |
+| Brand ink | `#16232A` | "hound" wordmark, headphones, antennas, outlines |
+| Hound tan | `#D7822F` | the beagle's coat |
+| Muzzle | `#FFFFFF` | snout / face highlights |
+| Tongue | `#F2654E` | the dog's tongue |
+| Book / page edge | `#2C8C9C` | the open book under the TV |
+
+## Typography
+
+- **Wordmark / brand font:** **[Fredoka](https://fonts.google.com/specimen/Fredoka)** (Google Fonts,
+  weights 400–700) — a rounded geometric sans that matches the logo's friendly lettering. Used for the
+  site title, headings, and the brand mark in the web app.
+- **Body / UI text:** **Inter** (kept for dense catalog metadata where legibility matters most).
 
 ## Don'ts
 
-- Don't recolor the gradient or stretch the icon non-uniformly.
-- Don't put the dark-background lockup on a light background (and vice-versa) — use the matching file.
-- Keep clear space around the lockup equal to the height of the icon's ear.
+- Don't recolor the orange or the ink, or stretch the icon non-uniformly.
+- Don't put the wordmark lockup on a dark background — the ink "hound" disappears; use the **icon**
+  (transparent) on dark surfaces instead.
+- Keep clear space around the lockup equal to the height of the TV's antenna knob.

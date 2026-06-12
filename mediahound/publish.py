@@ -18,7 +18,10 @@ import requests
 
 _API = "https://api.netlify.com/api/v1"
 _EXCLUDE_TOP = {"RawImages"}                 # source photos — not part of the published site
-_EXCLUDE_NAMES = {".env", "config.toml"}
+# Never publish secrets, the raw config, or personal/admin-only data. Title/format fixes are
+# already baked into collection.json at build, so corrections.json itself is not needed publicly
+# (and may hold personal ratings/notes/tags); loans.json is personal. See PRIVACY.md.
+_EXCLUDE_NAMES = {".env", "config.toml", "corrections.json", "loans.json"}
 
 
 def _site_files(output_dir: Path) -> dict[str, Path]:

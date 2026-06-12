@@ -4,6 +4,41 @@ All notable changes to this project are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/), and this project adheres to
 [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-06-11
+
+### Changed
+- **New brand** — a beagle in headphones inside a retro **TV over an open book**, with the
+  **media**(orange) **hound**(ink) wordmark. New icon everywhere (web favicon/apple-touch, macOS
+  `.icns`, Windows `.ico`, README, wiki), brand palette (orange `#E97B0C` + ink `#16232A`) as the UI
+  accent, and **Fredoka** as the brand/heading font. See [docs/brand/](docs/brand/).
+- **Inline Help** panel (❓) with searchable, collapsible sections; **Settings** dialog now scrolls.
+- Desktop app slimmed **370 MB → 45 MB** by using the native macOS **WebKit** backend (excluded Qt +
+  unused scientific libs in the PyInstaller spec); the bundle version is stamped from the package.
+
+### Added — the four design proposals ([docs/design/](docs/design/))
+- **📷 Barcode / UPC scanning** — identify the *exact* release from the barcode instead of fuzzy OCR.
+  Local decode via the optional `mediahound[barcode]` extra (`zxing-cpp`, a pip wheel, no system lib);
+  music UPC → MusicBrainz/Discogs barcode search, movie UPC → UPCItemDB product name → the existing
+  identify-by-title path. New `📷 Scan barcode` admin tool (native `BarcodeDetector` camera + manual
+  entry), `POST /api/identify-barcode`, and a barcode-first pass in `mediahound build --online`.
+- **💿 Discogs integration** — a Discogs music metadata provider (`[music.metadata] provider = "discogs"`),
+  one-shot **collection import** (`mediahound import-discogs <username>`, a `💿 Discogs` button, and
+  `POST /api/import-discogs`), and condition-based **price suggestions** (`resale.discogs_price`).
+  Token stored in the OS keychain (`DISCOGS_TOKEN`, in Settings → API keys).
+- **🛟 Interop & safety** — `mediahound backup` / `restore` (zip of RawImages + data + config; `--no-photos`
+  for a quick curation-only backup; `.env`/secrets never included), a `⬇ Backup` button + `GET /api/backup`,
+  **Letterboxd** and **JSON** exporters (`mediahound export --format letterboxd|json`, plus a client-side
+  `🎬 Letterboxd` button), and **JSON Feed + RSS** of recently-added items (`data/feed.json` / `feed.xml`,
+  `[feeds]` config).
+- **⭐ Personal catalog** — per-item **rating** (★1–10), **note**, **tags/shelves**, and a **lending tracker**
+  (loan out / returned, badge, On-loan filter), plus a **🎲 Surprise me** picker and a *My rating* sort.
+  All personal data is **admin-only and stripped from the published catalog** (`bundle.js`/`collection.json`),
+  and `corrections.json` / `loans.json` are excluded from Publish. See [PRIVACY.md](PRIVACY.md).
+- **📚 Library switcher** — open / create / **switch the served library at runtime** from the admin UI,
+  with no restart. Backed by a recents list (`~/.config/mediahound/recent.json`); `GET /api/libraries`,
+  `POST /api/switch-library`, `POST /api/create-library` (all localhost-only). This is where the **data
+  directory is chosen** — per library via `config.toml` `[paths]` — surfaced in the UI.
+
 ## [0.3.1] — 2026-06-11
 
 ### Fixed

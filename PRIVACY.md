@@ -19,8 +19,11 @@ data.** This document explains exactly what is stored, and the only times anythi
 | Action | What is sent, and to whom |
 | --- | --- |
 | `mediahound build --online` | Title / artist lookups to the metadata providers you enabled: TMDB, OMDb, Wikidata, MusicBrainz / Cover Art Archive, and JustWatch (where-to-watch). Ordinary web API calls. |
+| 📷 **Barcode lookup** (`--online` / Scan) | The decoded **UPC/EAN number** (not the photo) is sent to MusicBrainz/Discogs (music) or UPCItemDB (movies) to resolve the exact release/title. Decoding itself is local. |
+| 💿 **Discogs** (`import-discogs`, price) | Reads *your* Discogs collection / a release's price suggestions using your token. Nothing is written back to Discogs. |
 | Claude identification | The cover **image** is sent to the Anthropic API — only if you opt into the `claude` identifier. |
-| 🌐 **Publish** | The **generated static site** is uploaded to **Netlify** using your token. Your source photos, `.env`, and `config.toml` are **never** included. |
+| 🌐 **Publish** | The **generated static site** is uploaded to **Netlify** using your token. Your source photos, `.env`, `config.toml`, and your **personal data** (`corrections.json`, `loans.json`) are **never** included. |
+| ⬇ **Backup** | Writes a **local** zip of your library. Never uploaded; `.env`/secrets are excluded. |
 | 📱 **Phone upload** (`app --phone`) | Photos travel **only over your local Wi-Fi**, protected by a per-session token — never to the internet. |
 | Clicking a "watch / listen / more info / sell" link | A normal outbound link to that third-party website. |
 
@@ -34,9 +37,11 @@ needed to identify/enrich a title or deploy your site, and never shares data bet
 
 ## Publishing is public
 
-A published catalog is a public website — anyone with the link can view it. It includes your titles,
-cover art, and any notes you added, but **not** your source photos, keys, or config. Don't publish
-anything you would not want to be public.
+A published catalog is a public website — anyone with the link can view it. It includes your titles
+and cover art, but **not** your source photos, keys, config, or **personal catalog data**. Your
+personal **ratings, notes, tags/shelves, and lending records are admin-only** — they are stripped
+from the published `collection.json` / `bundle.js`, and `corrections.json` / `loans.json` are never
+uploaded. They render only in the local admin view. Don't publish anything you would not want public.
 
 ## Your controls
 

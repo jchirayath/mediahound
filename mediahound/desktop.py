@@ -11,6 +11,7 @@ into a .app / .exe so non-technical users never touch Python or a terminal.
 from __future__ import annotations
 
 import socket
+import sys
 import threading
 import time
 import urllib.request
@@ -90,7 +91,10 @@ def run(directory: str | None = None, log=print) -> int:
         return 0
 
     webview.create_window(APP_NAME, url, width=1200, height=820, min_size=(820, 600))
-    webview.start()                                      # blocks until the window is closed
+    # Use the OS-native backend (macOS Cocoa/WebKit) — no Qt. Keeps the app small and uses
+    # only built-in system frameworks. autodetect elsewhere (Windows → EdgeChromium).
+    gui = "cocoa" if sys.platform == "darwin" else None
+    webview.start(gui=gui)                               # blocks until the window is closed
     return 0
 
 

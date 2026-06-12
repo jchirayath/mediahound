@@ -6,10 +6,19 @@ Planned integrations, designed against MediaHound's existing architecture (the i
 
 | # | Proposal | One-liner | Status |
 |---|---|---|---|
-| 01 | [Barcode / UPC scanning](01-barcode-scanning.md) | Identify by barcode (exact) instead of OCR (fuzzy) | Planned |
-| 02 | [Discogs integration](02-discogs-integration.md) | Make the music half best-in-class: import + pricing | Planned |
-| 03 | [Interop & safety](03-interop-and-safety.md) | Backup/restore, exports (Letterboxd…), feeds, multi-library | Planned |
-| 04 | [Personal catalog](04-personal-catalog.md) | Ratings, notes, shelves/tags, lending, "surprise me" | Planned |
+| 01 | [Barcode / UPC scanning](01-barcode-scanning.md) | Identify by barcode (exact) instead of OCR (fuzzy) | Implemented |
+| 02 | [Discogs integration](02-discogs-integration.md) | Make the music half best-in-class: import + pricing | Implemented |
+| 03 | [Interop & safety](03-interop-and-safety.md) | Backup/restore, exports (Letterboxd…), feeds, multi-library | Implemented |
+| 04 | [Personal catalog](04-personal-catalog.md) | Ratings, notes, shelves/tags, lending, "surprise me" | Implemented |
+
+> **Status note (shipped).** All four are implemented. Delivered: barcode decode (`mediahound/barcode.py`,
+> optional `mediahound[barcode]`) + music UPC→MusicBrainz/Discogs + movie UPC→UPCItemDB + a `📷 Scan barcode`
+> UI; the Discogs provider (`metadata/discogs.py`), `import-discogs` CLI/API, and price suggestions;
+> `backup`/`restore` (`backup.py`), Letterboxd/JSON exporters (`exporters.py`), JSON+RSS feeds, and a `⬇ Backup`
+> button; and personal ratings/notes/tags + lending + 🎲 Surprise-me, with all personal data stripped from the
+> published catalog. The **multi-library switcher** (3d) is also implemented — a `📚 Library` admin dialog backed
+> by `~/.config/mediahound/recent.json` that opens / creates / **live-switches** the served library without a
+> restart (localhost-only). Remaining deferred sub-item: Discogs push-export (3b/P3).
 
 Deferred ideas live in the [Roadmap / backlog](../ROADMAP.md).
 

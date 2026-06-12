@@ -13,6 +13,7 @@ DEFAULTS = {
     "music": {"metadata": {"provider": "musicbrainz"}},  # music metadata (zero-key default)
     "resale": {"ebay_tld": "com"},
     "streaming": {"enabled": True, "country": "US"},
+    "feeds": {"enabled": True, "site_url": ""},     # JSON/RSS feeds of recently-added items
     "admin": {"password": "changeme"},
     "view": {"columns": 5},
 }
@@ -67,6 +68,10 @@ class Config:
     @property
     def streaming(self) -> dict:
         return self.data.get("streaming", {"enabled": True, "country": "US"})
+
+    @property
+    def feeds(self) -> dict:
+        return self.data.get("feeds", {"enabled": True, "site_url": ""})
 
     @property
     def admin(self) -> dict:

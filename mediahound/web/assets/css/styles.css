@@ -6,11 +6,13 @@
   --line: #2a2f3c;
   --text: #e8eaf0;
   --muted: #9aa0b0;
-  --accent: #ff5252;
+  --accent: #e97b0c;          /* MediaHound brand orange (from the logo) */
   --accent-2: #54c7ec;
+  --ink: #16232a;             /* brand dark navy (the "hound" wordmark) */
   --gold: #f2c14e;
   --radius: 14px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --brand-font: "Fredoka", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -21,11 +23,18 @@ body {
   margin: 0;
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(84, 199, 236, 0.08), transparent 60%),
-    radial-gradient(900px 500px at -10% 10%, rgba(255, 82, 82, 0.07), transparent 55%),
+    radial-gradient(900px 500px at -10% 10%, rgba(233, 123, 12, 0.09), transparent 55%),
     var(--bg);
   color: var(--text);
   font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Brand font (Fredoka) on titles, headings and the brand mark — keeps Inter for dense body text */
+.site-header h1, .brand-mark, h2, h3,
+.dialog-card h2, .settings-h3, .help-sec > summary, .welcome-card h2 {
+  font-family: var(--brand-font);
+  letter-spacing: 0.2px;
 }
 
 .wrap { max-width: 1280px; margin: 0 auto; padding: 0 20px; }
@@ -44,7 +53,7 @@ a:hover { text-decoration: underline; }
 .brand-mark {
   display: grid; place-items: center;
   width: 42px; height: 42px; border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), #b22); color: #fff;
+  background: linear-gradient(135deg, var(--accent), #b5560a); color: #fff;
   font-size: 18px; box-shadow: var(--shadow);
 }
 .site-header h1 { font-size: 20px; margin: 0; letter-spacing: 0.2px; }
@@ -102,6 +111,10 @@ select {
 .badge-seen {
   position: absolute; top: 10px; right: 10px; padding: 3px 9px; border-radius: 6px;
   font-size: 11px; font-weight: 700; background: rgba(46, 160, 67, 0.9); color: #fff;
+}
+.badge-loan {
+  position: absolute; top: 10px; right: 44px; padding: 3px 8px; border-radius: 6px;
+  font-size: 11px; font-weight: 700; background: rgba(214, 158, 46, 0.95); color: #1a1205;
 }
 .badge-stream {
   position: absolute; bottom: 10px; right: 10px; width: 26px; height: 26px; border-radius: 50%;
@@ -162,12 +175,7 @@ select {
   position: absolute; bottom: 10px; left: 10px; padding: 2px 8px; border-radius: 6px;
   font-size: 10.5px; background: rgba(0,0,0,0.7); color: #fff; opacity: 0; transition: opacity .15s;
 }
-.set-default {
-  position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
-  padding: 3px 10px; border-radius: 999px; border: none; cursor: pointer;
-  font-size: 12px; background: rgba(242,193,78,0.92); color: #2a1d00; opacity: 0; transition: opacity .15s;
-}
-.card:hover .gallery-hint, .card:hover .set-default { opacity: 1; }
+.card:hover .gallery-hint { opacity: 1; }
 
 /* Inline title edit */
 .title-edit { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
@@ -335,11 +343,17 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 .zoom-hint { position: absolute; bottom: 8px; left: 8px; width: 22px; height: 22px; border-radius: 6px;
   display: grid; place-items: center; background: rgba(0,0,0,0.55); color: #fff; font-size: 13px; opacity: 0; transition: opacity .15s; }
 .poster-wrap:hover .zoom-hint { opacity: 1; }
-.set-default { position: absolute; top: 8px; right: 8px; padding: 2px 8px; border-radius: 999px; border: none;
-  background: rgba(242,193,78,0.92); color: #2a1d00; cursor: pointer; font-size: 12px; opacity: 0; transition: opacity .15s; }
-.del-image { position: absolute; top: 8px; right: 44px; width: 26px; height: 22px; border-radius: 999px; border: none;
-  background: rgba(255,82,82,0.9); color: #fff; cursor: pointer; font-size: 11px; opacity: 0; transition: opacity .15s; }
-.poster-wrap:hover .set-default, .poster-wrap:hover .del-image { opacity: 1; }
+/* Set-as-default (★) + delete (🗑) photo controls — compact, square, prominent */
+.set-default, .del-image {
+  position: absolute; top: 8px; width: 30px; height: 30px; padding: 0; border-radius: 8px;
+  display: grid; place-items: center; line-height: 1; cursor: pointer; font-size: 16px;
+  border: 1.5px solid rgba(255,255,255,0.85); box-shadow: 0 2px 6px rgba(0,0,0,0.45);
+  opacity: 0; transition: opacity .15s, transform .1s;
+}
+.set-default { right: 8px; background: var(--gold); color: #2a1d00; }
+.del-image  { right: 46px; background: var(--accent); color: #fff; font-size: 15px; }
+.set-default:hover, .del-image:hover { transform: scale(1.12); }
+.poster-wrap:hover .set-default, .poster-wrap:hover .del-image { opacity: 0.96; }
 
 /* Admin bar + inline edit */
 .admin-bar { display: flex; gap: 6px; margin-top: 6px; }
@@ -351,6 +365,61 @@ body.is-admin .site-header { box-shadow: inset 0 -2px 0 var(--gold); }
 .inline-edit input[type=text], .inline-edit input[type=number], .inline-edit select { padding: 6px 8px; border-radius: 6px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 12.5px; width: 100%; }
 .inline-edit .ie-row { display: flex; gap: 6px; }
 .ie-check { font-size: 11px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+
+/* Personal catalog (admin-only): my rating / shelves / note / loan */
+.f-personal { display: flex; flex-direction: column; gap: 5px; margin-top: 8px;
+  padding-top: 7px; border-top: 1px dashed var(--line); }
+.my-stars { display: flex; align-items: center; gap: 0; line-height: 1; }
+.my-star { border: none; background: none; cursor: pointer; padding: 0 1px; font-size: 13px; color: var(--line); }
+.my-star.on { color: var(--gold); }
+.my-star:hover { color: var(--accent-2); }
+.my-star-num { margin-left: 7px; font-size: 11px; color: var(--muted); }
+.my-tags { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.my-tag, .my-tag-add { font-size: 10.5px; padding: 2px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--card-hi); color: var(--text); }
+.my-tag:hover { background: var(--accent-2); color: #06222b; border-color: var(--accent-2); }
+.my-tag-add { color: var(--muted); border-style: dashed; }
+.my-note { font-size: 11.5px; color: #dfe3ee; font-style: italic; cursor: pointer;
+  background: var(--bg-soft); border-left: 2px solid var(--gold); padding: 4px 8px; border-radius: 4px; }
+.my-note-add { align-self: flex-start; border: none; background: none; color: var(--accent-2); cursor: pointer; font-size: 11.5px; padding: 0; }
+.my-loan { display: flex; align-items: center; gap: 8px; font-size: 11px; flex-wrap: wrap; }
+.my-loan .loan-out { color: var(--gold); font-weight: 600; }
+.scan-video { width: 100%; max-height: 260px; border-radius: 10px; background: #000; margin: 6px 0; object-fit: cover; }
+
+/* Inline help (how to use) — collapsible accordion */
+.help-toolbar { display: flex; gap: 8px; align-items: center; margin: 4px 0 10px; }
+.help-toolbar #helpSearch { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg-soft); color: var(--text); font-size: 13px; }
+.help-body { max-height: 60vh; overflow-y: auto; overflow-x: hidden; padding-right: 8px;
+  display: flex; flex-direction: column; gap: 8px; }
+.help-sec { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-soft); overflow: hidden; }
+.help-sec > summary { cursor: pointer; list-style: none; padding: 11px 14px; font-size: 13.5px; font-weight: 600;
+  color: var(--text); display: flex; align-items: center; gap: 8px; user-select: none; }
+.help-sec > summary::-webkit-details-marker { display: none; }
+.help-sec > summary::after { content: "▸"; margin-left: auto; color: var(--muted); transition: transform 0.15s; font-size: 12px; }
+.help-sec[open] > summary { color: var(--accent-2); border-bottom: 1px solid var(--line); }
+.help-sec[open] > summary::after { transform: rotate(90deg); }
+.help-sec > summary:hover { background: var(--card-hi); }
+.help-sec ul { margin: 0; padding: 10px 16px 12px 32px; }
+.help-sec li { font-size: 12.5px; line-height: 1.6; color: var(--text); margin: 4px 0; }
+.help-sec code { background: var(--card); padding: 1px 5px; border-radius: 4px; font-size: 11.5px; }
+.help-admin { display: flex; flex-direction: column; gap: 8px; }
+.help-admin-note { font-size: 12px; color: var(--muted); margin: 4px 2px; }
+.help-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 18px; }
+.help-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+  color: var(--gold); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+
+/* Long dialogs (Settings) get an internal scroll so actions stay reachable */
+.dialog-scroll { max-height: 64vh; overflow-y: auto; overflow-x: hidden; padding-right: 8px; margin: 0 -2px; }
+
+/* Library switcher */
+.library-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 240px; overflow: auto; }
+.library-row { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%;
+  text-align: left; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg-soft); color: var(--text); cursor: pointer; }
+.library-row:hover { border-color: var(--accent-2); }
+.library-row .lib-title { font-weight: 600; font-size: 13px; }
+.library-row .lib-path { font-size: 11px; color: var(--muted); word-break: break-all; }
 
 /* Lightbox (image zoom) */
 .lightbox { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; }

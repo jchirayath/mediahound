@@ -81,6 +81,7 @@ class Store:
         self.seen_overrides_path = data_dir / "seen-overrides.json"
         self.identify_queue_path = data_dir / "identify-queue.json"
         self.corrections_path = data_dir / "corrections.json"
+        self.loans_path = data_dir / "loans.json"
 
         self.manifest: dict = _read_json(self.manifest_path, {})
         self.collection: list = _read_json(self.collection_path, [])
@@ -88,6 +89,8 @@ class Store:
         self.seen_overrides: dict = _read_json(self.seen_overrides_path, {})
         self.identify_queue: dict = _read_json(self.identify_queue_path, {})
         self.corrections: dict = _read_json(self.corrections_path, {})
+        # Personal lending tracker (id → {to, since, returned}) — admin-only, never published.
+        self.loans: dict = _read_json(self.loans_path, {})
 
         self._collection_by_id = {m["id"]: m for m in self.collection}
 
@@ -167,8 +170,9 @@ class Store:
         _write_json(self.manifest_path, self.manifest)
         _write_json(self.collection_path, self.collection)
         _write_json(self.unidentified_path, self.unidentified)
-        # create empty round-trip files on first run so the site can fetch them
-        if not self.seen_overrides_path.is_file():
-            _write_json(self.seen_overrides_path, {})
-        if not self.identify_queue_path.is_file():
-            _write_json(self.identify_queue_path, {})
+        # create empty round-trip files on first run so the site can fetch them (these are
+        # admin-only and excluded from publish, so an empty local copy leaks nothing)
+        for p in (self.seen_overrides_path, self.identify_queue_path,
+                  self.corrections_path, self.loans_path):
+            if not p.is_file():
+                _write_json(p, {})

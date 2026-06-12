@@ -5,6 +5,7 @@
 
   const SEEN_KEY = "mediahound:seen";
   const CORR_KEY = "mediahound:corrections";
+  const LOANS_KEY = "mediahound:loans";
   const COLS_KEY = "mediahound:columns";
   const ADMIN_KEY = "mediahound:admin";
   const $ = (s) => document.querySelector(s);
@@ -23,7 +24,7 @@
   };
 
   let movies = [], site = {}, view = { columns: 4, fields: { ...DEFAULT_FIELDS } };
-  let seen = load(SEEN_KEY, {}), corrections = load(CORR_KEY, {});
+  let seen = load(SEEN_KEY, {}), corrections = load(CORR_KEY, {}), loans = load(LOANS_KEY, {});
   let isAdmin = sessionStorage.getItem(ADMIN_KEY) === "1";
   let mediaType = "all";                 // "all" | "movie" | "music"
   const imgIndex = new Map();
@@ -70,7 +71,7 @@
     wire();
     applyAdminUI();
     render();
-    pingServer().then(() => { applyAdminUI(); if (!movies.length) render(); });   // detect `serve --admin`; refresh welcome CTA
+    pingServer().then(() => { applyAdminUI(); hydratePersonal(); if (!movies.length) render(); });   // detect `serve --admin`; refresh welcome CTA
   }).catch((e) => { $("#loading").innerHTML = "<p>Couldn't load the collection.</p>"; console.error(e); });
 
   // ---- helpers ------------------------------------------------------------
@@ -92,14 +93,44 @@
     if (c) { if (c.title) m.title = c.title; if (c.year) m.year = c.year; if (c.format) m.format = c.format;
              if (c.media_type) m.media_type = c.media_type; if ("artist" in c) m.artist = c.artist || null;
              if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
-             if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery; }
+             if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery;
+             // personal catalog (admin-only; stripped from the published site)
+             m.my_rating = "my_rating" in c ? c.my_rating : null;
+             m.my_note = "my_note" in c ? c.my_note : null;
+             m.tags = Array.isArray(c.tags) ? c.tags : []; }
+    else { m.my_rating = null; m.my_note = null; m.tags = []; }
+    applyLoan(m);
     // a movie-only format on a music item (or vice-versa) is wrong — normalise to the type's default
     const valid = FORMATS_BY_TYPE[m.media_type || "movie"];
     if (valid && m.format && !valid.includes(m.format)) m.format = valid[0];
     return m;
   }
+  // Lending: an open loan (not yet returned) marks an item "on loan". Admin-only.
+  function applyLoan(m) { const l = loans[m.id]; m.loan = (l && !l.returned) ? l : null; return m; }
+  function allTags() { return [...new Set(movies.flatMap((m) => m.tags || []))].sort((a, b) => a.localeCompare(b)); }
   function saveCorrections() { save(CORR_KEY, corrections); persist("api/corrections", corrections); }
   function setCorr(m, patch) { corrections[m.id] = Object.assign({}, corrections[m.id], patch); saveCorrections(); }
+  // Loans live in their own file (replace-on-write, like seen-overrides) so they stay separate
+  // from catalog corrections. Admin-only; loans.json is never published.
+  function saveLoans() {
+    Object.keys(loans).forEach((k) => { if (!loans[k]) delete loans[k]; });
+    save(LOANS_KEY, loans); persist("api/loans", loans);
+  }
+  function setLoan(m, loan) { if (loan) loans[m.id] = loan; else delete loans[m.id]; saveLoans(); applyLoan(m); }
+  // On a served admin session, seed personal data (ratings/notes/tags + loans) from the
+  // local data/ files so it shows on any browser — not just the one that made the edits.
+  function hydratePersonal() {
+    if (!(isAdmin && serverAdmin)) return;
+    Promise.all([j("data/corrections.json", {}), j("data/loans.json", {})]).then(([c, l]) => {
+      for (const [id, sv] of Object.entries(c || {})) {
+        const lv = corrections[id] || (corrections[id] = {});
+        ["my_rating", "my_note", "tags"].forEach((k) => { if (lv[k] === undefined && sv[k] !== undefined) lv[k] = sv[k]; });
+      }
+      loans = Object.assign({}, l || {}, loans);
+      movies.forEach(applyCorrection);
+      buildFilters(); render();
+    });
+  }
 
   // ---- admin-server persistence (mediahound serve --admin) ----------------
   // When the site is served by the local admin server, every edit is written
@@ -170,6 +201,57 @@
       }).catch((e) => { note.textContent = "Import failed: " + e; });
   }
 
+  // ---- Discogs collection import ------------------------------------------
+  function openDiscogs() {
+    if (!serverAdmin) {
+      alert("Importing from Discogs needs the local app.\n\nRun:  mediahound app\n" +
+            "…or from a terminal:  mediahound import-discogs <username>");
+      return;
+    }
+    const user = (window.prompt("Import a Discogs collection — enter the Discogs username:") || "").trim();
+    if (!user) return;
+    const el = $("#saveState"); if (el) { el.textContent = "💿 Importing from Discogs…"; el.hidden = false; }
+    fetch("api/import-discogs", { method: "POST", headers: authHeaders(), body: JSON.stringify({ username: user }) })
+      .then((r) => r.json()).then((r) => {
+        if (r && r.ok) { if (el) el.textContent = `✓ Imported ${r.added} — reloading`; location.reload(); }
+        else { if (el) el.hidden = true; alert("Discogs import failed: " + ((r && r.error) || "unknown")); }
+      }).catch((e) => { if (el) el.hidden = true; alert("Discogs import failed: " + e); });
+  }
+
+  // ---- Library switcher (open / create / switch the served catalog) -------
+  function openLibrary() {
+    if (!serverAdmin) {
+      alert("Switching libraries needs the local app.\n\nRun:  mediahound app\n(or  mediahound serve --admin)");
+      return;
+    }
+    $("#libraryNote").hidden = true; $("#libraryPath").value = "";
+    $("#libraryList").textContent = "Loading…"; $("#libraryDialog").hidden = false;
+    j("api/libraries", null).then((r) => {
+      if (!r || !r.ok) { $("#libraryList").textContent = "Couldn't load libraries."; return; }
+      $("#libraryCurrent").textContent = "Current: " + (r.current && r.current.title ? r.current.title : "(this library)") +
+        (r.current && r.current.path ? "  ·  " + r.current.path : "");
+      const list = $("#libraryList"); list.innerHTML = "";
+      const recent = (r.recent || []).filter((x) => !(r.current && x.path === r.current.path));
+      if (!recent.length) { list.innerHTML = '<p class="dialog-sub">No other recent libraries yet.</p>'; return; }
+      recent.forEach((lib) => {
+        const row = document.createElement("button"); row.className = "library-row";
+        row.innerHTML = `<span class="lib-title">${esc(lib.title)}</span><span class="lib-path">${esc(lib.path)}</span>`;
+        row.onclick = () => switchLibrary(lib.path, false);
+        list.appendChild(row);
+      });
+    });
+  }
+  function switchLibrary(path, create) {
+    const note = $("#libraryNote"); note.hidden = false;
+    note.textContent = (create ? "Creating " : "Opening ") + path + "…";
+    fetch(create ? "api/create-library" : "api/switch-library",
+          { method: "POST", headers: authHeaders(), body: JSON.stringify({ path }) })
+      .then((r) => r.json()).then((r) => {
+        if (r && r.ok) { note.textContent = "✓ " + (r.title || "Opened") + " — reloading"; location.reload(); }
+        else { note.textContent = "Couldn't switch: " + ((r && r.error) || "unknown"); }
+      }).catch((e) => { note.textContent = "Couldn't switch: " + e; });
+  }
+
   // ---- Add photos (drag-and-drop upload) ----------------------------------
   let uploadFiles = [];
   function openUpload() {
@@ -214,6 +296,58 @@
     fetch("api/rebuild", { method: "POST", headers: authHeaders(), body: "{}" })
       .then((r) => r.json()).then(() => location.reload())
       .catch(() => location.reload());
+  }
+
+  // ---- Barcode scan / type → identify the exact release -------------------
+  let scanStream = null, scanTimer = null, scanDetector = null;
+  function openScan() {
+    if (!serverAdmin) {
+      alert("Scanning needs the local app.\n\nRun:  mediahound app\n(or  mediahound serve --admin)");
+      return;
+    }
+    $("#scanNote").hidden = true; $("#scanUpc").value = "";
+    $("#scanVideo").hidden = true; $("#scanDialog").hidden = false;
+    setTimeout(() => $("#scanUpc").focus(), 30);
+  }
+  async function startCamera() {
+    if (!("BarcodeDetector" in window)) {
+      $("#scanNote").hidden = false;
+      $("#scanNote").textContent = "Live scanning isn't supported in this browser — type the digits instead.";
+      return;
+    }
+    try {
+      scanDetector = scanDetector || new window.BarcodeDetector({ formats: ["ean_13", "upc_a", "ean_8", "upc_e"] });
+      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      const v = $("#scanVideo"); v.hidden = false; v.srcObject = scanStream; await v.play();
+      $("#scanNote").hidden = false; $("#scanNote").textContent = "Point the camera at the barcode…";
+      scanTimer = setInterval(async () => {
+        try {
+          const codes = await scanDetector.detect(v);
+          const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue || ""));
+          if (hit) { $("#scanUpc").value = hit.rawValue; stopCamera(); submitScan(); }
+        } catch (e) { /* keep trying */ }
+      }, 400);
+    } catch (e) {
+      $("#scanNote").hidden = false; $("#scanNote").textContent = "Couldn't open the camera — type the digits instead.";
+    }
+  }
+  function stopCamera() {
+    if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+    if (scanStream) { scanStream.getTracks().forEach((t) => t.stop()); scanStream = null; }
+    const v = $("#scanVideo"); if (v) { v.srcObject = null; v.hidden = true; }
+  }
+  function submitScan() {
+    const upc = ($("#scanUpc").value || "").replace(/\D/g, "");
+    const note = $("#scanNote"); note.hidden = false;
+    if (!/^\d{8,14}$/.test(upc)) { note.textContent = "Enter a valid UPC/EAN (8–14 digits)."; return; }
+    const type = (document.querySelector('input[name="scanType"]:checked') || {}).value || "music";
+    note.textContent = "Looking up " + upc + "…";
+    fetch("api/identify-barcode", { method: "POST", headers: authHeaders(), body: JSON.stringify({ upc, media_type: type }) })
+      .then((r) => r.json()).then((r) => {
+        if (r && r.ok && r.matched) { note.textContent = `✓ ${r.title}${r.artist ? " — " + r.artist : ""} — reloading`; stopCamera(); location.reload(); }
+        else if (r && r.ok) { note.textContent = "No match for that barcode. Try the other media type, or add it by photo."; }
+        else { note.textContent = "Lookup failed: " + ((r && r.error) || "unknown"); }
+      }).catch((e) => { note.textContent = "Lookup failed: " + e; });
   }
 
   // ---- first-run welcome (empty catalog) ----------------------------------
@@ -277,6 +411,8 @@
     fill("#filterStudio", uniq([...list.map((m) => m.studio), ...list.map((m) => m.label)]));  // studio (movie) or label (music)
     fill("#filterLanguage", uniq(list.map((m) => m.language)));
     fill("#filterCategory", uniq(list.map((m) => m.category)));
+    // Tag/shelf filter — admin-only (personal data); `.admin-only` hides it for public viewers.
+    if ($("#filterTag")) fill("#filterTag", uniq(list.flatMap((m) => m.tags || [])));
     const provs = uniq(list.flatMap((m) => ((m.streaming && m.streaming.providers) || []).map((p) => p.name)));
     const ss = clearOptions($("#filterStream"));
     [["any", "▶ On any service"]].concat(provs.map((p) => [p, "▶ " + p])).concat([["none", "Not streaming"]])
@@ -294,6 +430,8 @@
     const f = $("#filterFormat").value, g = $("#filterGenre").value, st = $("#filterStudio").value;
     const l = $("#filterLanguage").value, c = $("#filterCategory").value, s = $("#filterSeen").value;
     const sv = $("#filterStream").value;
+    const tag = ($("#filterTag") && $("#filterTag").value) || "";
+    const loan = ($("#filterLoan") && $("#filterLoan").value) || "";
     let v = movies.filter((m) => {
       if (mediaType !== "all" && (m.media_type || "movie") !== mediaType) return false;
       if (f && m.format !== f) return false;
@@ -301,6 +439,9 @@
       if (st && m.studio !== st && m.label !== st) return false;   // studio (movie) or label (music)
       if (l && m.language !== l) return false;
       if (c && m.category !== c) return false;
+      if (isAdmin && tag && !(m.tags || []).includes(tag)) return false;
+      if (isAdmin && loan === "out" && !m.loan) return false;
+      if (isAdmin && loan === "available" && m.loan) return false;
       if (sv) {
         const ps = ((m.streaming && m.streaming.providers) || []).map((p) => p.name);
         if (sv === "any" && !ps.length) return false;
@@ -322,6 +463,7 @@
       "added": (a, b) => String(b.added_at || "").localeCompare(String(a.added_at || "")),
       "value-desc": (a, b) => (b.resale?.mid || 0) - (a.resale?.mid || 0),
       "rating-desc": (a, b) => (b.rating || 0) - (a.rating || 0),
+      "myrating-desc": (a, b) => (b.my_rating || 0) - (a.my_rating || 0),
     }[$("#sort").value];
     return v.sort(cmp);
   }
@@ -411,9 +553,84 @@
     }
     b.appendChild(foot);
 
-    if (isAdmin) { b.appendChild(seenToggle(m)); b.appendChild(adminBar(m, el)); }
+    if (isAdmin) { b.appendChild(personalEl(m)); b.appendChild(seenToggle(m)); b.appendChild(adminBar(m, el)); }
     el.appendChild(b);
     return el;
+  }
+
+  // ---- personal catalog: my rating / note / tags / loan (admin-only) -------
+  function personalEl(m) {
+    const d = lineEl("personal");
+    // ★ my rating — 1..10, click a star to set, click the active high star again to clear
+    const stars = document.createElement("div"); stars.className = "my-stars";
+    stars.title = "Your rating (1–10)";
+    for (let n = 1; n <= 10; n++) {
+      const s = document.createElement("button");
+      s.className = "my-star" + (m.my_rating >= n ? " on" : "");
+      s.textContent = "★"; s.dataset.n = n; s.setAttribute("aria-label", `${n} of 10`);
+      s.onclick = () => { const v = (m.my_rating === n) ? null : n; setCorr(m, { my_rating: v }); applyCorrection(m); render(); };
+      stars.appendChild(s);
+    }
+    const num = document.createElement("span"); num.className = "my-star-num";
+    num.textContent = m.my_rating ? m.my_rating + "/10" : "";
+    stars.appendChild(num);
+    d.appendChild(stars);
+
+    // tags / shelves
+    const tags = document.createElement("div"); tags.className = "my-tags";
+    (m.tags || []).forEach((t) => {
+      const c = document.createElement("button"); c.className = "my-tag";
+      c.textContent = t; c.title = "Filter by this shelf";
+      c.onclick = () => { if ($("#filterTag")) { $("#filterTag").value = t; render(); scrollTop(); } };
+      tags.appendChild(c);
+    });
+    const addTag = document.createElement("button"); addTag.className = "my-tag-add";
+    addTag.textContent = "＋ shelf"; addTag.title = "Add a tag / shelf";
+    addTag.onclick = () => {
+      const t = (window.prompt("Add to shelf / tag:") || "").trim();
+      if (!t) return;
+      const next = [...new Set([...(m.tags || []), t])];
+      setCorr(m, { tags: next }); applyCorrection(m); buildFilters(); render();
+    };
+    tags.appendChild(addTag);
+    d.appendChild(tags);
+
+    // note
+    if (m.my_note) {
+      const note = document.createElement("div"); note.className = "my-note"; note.textContent = m.my_note;
+      note.title = "Click to edit your note"; note.onclick = () => editNote(m);
+      d.appendChild(note);
+    } else {
+      const add = document.createElement("button"); add.className = "my-note-add";
+      add.textContent = "✎ Add a note"; add.onclick = () => editNote(m);
+      d.appendChild(add);
+    }
+
+    // loan status
+    const loanRow = document.createElement("div"); loanRow.className = "my-loan";
+    if (m.loan) {
+      loanRow.innerHTML = `<span class="loan-out">📤 Out to ${esc(m.loan.to || "someone")}` +
+        (m.loan.since ? ` · since ${esc(m.loan.since)}` : "") + `</span>`;
+      const back = document.createElement("button"); back.className = "btn-mini"; back.textContent = "↩ Returned";
+      back.onclick = () => { setLoan(m, null); render(); };
+      loanRow.appendChild(back);
+    } else {
+      const out = document.createElement("button"); out.className = "btn-mini"; out.textContent = "📤 Loan out";
+      out.onclick = () => {
+        const who = (window.prompt(`Lend “${m.title}” to:`) || "").trim();
+        if (!who) return;
+        setLoan(m, { to: who, since: new Date().toISOString().slice(0, 10), returned: false }); render();
+      };
+      loanRow.appendChild(out);
+    }
+    d.appendChild(loanRow);
+    return d;
+  }
+  function editNote(m) {
+    const cur = m.my_note || "";
+    const next = window.prompt("Your private note (saved to data/, never published):", cur);
+    if (next === null) return;
+    setCorr(m, { my_note: next.trim() || null }); applyCorrection(m); render();
   }
 
   function lineEl(key) { const d = document.createElement("div"); d.className = "f f-" + key; return d; }
@@ -451,6 +668,18 @@
   function setFilter(sel, val) { $("#search").value = ""; $(sel).value = val; render(); scrollTop(); }
   function scrollTop() { window.scrollTo({ top: 0, behavior: "smooth" }); }
 
+  // 🎲 Surprise me — pick a random title from what's currently filtered (preferring unseen)
+  // and pop it open in the lightbox. Pure client-side; changes no data.
+  function surpriseMe() {
+    let pool = currentView();
+    const unseen = pool.filter((m) => !m.seen);
+    if (unseen.length) pool = unseen;
+    if (!pool.length) { alert("Nothing matches the current filters to pick from."); return; }
+    const m = pool[Math.floor(Math.random() * pool.length)];
+    if (galleryOf(m).length) openZoom(m, 0);
+    else { $("#search").value = m.title; render(); scrollTop(); }
+  }
+
   function toggleSeen(m) {
     m.seen = !m.seen; m.date_seen = m.seen ? new Date().toISOString().slice(0, 10) : null;
     seen[m.id] = { seen: m.seen, date_seen: m.date_seen }; save(SEEN_KEY, seen);
@@ -476,6 +705,7 @@
     pw.insertAdjacentHTML("beforeend",
       `<span class="badge-format">${esc(m.format || "—")}</span>` +
       (m.seen ? `<span class="badge-seen">✓</span>` : "") +
+      (isAdmin && m.loan ? `<span class="badge-loan" title="On loan to ${esc(m.loan.to || "someone")}">📤</span>` : "") +
       (provs.length ? `<a class="badge-stream" href="${esc(safeUrl(watchUrl))}" target="_blank" rel="noopener" title="Watch on ${esc(provs.map((p) => p.name).join(", "))}" onclick="event.stopPropagation()">▶</a>` : "") +
       `<span class="zoom-hint" title="Click to zoom">⤢</span>`);
 
@@ -609,7 +839,7 @@
     $("#siteSubtitle").textContent = s;
     const bi = $("#brandImg"), bm = $("#brandMark");
     // user logo if set, else the MediaHound hound mark (never the bare ▶ fallback)
-    bi.src = view.site_image || "assets/img/mediahound-icon.svg";
+    bi.src = view.site_image || "assets/img/mediahound-icon.png";
     bi.hidden = false; bm.hidden = true;
   }
   function applyAdminUI() {
@@ -624,7 +854,11 @@
     document.body.classList.toggle("server-admin", live);
     const rb = $("#rebuildBtn"); if (rb) rb.hidden = !live;
     const ib = $("#importBtn"); if (ib) ib.hidden = !live;
+    const db = $("#discogsBtn"); if (db) db.hidden = !(live && !phoneMode);
     const ab = $("#addPhotosBtn"); if (ab) ab.hidden = !live;
+    const sc = $("#scanBtn"); if (sc) sc.hidden = !live;                        // scan works over LAN (phone) too
+    const bk = $("#backupBtn"); if (bk) bk.hidden = !(live && !phoneMode);     // full-library download — local only
+    const lbn = $("#libraryBtn"); if (lbn) lbn.hidden = !(live && !phoneMode); // switch served library — local only
     const pb = $("#publishBtn"); if (pb) pb.hidden = !(live && !phoneMode);   // publish uses your Netlify token — local only
     if (live) {
       $("#adminBadge").textContent = "● ADMIN — saving to disk";
@@ -634,9 +868,41 @@
     }
   }
   function openLogin() { $("#loginErr").hidden = true; $("#loginPw").value = ""; $("#loginDialog").hidden = false; setTimeout(() => $("#loginPw").focus(), 30); }
+  // ---- inline help (how to use) -------------------------------------------
+  function helpSections() { return $$("#helpDialog .help-sec"); }
+  function visibleHelpSections() { return helpSections().filter((d) => !d.hidden); }
+  function openHelp() {
+    // show the admin tools section only when signed in
+    const adminBlock = document.querySelector("#helpDialog .help-admin");
+    if (adminBlock) adminBlock.hidden = !isAdmin;
+    const note = $("#helpModeNote");
+    if (note) note.textContent = isAdmin
+      ? "You're in admin mode — the editing tools below are available. Every edit saves to disk."
+      : "A quick tour of what you can do here. Unlock 🔒 Admin to edit your catalog and see the editing tools.";
+    // reset: clear search, collapse all but the first visible section
+    if ($("#helpSearch")) $("#helpSearch").value = "";
+    filterHelp("");
+    const vis = visibleHelpSections();
+    helpSections().forEach((d) => { d.open = false; });
+    if (vis[0]) vis[0].open = true;
+    $("#helpDialog").hidden = false;
+  }
+  function setAllHelp(open) { visibleHelpSections().forEach((d) => { d.open = open; }); }
+  function filterHelp(q) {
+    q = (q || "").trim().toLowerCase();
+    let shown = 0;
+    helpSections().forEach((d) => {
+      const inAdmin = d.closest(".help-admin");
+      const adminHidden = inAdmin && !isAdmin;
+      const match = !q || d.textContent.toLowerCase().includes(q);
+      d.hidden = adminHidden || !match;
+      if (!d.hidden) { shown++; if (q) d.open = true; }
+    });
+    if ($("#helpEmpty")) $("#helpEmpty").hidden = shown !== 0;
+  }
   async function tryLogin() {
     const h = await sha256($("#loginPw").value);
-    if (h === site.admin_password_sha256) { isAdmin = true; sessionStorage.setItem(ADMIN_KEY, "1"); $("#loginDialog").hidden = true; applyAdminUI(); render(); }
+    if (h === site.admin_password_sha256) { isAdmin = true; sessionStorage.setItem(ADMIN_KEY, "1"); $("#loginDialog").hidden = true; applyAdminUI(); hydratePersonal(); render(); }
     else $("#loginErr").hidden = false;
   }
   function exitAdmin() { isAdmin = false; sessionStorage.removeItem(ADMIN_KEY); applyAdminUI(); render(); }
@@ -695,7 +961,7 @@
   }
 
   // ---- API keys (stored in the OS keychain by the local app) --------------
-  const KEY_NAMES = ["TMDB_API_KEY", "OMDB_API_KEY", "ANTHROPIC_API_KEY"];
+  const KEY_NAMES = ["TMDB_API_KEY", "OMDB_API_KEY", "ANTHROPIC_API_KEY", "DISCOGS_TOKEN"];
   function loadApiKeys() {
     // only when the local app is running and NOT exposed to the phone/LAN
     const show = serverAdmin && !phoneMode;
@@ -793,25 +1059,52 @@
     alert("Downloaded seen-overrides.json → drop into data/ and rebuild to make permanent.");
   }
   function download(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "application/json" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
+  function downloadCsv(name, text) { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: "text/csv" })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
+
+  // ⬇ Backup — stream a zip of the whole library from the local admin server.
+  function doBackup() {
+    if (!serverAdmin) { alert("Backup needs the local app — run:  mediahound app  (or serve --admin)."); return; }
+    const a = document.createElement("a"); a.href = "api/backup"; a.download = ""; a.click();
+  }
+  // 🎬 Letterboxd — build an import CSV of your movies (Title, Year, Rating10, WatchedDate, Tags)
+  // entirely client-side from the loaded catalog + your personal ratings/tags.
+  function exportLetterboxd() {
+    const csvField = (v) => { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+    const rows = [["Title", "Year", "Rating10", "WatchedDate", "Tags"]];
+    let n = 0;
+    movies.filter((m) => (m.media_type || "movie") === "movie").forEach((m) => {
+      rows.push([m.title || "", m.year || "", m.my_rating || "",
+                 m.seen ? (m.date_seen || "") : "", (m.tags || []).join(", ")]);
+      n++;
+    });
+    if (!n) { alert("No movies to export."); return; }
+    downloadCsv("letterboxd.csv", rows.map((r) => r.map(csvField).join(",")).join("\n"));
+    alert(`Exported ${n} movie(s) → letterboxd.csv.\nImport at letterboxd.com/import.`);
+  }
 
   // ---- wiring -------------------------------------------------------------
   function wire() {
-    ["#search", "#sort", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen"]
-      .forEach((s) => $(s).addEventListener("input", render));
+    ["#search", "#sort", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen", "#filterTag", "#filterLoan"]
+      .forEach((s) => { const el = $(s); if (el) el.addEventListener("input", render); });
+    if ($("#surpriseBtn")) $("#surpriseBtn").onclick = surpriseMe;
     $$("#mediaTabs .mt-btn").forEach((btn) => btn.addEventListener("click", () => {
       mediaType = btn.dataset.mt;
       $$("#mediaTabs .mt-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
       // narrow the filter dropdowns to the chosen type, resetting any now-irrelevant selection
-      ["#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory"].forEach((s) => ($(s).value = ""));
+      ["#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterTag", "#filterLoan"].forEach((s) => { const el = $(s); if (el) el.value = ""; });
       buildFilters();
       render();
     }));
     // only show the Movies/Music switch when the catalog actually mixes media types
     if (new Set(movies.map((m) => m.media_type || "movie")).size < 2) $("#mediaTabs").hidden = true;
-    $("#clearFilters").onclick = () => { ["#search", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen"].forEach((s) => $(s).value = ""); $("#sort").value = "title"; render(); };
+    $("#clearFilters").onclick = () => { ["#search", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen", "#filterTag", "#filterLoan"].forEach((s) => { const el = $(s); if (el) el.value = ""; }); $("#sort").value = "title"; render(); };
     $("#colMinus").onclick = () => setCols(userCols() - 1);
     $("#colPlus").onclick = () => setCols(userCols() + 1);
     $("#adminBtn").onclick = () => isAdmin ? exitAdmin() : openLogin();
+    if ($("#helpBtn")) $("#helpBtn").onclick = openHelp;
+    if ($("#helpExpand")) $("#helpExpand").onclick = () => setAllHelp(true);
+    if ($("#helpCollapse")) $("#helpCollapse").onclick = () => setAllHelp(false);
+    if ($("#helpSearch")) $("#helpSearch").addEventListener("input", (e) => filterHelp(e.target.value));
     $("#exitAdmin").onclick = exitAdmin;
     $("#settingsBtn").onclick = openSettings;
     $("#settingsSave").onclick = saveSettings;
@@ -828,6 +1121,7 @@
     $("#exportChanges").onclick = exportCorrections;
     if ($("#rebuildBtn")) $("#rebuildBtn").onclick = rebuildSite;
     if ($("#importBtn")) $("#importBtn").onclick = openImport;
+    if ($("#discogsBtn")) $("#discogsBtn").onclick = openDiscogs;
     if ($("#importGo")) $("#importGo").onclick = doImport;
     if ($("#importFile")) $("#importFile").addEventListener("change", (e) => {
       const f = e.target.files[0]; if (!f) return;
@@ -835,7 +1129,14 @@
     });
     // Add photos (upload + drag-drop)
     if ($("#addPhotosBtn")) $("#addPhotosBtn").onclick = openUpload;
+    if ($("#scanBtn")) $("#scanBtn").onclick = openScan;
+    if ($("#scanCamera")) $("#scanCamera").onclick = startCamera;
+    if ($("#scanGo")) $("#scanGo").onclick = submitScan;
+    if ($("#scanUpc")) $("#scanUpc").addEventListener("keydown", (e) => { if (e.key === "Enter") submitScan(); });
     if ($("#publishBtn")) $("#publishBtn").onclick = () => doPublish();
+    if ($("#libraryBtn")) $("#libraryBtn").onclick = openLibrary;
+    if ($("#libraryOpen")) $("#libraryOpen").onclick = () => { const p = $("#libraryPath").value.trim(); if (p) switchLibrary(p, false); };
+    if ($("#libraryCreate")) $("#libraryCreate").onclick = () => { const p = $("#libraryPath").value.trim(); if (p) switchLibrary(p, true); };
     if ($("#uploadGo")) $("#uploadGo").onclick = doUpload;
     if ($("#uploadFiles")) $("#uploadFiles").addEventListener("change", (e) => addUploadFiles(e.target.files));
     const dz = $("#dropZone");
@@ -845,14 +1146,16 @@
       dz.addEventListener("drop", (e) => { if (e.dataTransfer && e.dataTransfer.files) addUploadFiles(e.dataTransfer.files); });
     }
     $("#exportSeen").onclick = exportSeen;
+    if ($("#backupBtn")) $("#backupBtn").onclick = doBackup;
+    if ($("#exportLetterboxd")) $("#exportLetterboxd").onclick = exportLetterboxd;
     $("#loginGo").onclick = tryLogin;
     $("#loginPw").addEventListener("keydown", (e) => { if (e.key === "Enter") tryLogin(); });
     $("#lbPrev").onclick = () => zoomStep(-1);
     $("#lbNext").onclick = () => zoomStep(1);
     // dialog + lightbox close
-    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; }));
+    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; }));
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeZoom(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; }
+      if (e.key === "Escape") { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; }
       if (zoomState && e.key === "ArrowLeft") zoomStep(-1);
       if (zoomState && e.key === "ArrowRight") zoomStep(1);
     });

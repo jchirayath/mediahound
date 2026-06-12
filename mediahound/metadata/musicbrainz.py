@@ -53,6 +53,22 @@ class MusicBrainzProvider:
             return MusicMeta(False)
         return self._parse(rid, d, year)
 
+    def lookup_by_barcode(self, upc: str, year: int | None = None) -> MusicMeta:
+        """Resolve a UPC/EAN barcode to the exact release (MusicBrainz supports barcode search)."""
+        upc = (upc or "").strip()
+        if not upc:
+            return MusicMeta(False)
+        try:
+            res = self._get(f"{_WS}/release", query=f"barcode:{upc}", limit=1)
+            releases = res.get("releases", [])
+            if not releases:
+                return MusicMeta(False)
+            rid = releases[0]["id"]
+            d = self._get(f"{_WS}/release/{rid}", inc="artist-credits+labels+recordings+genres")
+        except (requests.RequestException, ValueError):
+            return MusicMeta(False)
+        return self._parse(rid, d, year)
+
     def _parse(self, rid: str, d: dict, year_hint: int | None) -> MusicMeta:
         artist = "".join(
             (c.get("name") or "") + (c.get("joinphrase") or "")

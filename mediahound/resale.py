@@ -45,6 +45,27 @@ def estimate(title: str, year: int | None, fmt: str, rating: float | None,
     }
 
 
+def discogs_price(release_id: str, condition: str = "Very Good Plus (VG+)",
+                  token: str | None = None) -> dict | None:
+    """A condition-specific resale estimate for a music release from the Discogs marketplace.
+
+    Token-gated (Discogs only serves price suggestions to authenticated users). Returns a resale
+    dict shaped like `estimate()` (so callers can drop it in for music with a `discogs_release_id`)
+    or None if unavailable. eBay remains the fallback for movies and tokenless setups."""
+    from .metadata.discogs import DiscogsProvider
+    info = DiscogsProvider(token=token).price_suggestion(str(release_id), condition)
+    if not info or info.get("value") is None:
+        return None
+    val = round(float(info["value"]), 0)
+    cur = info.get("currency") or "USD"
+    return {
+        "currency": cur, "low": round(val * 0.7, 0), "mid": val, "high": round(val * 1.4, 0),
+        "display": f"~{int(val)} {cur} ({condition})",
+        "discogs_release_id": str(release_id),
+        "note": f"Discogs price suggestion ({condition})",
+    }
+
+
 def _ebay_sold_url(title: str, year: int | None, fmt: str, tld: str) -> str:
     terms = title or ""
     if fmt and fmt != "Unknown":

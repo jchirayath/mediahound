@@ -41,6 +41,25 @@ provider = "wikidata"
 language = "en-US"                    # set TMDB_API_KEY in env or .env
 
 # ----------------------------------------------------------------------------
+# MUSIC METADATA — cover + artist/label/catalog #/tracklist for CDs, vinyl, cassettes.
+#   provider = "musicbrainz" (default) Open data (CC0) + Cover Art Archive. NO key.
+#   provider = "discogs"     The records/CDs database + marketplace. A personal access
+#                            token (Discogs → Settings → Developers) raises the rate limit
+#                            and unlocks price suggestions. Set DISCOGS_TOKEN in env/.env or
+#                            via the admin Settings → API keys panel.
+# Import an existing Discogs collection any time:  mediahound import-discogs <username>
+# ----------------------------------------------------------------------------
+[music.metadata]
+provider = "musicbrainz"
+
+# ----------------------------------------------------------------------------
+# BARCODE — decode a UPC/EAN to identify the EXACT release (more accurate than OCR).
+# Decoding needs the optional extra:  pip install "mediahound[barcode]"
+# Lookups are online, so they only run with --online (music → MusicBrainz/Discogs,
+# movies → UPCItemDB product name → the normal identify-by-title path).
+# ----------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------
 # RESALE — estimated used value + a link to live sold listings.
 # ----------------------------------------------------------------------------
 [resale]
@@ -53,6 +72,14 @@ ebay_tld = "com"                     # com | co.uk | de | ca | com.au ...
 [streaming]
 enabled = true
 country = "US"                       # JustWatch region: US | GB | CA | AU | IN ...
+
+# ----------------------------------------------------------------------------
+# FEEDS — emit data/feed.json (JSON Feed) + data/feed.xml (RSS) of recently-added
+# items so anyone can subscribe once you publish. Set site_url for absolute links.
+# ----------------------------------------------------------------------------
+[feeds]
+enabled  = true
+site_url = ""                        # e.g. "https://mymedia.example.com" (used in feed item links)
 
 # ----------------------------------------------------------------------------
 # ADMIN — the read-only "default" view is public; the "Admin" view (read/write,

@@ -106,13 +106,72 @@ def cmd_import(args) -> int:
 
 
 def cmd_export(args) -> int:
-    from .csvio import export_csv
     from .store import Store
     cfg = _load_or_die(args.config)
     store = Store(cfg.data_dir)
+    fmt = args.format
+    default_out = {"csv": "catalog.csv", "letterboxd": "letterboxd.csv", "json": "catalog.json"}[fmt]
+    out = Path(args.output or default_out).resolve()
+    if fmt == "csv":
+        from .csvio import export_csv
+        n = export_csv(store, out)
+    elif fmt == "letterboxd":
+        from .exporters import export_letterboxd
+        n = export_letterboxd(store, out)
+    else:
+        from .exporters import export_json
+        n = export_json(store, out)
+    print(f"Exported {n} item(s) ({fmt}) → {out}")
+    return 0
+
+
+def cmd_import_discogs(args) -> int:
+    from . import pipeline
+    from .discogs_import import import_collection
+    from .store import Store
+    cfg = _load_or_die(args.config)
+    token = None
+    if args.token_from_keychain:
+        from . import keystore
+        token = keystore.get_key("DISCOGS_TOKEN")
+        if not token:
+            print("No DISCOGS_TOKEN in the keychain. Set one in the admin Settings → API keys, "
+                  "or pass --token.", file=sys.stderr)
+            return 2
+    token = args.token or token
+    store = Store(cfg.data_dir)
+    try:
+        added, enriched = import_collection(cfg, store, args.username, token=token,
+                                            online=not args.offline, log=print)
+    except (RuntimeError, OSError) as exc:
+        print(f"Discogs import failed: {exc}", file=sys.stderr)
+        return 1
+    store.save()
+    pipeline._write_site(cfg, store)
+    print(f"Done. {added} added, {enriched} enriched → {cfg.data_dir}")
+    return 0
+
+
+def cmd_backup(args) -> int:
+    from .backup import make_backup
+    cfg = _load_or_die(args.config)
     out = Path(args.output).resolve()
-    n = export_csv(store, out)
-    print(f"Exported {n} item(s) → {out}")
+    n = make_backup(cfg, out, no_photos=args.no_photos)
+    kind = "data-only" if args.no_photos else "full"
+    print(f"Backed up {n} file(s) ({kind}) → {out}")
+    return 0
+
+
+def cmd_restore(args) -> int:
+    from .backup import restore_backup
+    zip_path = Path(args.archive).resolve()
+    if not zip_path.is_file():
+        print(f"Backup not found: {zip_path}", file=sys.stderr)
+        return 2
+    dest = Path(args.directory).resolve()
+    n = restore_backup(zip_path, dest)
+    print(f"Restored {n} file(s) → {dest}")
+    print(f"Next: mediahound build --config {dest / 'config.toml'}")
     return 0
 
 
@@ -177,10 +236,35 @@ def main(argv=None) -> int:
                     help="enrich each row (cover art + missing fields) via the metadata providers")
     pm.set_defaults(func=cmd_import)
 
-    pe = sub.add_parser("export", help="write the whole catalog to a CSV (backup/migration).")
+    pe = sub.add_parser("export", help="write the catalog to CSV / Letterboxd CSV / JSON.")
     pe.add_argument("--config", default="config.toml", help="path to config.toml")
-    pe.add_argument("-o", "--output", default="catalog.csv", help="output CSV path")
+    pe.add_argument("--format", choices=("csv", "letterboxd", "json"), default="csv",
+                    help="csv (full catalog), letterboxd (movies → Letterboxd import CSV), or json")
+    pe.add_argument("-o", "--output", default=None,
+                    help="output path (default depends on --format)")
     pe.set_defaults(func=cmd_export)
+
+    pbk = sub.add_parser("backup", help="zip up your library (RawImages + data + config) for safekeeping.")
+    pbk.add_argument("--config", default="config.toml", help="path to config.toml")
+    pbk.add_argument("-o", "--output", default="mediahound-library.zip", help="output zip path")
+    pbk.add_argument("--no-photos", action="store_true",
+                     help="back up only the curation (data + config), not the RawImages photos — small & fast")
+    pbk.set_defaults(func=cmd_backup)
+
+    prs = sub.add_parser("restore", help="re-create a library from a backup zip.")
+    prs.add_argument("archive", help="path to a backup .zip made by `mediahound backup`")
+    prs.add_argument("directory", help="destination folder for the restored library")
+    prs.set_defaults(func=cmd_restore)
+
+    pd = sub.add_parser("import-discogs", help="import a Discogs user's collection into the catalog.")
+    pd.add_argument("username", help="the Discogs username whose collection to import")
+    pd.add_argument("--config", default="config.toml", help="path to config.toml")
+    pd.add_argument("--token", help="Discogs personal access token (raises the rate limit)")
+    pd.add_argument("--token-from-keychain", action="store_true",
+                    help="use the DISCOGS_TOKEN stored in the OS keychain")
+    pd.add_argument("--offline", action="store_true",
+                    help="skip per-release enrichment (no tracklist/barcode lookups) — faster")
+    pd.set_defaults(func=cmd_import_discogs)
 
     ps = sub.add_parser("serve", help="preview the site locally; --admin saves edits straight to data/.")
     ps.add_argument("--config", default="config.toml", help="path to config.toml")

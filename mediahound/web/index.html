@@ -6,8 +6,11 @@
   <title>Movie Collection</title>
   <meta name="description" content="A searchable catalog of a DVD & VHS collection." />
   <link rel="icon" href="favicon.ico" sizes="any" />
-  <link rel="icon" type="image/svg+xml" href="assets/img/mediahound-icon.svg" />
+  <link rel="icon" type="image/png" href="assets/img/mediahound-icon.png" />
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" />
   <link rel="stylesheet" href="assets/css/styles.css" />
 </head>
 <body>
@@ -24,6 +27,7 @@
       <div class="header-right">
         <span id="adminBadge" class="admin-badge" hidden>● ADMIN MODE</span>
         <div class="header-stats" id="headerStats"></div>
+        <button id="helpBtn" class="btn-ghost" type="button" title="How to use MediaHound">❓ Help</button>
         <button id="settingsBtn" class="btn-ghost admin-only" type="button" hidden>⚙ Settings</button>
         <button id="adminBtn" class="btn-ghost" type="button">🔒 Admin</button>
       </div>
@@ -45,7 +49,9 @@
         <option value="added">Recently added</option>
         <option value="value-desc">Est. value (high)</option>
         <option value="rating-desc">Rating (high)</option>
+        <option value="myrating-desc">My rating (high)</option>
       </select>
+      <button id="surpriseBtn" class="btn-ghost" type="button" title="Pick something to watch/listen to tonight">🎲 Surprise me</button>
     </div>
     <div class="filter-row" id="filters">
       <select id="filterFormat"><option value="">All formats</option></select>
@@ -58,6 +64,12 @@
         <option value="">Seen &amp; unseen</option>
         <option value="seen">Seen</option>
         <option value="unseen">Unseen</option>
+      </select>
+      <select id="filterTag" class="admin-only" title="Filter by your shelf / tag" hidden><option value="">All shelves</option></select>
+      <select id="filterLoan" class="admin-only" title="Lending status" hidden>
+        <option value="">On loan &amp; available</option>
+        <option value="out">📤 On loan</option>
+        <option value="available">Available</option>
       </select>
       <button id="clearFilters" class="btn-ghost" type="button">Clear</button>
     </div>
@@ -73,9 +85,14 @@
         <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
         <span id="saveState" class="save-state" hidden></span>
         <button id="addPhotosBtn" class="btn-ghost admin-only" type="button" hidden title="Add cover photos to your catalog">➕ Add photos</button>
+        <button id="scanBtn" class="btn-ghost admin-only" type="button" hidden title="Scan or type a barcode to identify the exact release">📷 Scan barcode</button>
         <button id="importBtn" class="btn-ghost admin-only" type="button" hidden title="Bulk-add titles from a CSV list">⬆ Import list</button>
+        <button id="discogsBtn" class="btn-ghost admin-only" type="button" hidden title="Import a Discogs user's record/CD collection">💿 Discogs</button>
         <button id="rebuildBtn" class="btn-ghost admin-only" type="button" hidden title="Re-bake the catalog from your saved edits and reload">↻ Rebuild</button>
+        <button id="libraryBtn" class="btn-ghost admin-only" type="button" hidden title="Open or switch to another library">📚 Library</button>
         <button id="publishBtn" class="btn-ghost admin-only" type="button" hidden title="Publish your catalog to the web (Netlify)">🌐 Publish</button>
+        <button id="backupBtn" class="btn-ghost admin-only" type="button" hidden title="Download a zip backup of your whole library">⬇ Backup</button>
+        <button id="exportLetterboxd" class="btn-ghost admin-only" type="button" hidden title="Export your movies as a Letterboxd import CSV">🎬 Letterboxd</button>
         <button id="exportChanges" class="btn-ghost admin-only" type="button" hidden>Export changes</button>
         <button id="exportSeen" class="btn-ghost admin-only" type="button" hidden>Export seen</button>
         <button id="exitAdmin" class="btn-ghost admin-only" type="button" hidden>Exit admin</button>
@@ -128,6 +145,7 @@
       <h2>Library &amp; default-view settings</h2>
       <p class="dialog-sub">Edit the library name, description and logo, choose which fields everyone sees, and the default movies-per-row.</p>
 
+      <div class="dialog-scroll">
       <div class="settings-block">
         <div class="settings-row">
           <label>Library name<input type="text" id="setTitle" placeholder="My Movie Collection" /></label>
@@ -168,18 +186,113 @@
           <label>Anthropic <span class="key-state" id="keyState_ANTHROPIC_API_KEY"></span>
             <input type="password" id="key_ANTHROPIC_API_KEY" autocomplete="off" placeholder="paste key…" />
           </label>
+          <label>Discogs <span class="key-state" id="keyState_DISCOGS_TOKEN"></span>
+            <input type="password" id="key_DISCOGS_TOKEN" autocomplete="off" placeholder="paste token…" />
+          </label>
         </div>
         <div class="dialog-actions">
           <button class="btn btn-primary" id="keysSave" type="button">Save API keys</button>
           <span class="dialog-sub" id="keysNote" hidden></span>
         </div>
       </div>
+      </div><!-- /.dialog-scroll -->
       <div class="dialog-actions">
         <button class="btn btn-primary" id="settingsSave">Apply</button>
         <button class="btn btn-gold" id="settingsExport">Export view-config.json</button>
         <button class="btn" data-close>Close</button>
       </div>
       <p class="dialog-sub" id="settingsPwNote" hidden></p>
+    </div>
+  </div>
+
+  <!-- How to use (inline help) -->
+  <div class="dialog" id="helpDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card dialog-wide">
+      <h2>How to use MediaHound</h2>
+      <p class="dialog-sub" id="helpModeNote">A quick tour of what you can do here. Unlock <b>🔒 Admin</b> to edit your catalog and see the editing tools.</p>
+      <div class="help-toolbar">
+        <input type="search" id="helpSearch" placeholder="Search help…" autocomplete="off" />
+        <button class="btn-mini" id="helpExpand" type="button">Expand all</button>
+        <button class="btn-mini" id="helpCollapse" type="button">Collapse all</button>
+      </div>
+      <div class="help-body">
+
+        <details class="help-sec" open>
+          <summary>🔎 Browsing &amp; finding things</summary>
+          <ul>
+            <li><b>Search</b> matches title, artist, genre, cast, studio/label, even track names.</li>
+            <li><b>Sort</b> by title, year, recently-added, estimated value, rating — or <b>My rating</b> in admin.</li>
+            <li><b>Filters</b>: format, genre, studio/label, streaming service, language, category, seen/unseen. <b>Clear</b> resets them.</li>
+            <li><b>🎬 Movies / 🎵 Music</b> tabs appear when your catalog has both; they narrow the filters to that type.</li>
+            <li><b>🎲 Surprise me</b> picks something to watch/listen to from whatever's currently filtered (preferring unseen).</li>
+            <li><b>Per row</b> (− / +) changes how many cards show per row; it's remembered on this device.</li>
+          </ul>
+        </details>
+
+        <details class="help-sec">
+          <summary>🖼️ On each card</summary>
+          <ul>
+            <li>Click the cover to <b>zoom</b>; use ‹ › to flip through multiple photos of a title.</li>
+            <li><b>▶ / ♫ pills</b> link to where to watch or listen; the <b>resale</b> figure links to live eBay sold listings.</li>
+            <li>Click a <b>genre, person, or studio</b> to filter the grid to it.</li>
+          </ul>
+        </details>
+
+        <div class="help-admin">
+          <p class="help-admin-note">🔓 <b>Admin tools</b> (you're signed in) — every edit saves to <code>data/</code> and survives the next rebuild.</p>
+
+          <details class="help-sec">
+            <summary>✎ Editing your catalog</summary>
+            <ul>
+              <li>Click a title (or <b>✎ Edit</b>) to fix name, year, format, studio/artist, or <b>move a title between 🎬 Movies and 🎵 Music</b>. Tick <i>re-query</i> to re-fetch metadata online on the next rebuild.</li>
+              <li><b>Mark as seen</b>, <b>⟳ Rotate</b>, set a photo as the default (★), delete a photo (🗑), or delete the title.</li>
+              <li><b>↻ Rebuild</b> re-bakes the catalog from your edits and reloads.</li>
+            </ul>
+          </details>
+
+          <details class="help-sec">
+            <summary>➕ Adding things</summary>
+            <ul>
+              <li><b>➕ Add photos</b> — drag in cover photos (or choose files); they're catalogued automatically.</li>
+              <li><b>📷 Scan barcode</b> — point your camera at a barcode (or type the UPC/EAN) to identify the <i>exact</i> release — no photo needed.</li>
+              <li><b>⬆ Import list</b> — paste or upload a CSV of titles (optionally enrich online for art + details).</li>
+              <li><b>💿 Discogs</b> — import an entire Discogs collection by username.</li>
+            </ul>
+          </details>
+
+          <details class="help-sec">
+            <summary>⭐ Your personal catalog <span class="help-tag">private</span></summary>
+            <ul>
+              <li>Give any item a <b>★ rating</b> (1–10), a <b>note</b>, and <b>shelves/tags</b>; filter by shelf.</li>
+              <li><b>📤 Loan out</b> tracks who has what — a badge shows on-loan items, with an <i>On loan / Available</i> filter.</li>
+              <li>All of this is <b>admin-only and never published</b> — it's stripped from any public site you publish.</li>
+            </ul>
+          </details>
+
+          <details class="help-sec">
+            <summary>💾 Backup, share &amp; libraries</summary>
+            <ul>
+              <li><b>⬇ Backup</b> downloads a zip of your whole library; <b>🎬 Letterboxd</b> exports your movies as an import CSV.</li>
+              <li><b>🌐 Publish</b> deploys a public, read-only copy of your catalog to the web (Netlify).</li>
+              <li><b>📚 Library</b> opens, creates, or switches between catalogs (e.g. movies vs. music) without restarting.</li>
+              <li><b>⚙ Settings</b> sets the library name, logo, which fields show, columns, the admin password, and provider API keys.</li>
+            </ul>
+          </details>
+        </div>
+
+        <details class="help-sec">
+          <summary>ℹ️ Good to know</summary>
+          <ul>
+            <li>The default view is <b>public &amp; read-only</b>; editing needs the <b>🔒 Admin</b> password.</li>
+            <li>Online lookups (cover art, where-to-watch, barcodes) only happen when you ask — a plain rebuild is offline.</li>
+            <li>More: <a href="https://github.com/jchirayath/mediahound" target="_blank" rel="noopener">github.com/jchirayath/mediahound</a></li>
+          </ul>
+        </details>
+
+        <p class="help-empty" id="helpEmpty" hidden>No help topics match your search.</p>
+      </div>
+      <div class="dialog-actions"><button class="btn btn-primary" data-close>Got it</button></div>
     </div>
   </div>
 
@@ -225,6 +338,50 @@
       <p class="dialog-sub" id="uploadNote" hidden></p>
       <div class="dialog-actions">
         <button class="btn btn-primary" id="uploadGo" disabled>Add to catalog</button>
+        <button class="btn" data-close>Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Library switcher: open / create / switch the served library (needs the local admin server) -->
+  <div class="dialog" id="libraryDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card">
+      <h2>Libraries</h2>
+      <p class="dialog-sub">Switch the app to a different catalog, or create a new one. A library is
+        just a folder with a <code>config.toml</code>. The data directory is set per-library here.</p>
+      <p class="dialog-sub" id="libraryCurrent"></p>
+      <div id="libraryList" class="library-list"></div>
+      <div class="settings-row" style="align-items:center">
+        <input type="text" id="libraryPath" autocomplete="off" placeholder="/path/to/a/library/folder" />
+        <button class="btn-mini" id="libraryOpen" type="button">Open</button>
+        <button class="btn-mini" id="libraryCreate" type="button">Create new</button>
+      </div>
+      <p class="dialog-sub" id="libraryNote" hidden></p>
+      <div class="dialog-actions"><button class="btn" data-close>Close</button></div>
+    </div>
+  </div>
+
+  <!-- Scan / type a barcode (needs `mediahound serve --admin`) -->
+  <div class="dialog" id="scanDialog" hidden>
+    <div class="dialog-backdrop" data-close></div>
+    <div class="dialog-card">
+      <h2>Scan a barcode</h2>
+      <p class="dialog-sub">Point your camera at the barcode on the back of a case, or type the
+        UPC/EAN digits. The exact release is identified and added — no cover photo needed.</p>
+      <div class="settings-row" style="align-items:center;gap:18px">
+        <span>This is:</span>
+        <label class="ie-check"><input type="radio" name="scanType" value="music" checked /> 🎵 Music (CD/vinyl)</label>
+        <label class="ie-check"><input type="radio" name="scanType" value="movie" /> 🎬 Movie (DVD/Blu-ray)</label>
+      </div>
+      <video id="scanVideo" class="scan-video" playsinline muted hidden></video>
+      <div class="settings-row" style="align-items:center">
+        <input type="text" id="scanUpc" inputmode="numeric" autocomplete="off" placeholder="UPC / EAN digits" />
+        <button class="btn-mini" id="scanCamera" type="button">📷 Use camera</button>
+      </div>
+      <p class="dialog-sub" id="scanNote" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" id="scanGo">Identify &amp; add</button>
         <button class="btn" data-close>Cancel</button>
       </div>
     </div>

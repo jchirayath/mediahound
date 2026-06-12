@@ -11,6 +11,9 @@ def get_metadata_provider(cfg, media_type: str = "movie"):
         if name == "musicbrainz":
             from .musicbrainz import MusicBrainzProvider
             return MusicBrainzProvider(mcfg)
+        if name == "discogs":
+            from .discogs import DiscogsProvider
+            return DiscogsProvider(mcfg)
         raise ValueError(f"Unknown music metadata provider: {name!r}")
 
     name = cfg.metadata.get("provider", "wikidata").lower()

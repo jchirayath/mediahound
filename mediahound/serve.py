@@ -18,7 +18,6 @@ import hmac
 import json
 import threading
 import webbrowser
-from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -74,7 +73,14 @@ class _Handler(SimpleHTTPRequestHandler):
     cfg: Config = None
     allowed_origins: set = frozenset()
     token: str | None = None          # phone mode: a shared secret required on every write
+    site_dir: str = "."               # served document root (switchable at runtime via the library switcher)
     log_fn = staticmethod(lambda *_: None)
+
+    # Serve static files from the (mutable) class `site_dir`, so the library switcher can
+    # re-point a running server at a different library without restarting it.
+    def translate_path(self, path):
+        self.directory = type(self).site_dir
+        return super().translate_path(path)
 
     # -- helpers ----------------------------------------------------------
     def _send_json(self, obj, status=200):
@@ -142,6 +148,25 @@ class _Handler(SimpleHTTPRequestHandler):
                 return self._send_json({"ok": False, "error": "not found"}, 404)
             from . import keystore
             return self._send_json({"ok": True, "keys": keystore.status()})  # booleans only
+        if route == "/api/libraries":
+            if not self.admin:
+                return self._send_json({"ok": False, "error": "not found"}, 404)
+            if self.token:                     # switching libraries is a local-only operation
+                return self._send_json({"ok": True, "switchable": False, "recent": [],
+                                        "current": {"path": str(self.cfg.base_dir),
+                                                    "title": self.cfg.site.get("title")}})
+            from . import libraries
+            return self._send_json({"ok": True, "switchable": True,
+                                    "current": {"path": str(self.cfg.base_dir),
+                                                "title": self.cfg.site.get("title")},
+                                    "recent": libraries.list_recent()})
+        if route == "/api/backup":
+            if not self.admin:
+                return self._send_json({"ok": False, "error": "not found"}, 404)
+            if self.token:                     # a full-library download is localhost-only, never over the LAN
+                return self._send_json({"ok": False, "error": "Back up from the computer running MediaHound"}, 403)
+            query = self.path.split("?", 1)[1] if "?" in self.path else ""
+            return self._backup(no_photos="no_photos" in query)
         return super().do_GET()
 
     def do_POST(self):
@@ -155,6 +180,8 @@ class _Handler(SimpleHTTPRequestHandler):
 
         if route == "/api/corrections":
             return self._merge_file("corrections.json", "corrections")
+        if route == "/api/loans":
+            return self._replace_file("loans.json", "loans")
         if route == "/api/seen":
             return self._replace_file("seen-overrides.json", "seen overrides")
         if route == "/api/identify":
@@ -163,8 +190,20 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._rebuild()
         if route == "/api/import":
             return self._import()
+        if route == "/api/import-discogs":
+            if self.token:                     # uses your Discogs token / collection — localhost only
+                return self._send_json(
+                    {"ok": False, "error": "Import Discogs from the computer running MediaHound"}, 403)
+            return self._import_discogs()
         if route == "/api/upload":
             return self._upload()
+        if route == "/api/identify-barcode":
+            return self._identify_barcode()
+        if route in ("/api/switch-library", "/api/create-library"):
+            if self.token:                     # local-only: never switch the served library over the LAN
+                return self._send_json(
+                    {"ok": False, "error": "Switch libraries from the computer running MediaHound"}, 403)
+            return self._switch_library(create=route.endswith("create-library"))
         if route == "/api/keys":
             # API keys are set from THIS computer only — never accept them over the LAN.
             if self.token:
@@ -277,6 +316,141 @@ class _Handler(SimpleHTTPRequestHandler):
         self.log_fn(f"  uploaded {target.name} → RawImages/{sub}/")
         return self._send_json({"ok": True, "saved": target.name, "media_type": media_type})
 
+    def _switch_library(self, create: bool = False):
+        """Re-point the running admin server at a different library (or create one), so the user
+        can switch catalogs from the UI without restarting. Localhost-only; updates the recents."""
+        import argparse
+        body = self._read_json_body()
+        raw = (isinstance(body, dict) and str(body.get("path") or "").strip()) or ""
+        if not raw:
+            return self._send_json({"ok": False, "error": "expected {path: <library folder>}"}, 400)
+        target = Path(raw).expanduser()
+        try:
+            from . import libraries, pipeline
+            from .cli import cmd_init
+            from .config import load_config
+            if create:
+                if libraries.is_library(target):
+                    return self._send_json({"ok": False, "error": "a library already exists there"}, 400)
+                cmd_init(argparse.Namespace(directory=str(target), force=False))
+            config_path = target / "config.toml"
+            if not config_path.is_file():
+                return self._send_json(
+                    {"ok": False, "error": f"no config.toml in {target} — not a MediaHound library"}, 400)
+            new_cfg = load_config(config_path)
+            if not (new_cfg.data_dir / "collection.json").is_file():
+                pipeline.build(new_cfg, online=False, log=self.log_fn)   # ensure there's a site to serve
+            # swap the served library for every subsequent request (shared class attributes)
+            cls = type(self)
+            cls.cfg = new_cfg
+            cls.site_dir = str(new_cfg.output_dir.resolve())
+            libraries.add_recent(new_cfg.base_dir, new_cfg.site.get("title"))
+            self.log_fn(f"  switched library → {new_cfg.base_dir}")
+            return self._send_json({"ok": True, "title": new_cfg.site.get("title"),
+                                    "path": str(new_cfg.base_dir)})
+        except Exception as exc:                       # noqa: BLE001 - report to client
+            self.log_fn(f"  switch library failed: {exc}")
+            return self._send_json({"ok": False, "error": str(exc)}, 500)
+
+    def _identify_barcode(self):
+        """Resolve a scanned UPC/EAN to a release/title and add it to the catalog (one-tap add)."""
+        import os
+        import tempfile
+        body = self._read_json_body()
+        upc = (isinstance(body, dict) and str(body.get("upc") or "").strip()) or ""
+        if not upc.isdigit():
+            return self._send_json({"ok": False, "error": "expected {upc: <digits>, media_type}"}, 400)
+        media_type = "music" if (isinstance(body, dict) and body.get("media_type") == "music") else "movie"
+        tmp = None
+        try:
+            from . import barcode, pipeline
+            from .store import Store
+            match = barcode.lookup(self.cfg, upc, media_type)
+            if not match:
+                return self._send_json({"ok": True, "matched": False, "upc": upc})
+            store = Store(self.cfg.data_dir)
+            if media_type == "music":
+                item = barcode.music_item_from_meta(self.cfg, match["meta"], upc)
+                store.upsert_movie(item)
+                store.record(f"barcode-{upc}", item["source_image"], "identified",
+                             item["id"], pipeline._now())
+                store.save()
+                pipeline._write_site(self.cfg, store)
+                return self._send_json({"ok": True, "matched": True, "media_type": "music",
+                                        "title": item["title"], "artist": item.get("artist"),
+                                        "year": item.get("year")})
+            # movie: resolve UPC → product title, then enrich via the normal title path
+            from .csvio import import_csv
+            fd, tmp = tempfile.mkstemp(suffix=".csv")
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write("media_type,title\nmovie," + match["title"].replace(",", " ") + "\n")
+            import_csv(self.cfg, store, Path(tmp), online=True, log=self.log_fn)
+            store.save()
+            pipeline._write_site(self.cfg, store)
+            return self._send_json({"ok": True, "matched": True, "media_type": "movie",
+                                    "title": match["title"]})
+        except Exception as exc:                       # noqa: BLE001 - report to client
+            self.log_fn(f"  barcode identify failed: {exc}")
+            return self._send_json({"ok": False, "error": str(exc)}, 500)
+        finally:
+            if tmp:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+
+    def _import_discogs(self):
+        """Import a Discogs user's collection, then regenerate the site."""
+        body = self._read_json_body()
+        username = (isinstance(body, dict) and str(body.get("username") or "").strip()) or ""
+        if not username:
+            return self._send_json({"ok": False, "error": "expected {username: <discogs user>}"}, 400)
+        online = bool(body.get("online", True))
+        try:
+            from . import keystore, pipeline
+            from .discogs_import import import_collection
+            from .store import Store
+            token = keystore.get_key("DISCOGS_TOKEN")
+            store = Store(self.cfg.data_dir)
+            added, enriched = import_collection(self.cfg, store, username, token=token,
+                                                online=online, log=self.log_fn)
+            store.save()
+            pipeline._write_site(self.cfg, store)
+            return self._send_json({"ok": True, "added": added, "enriched": enriched})
+        except Exception as exc:                       # noqa: BLE001 - report to client
+            self.log_fn(f"  discogs import failed: {exc}")
+            return self._send_json({"ok": False, "error": str(exc)}, 500)
+
+    def _backup(self, no_photos: bool = False):
+        """Stream a zip backup of the whole library as a download."""
+        import os
+        import tempfile
+        tmp = None
+        try:
+            from . import backup
+            fd, tmp = tempfile.mkstemp(suffix=".zip")
+            os.close(fd)
+            n = backup.make_backup(self.cfg, Path(tmp), no_photos=no_photos)
+            blob = Path(tmp).read_bytes()
+            label = "library" + ("-data" if no_photos else "")
+            self.send_response(200)
+            self.send_header("Content-Type", "application/zip")
+            self.send_header("Content-Length", str(len(blob)))
+            self.send_header("Content-Disposition", f'attachment; filename="mediahound-{label}.zip"')
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(blob)
+            self.log_fn(f"  backup: {n} file(s){' (data-only)' if no_photos else ''} downloaded")
+        except Exception as exc:                       # noqa: BLE001 - report to client
+            self.log_fn(f"  backup failed: {exc}")
+            self._send_json({"ok": False, "error": str(exc)}, 500)
+        finally:
+            if tmp:
+                try:
+                    os.remove(tmp)
+                except OSError:
+                    pass
+
     def _set_keys(self):
         """Store provider API keys in the OS keychain. Values are write-only (never read back)."""
         from . import keystore
@@ -315,10 +489,12 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._send_json({"ok": False, "error": str(exc)}, 502)
 
 
-def make_handler(cfg: Config, admin: bool, origins: set, log_fn, token: str | None = None):
+def make_handler(cfg: Config, admin: bool, origins: set, log_fn, token: str | None = None,
+                 site_dir: str | None = None):
     return type("MediaHoundHandler", (_Handler,), {
         "admin": admin, "cfg": cfg, "allowed_origins": frozenset(origins),
-        "token": token, "log_fn": staticmethod(log_fn),
+        "token": token, "site_dir": site_dir or str(cfg.output_dir.resolve()),
+        "log_fn": staticmethod(log_fn),
     })
 
 
@@ -341,8 +517,15 @@ def serve(cfg: Config, host: str = "127.0.0.1", port: int = 8765, admin: bool = 
 
     origins = {f"http://{host}:{port}", f"http://localhost:{port}", f"http://127.0.0.1:{port}",
                f"http://{lan}:{port}"}
-    handler = partial(make_handler(cfg, admin, origins, log, token), directory=str(site))
+    handler = make_handler(cfg, admin, origins, log, token, site_dir=str(site))
     httpd = ThreadingHTTPServer((host, port), handler)
+    # Remember this library so the switcher can offer it again (admin, non-phone sessions only).
+    if admin and not token:
+        try:
+            from . import libraries
+            libraries.add_recent(cfg.base_dir, cfg.site.get("title"))
+        except Exception:                          # noqa: BLE001 - recents are best-effort
+            pass
 
     local_url = f"http://127.0.0.1:{port}/" + (f"?t={token}" if token else "")
     mode = "ADMIN (edits save straight to data/)" if admin else "read-only preview"

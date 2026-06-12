@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/mediahound-logo-dark.svg">
-    <img alt="MediaHound" src="docs/brand/mediahound-logo.svg" height="92">
-  </picture>
+  <img alt="MediaHound" src="docs/brand/mediahound-logo.png" height="150">
 </p>
 
 # 🎬🎵 MediaHound
@@ -12,7 +9,7 @@
 [![PyPI](https://img.shields.io/pypi/v/mediahound.svg)](https://pypi.org/project/mediahound/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/)
-[![Live demo](https://img.shields.io/badge/live-demo-ff5252.svg)](https://jchirayath.github.io/mediahound/)
+[![Live demo](https://img.shields.io/badge/live-demo-e97b0c.svg)](https://jchirayath.github.io/mediahound/)
 
 **Turn photos of your movie *and* music collection into a sleek, searchable web catalog.**
 
@@ -181,7 +178,34 @@ rebuilt in place.
 ### Where to watch & resale
 - **Where to watch** — is it on Netflix / Amazon Prime / Hulu? A clickable ▶ badge + pills link
   straight to the title (via JustWatch, no key). A filter narrows to a specific service.
-- **Resale value** — a heuristic estimate plus a live link to eBay sold/completed listings.
+- **Resale value** — a heuristic estimate plus a live link to eBay sold/completed listings. For music
+  with a Discogs release id, a condition-based **Discogs price suggestion** (token-gated).
+
+### 📷 Barcode scanning (exact, not fuzzy)
+- Identify the **exact release** from the UPC/EAN barcode instead of fuzzy OCR. In the admin view,
+  **📷 Scan barcode** opens your camera (or type the digits); on `mediahound build --online` a barcode
+  found in a cover photo is preferred over OCR. Music → MusicBrainz/Discogs; movies → UPCItemDB →
+  the normal identify-by-title path. Local decode needs the optional extra: `pip install "mediahound[barcode]"`.
+
+### 💿 Discogs (records & CDs)
+- **Import an existing Discogs collection** in one step: `mediahound import-discogs <username>` (or the
+  **💿 Discogs** admin button). Selectable as a music metadata provider (`[music.metadata] provider = "discogs"`).
+  Token stored in your keychain via **Settings → API keys**.
+
+### ⭐ Your personal catalog (admin-only, never published)
+- **Rate** (★1–10), **note**, and **tag/shelve** any item; track **lending** (loan out → badge →
+  returned), filter **On loan / Available**, and hit **🎲 Surprise me** to pick something for tonight.
+  All of this is **stripped from the published site** — it shows only in your local admin view.
+
+### 🛟 Backup, export & feeds
+- **`mediahound backup` / `restore`** zip up (and re-create) your whole library — `--no-photos` for a
+  quick curation-only backup; secrets are never included. A **⬇ Backup** button does the same from the app.
+- **Export** to **Letterboxd** (movies) or **JSON**: `mediahound export --format letterboxd|json`
+  (or the **🎬 Letterboxd** button). The published site also emits **`feed.json` + `feed.xml`** of
+  recently-added items so anyone can subscribe.
+- **📚 Library switcher** — keep separate catalogs (e.g. movies vs. music, or per-family-member) and
+  **open / create / switch between them from the admin UI** with no restart (a recents list lives in
+  `~/.config/mediahound/`). Each library's **data directory** is set by its own `config.toml` `[paths]`.
 
 ### Two views
 - **Default view** — public, read-only.

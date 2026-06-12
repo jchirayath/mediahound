@@ -148,7 +148,8 @@ def test_upload_cross_origin_refused(served_site):
 def test_api_keys_status_and_set(served_site, mem_keyring):
     base, cfg = served_site
     body = json.loads(urllib.request.urlopen(base + "/api/keys", timeout=2).read())
-    assert body["keys"] == {"TMDB_API_KEY": False, "OMDB_API_KEY": False, "ANTHROPIC_API_KEY": False}
+    assert body["keys"] == {"TMDB_API_KEY": False, "OMDB_API_KEY": False,
+                            "ANTHROPIC_API_KEY": False, "DISCOGS_TOKEN": False}
     status, body = _post(base + "/api/keys", {"TMDB_API_KEY": "secret-123"}, origin=base)
     assert status == 200 and body["ok"] is True and body["changed"] == ["TMDB_API_KEY"]
     assert body["keys"]["TMDB_API_KEY"] is True
