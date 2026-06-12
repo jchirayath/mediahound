@@ -32,6 +32,7 @@
   const isMusic = (m) => mtype(m) === "music";
   const isBook = (m) => mtype(m) === "book";
   const isGame = (m) => mtype(m) === "game";
+  const isAudiobook = (m) => mtype(m) === "audiobook";
 
   // Shared per-media-type view registry (card widgets + labels). Adding a new media type is
   // mostly a matter of adding one entry here instead of threading a branch through every
@@ -72,6 +73,16 @@
       org: (m) => (m.publisher ? { icon: "🏢", value: m.publisher } : null),
       tooltip: (m) => ((m.platforms || []).length ? "Platforms: " + m.platforms.join(", ") : ""),
       pills: (m) => playPills(m),
+    },
+    audiobook: {
+      emoji: "🎧", label: "Audiobooks",
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, fmtDuration(m.duration)],
+      creator: (m) => (m.author ? { icon: "🖊", name: m.author } : null),
+      // narrator → a clickable chip (like a movie's cast), so it filters to their other readings
+      cast: (m) => (m.narrator ? [m.narrator] : []),
+      org: (m) => (m.publisher ? { icon: "🎧", value: m.publisher } : null),
+      tooltip: (m) => (m.narrator ? "Narrated by " + m.narrator : ""),
+      pills: (m) => hearPills(m),
     },
   };
   const typeOf = (m) => TYPES[mtype(m)] || TYPES.movie;
@@ -147,6 +158,7 @@
              if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
              if ("author" in c) m.author = c.author || null; if ("publisher" in c) m.publisher = c.publisher || null;
              if ("developer" in c) m.developer = c.developer || null;
+             if ("narrator" in c) m.narrator = c.narrator || null;
              if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery;
              // personal catalog (admin-only; stripped from the published site)
              m.my_rating = "my_rating" in c ? c.my_rating : null;
@@ -508,7 +520,7 @@
         String(m.year), m.director, (m.actors || []).join(" "), m.studio, m.distributor,
         m.artist, m.label, (m.tracklist || []).join(" "),
         m.author, m.publisher, m.isbn, m.series,
-        m.developer, (m.platforms || []).join(" ")].join(" ").toLowerCase();
+        m.developer, (m.platforms || []).join(" "), m.narrator].join(" ").toLowerCase();
         if (!hay.includes(q)) return false; }
       return true;
     });
@@ -716,6 +728,13 @@
     const short = { "PS Store": "PSN", "MobyGames": "Moby" };
     return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Get on ${esc(x.name)}">🎮 ${esc(short[x.name] || x.name)}</a>`).join("");
   }
+  function hearPills(m) {                       // audiobooks reuse the `listen` field
+    const p = (m.listen && m.listen.providers) || [];
+    if (!p.length) return "";
+    const short = { "Open Library": "OpenLib", "Libro.fm": "Libro" };
+    return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Listen on ${esc(x.name)}">🎧 ${esc(short[x.name] || x.name)}</a>`).join("");
+  }
+  const fmtDuration = (min) => (min ? (min >= 60 ? `${Math.floor(min / 60)}h ${min % 60}m` : `${min}m`) : null);
   function seenToggle(m) {
     const d = lineEl("seentoggle");
     const btn = document.createElement("button");
@@ -834,6 +853,7 @@
     music: ["CD", "Vinyl", "Cassette", "Unknown"],
     book: ["Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown"],
     game: ["Switch", "PS5", "PS4", "Xbox", "PC", "Retro", "Unknown"],
+    audiobook: ["Audible", "CD", "MP3-CD", "Cassette", "Digital", "Unknown"],
   };
   function fmtOptions(type, current) {
     return (FORMATS_BY_TYPE[type] || FORMATS_BY_TYPE.movie)
@@ -852,14 +872,16 @@
           `<option value="music" ${startType === "music" ? "selected" : ""}>🎵 Music</option>` +
           `<option value="book" ${startType === "book" ? "selected" : ""}>📚 Book</option>` +
           `<option value="game" ${startType === "game" ? "selected" : ""}>🎮 Game</option>` +
+          `<option value="audiobook" ${startType === "audiobook" ? "selected" : ""}>🎧 Audiobook</option>` +
         `</select>` +
         `<input id="e_y" type="number" value="${esc(m.year || "")}" placeholder="Year">` +
         `<select id="e_f">${fmtOptions(startType, m.format)}</select>` +
       `</div>` +
       `<input id="e_artist" type="text" value="${esc(m.artist || "")}" placeholder="Artist (for music)" ${startType === "music" ? "" : "hidden"}>` +
-      `<input id="e_author" type="text" value="${esc(m.author || "")}" placeholder="Author (for books)" ${startType === "book" ? "" : "hidden"}>` +
+      `<input id="e_author" type="text" value="${esc(m.author || "")}" placeholder="Author (books / audiobooks)" ${(startType === "book" || startType === "audiobook") ? "" : "hidden"}>` +
+      `<input id="e_narrator" type="text" value="${esc(m.narrator || "")}" placeholder="Narrator (for audiobooks)" ${startType === "audiobook" ? "" : "hidden"}>` +
       `<input id="e_developer" type="text" value="${esc(m.developer || "")}" placeholder="Developer (for games)" ${startType === "game" ? "" : "hidden"}>` +
-      `<input id="e_publisher" type="text" value="${esc(m.publisher || "")}" placeholder="Publisher (books / games)" ${(startType === "book" || startType === "game") ? "" : "hidden"}>` +
+      `<input id="e_publisher" type="text" value="${esc(m.publisher || "")}" placeholder="Publisher (books / games / audiobooks)" ${(startType === "book" || startType === "game" || startType === "audiobook") ? "" : "hidden"}>` +
       `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company" ${startType === "movie" ? "" : "hidden"}>` +
       `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor" ${startType === "movie" ? "" : "hidden"}>` +
       `<label class="ie-check"><input id="e_r" type="checkbox"> Re-query internet on next online rebuild</label>` +
@@ -872,9 +894,10 @@
       const t = e.target.value;
       ed.querySelector("#e_f").innerHTML = fmtOptions(t, (FORMATS_BY_TYPE[t] || FORMATS_BY_TYPE.movie)[0]);
       ed.querySelector("#e_artist").hidden = t !== "music";
-      ed.querySelector("#e_author").hidden = t !== "book";
+      ed.querySelector("#e_author").hidden = !(t === "book" || t === "audiobook");
+      ed.querySelector("#e_narrator").hidden = t !== "audiobook";
       ed.querySelector("#e_developer").hidden = t !== "game";
-      ed.querySelector("#e_publisher").hidden = !(t === "book" || t === "game");
+      ed.querySelector("#e_publisher").hidden = !(t === "book" || t === "game" || t === "audiobook");
       ed.querySelector("#e_s").hidden = t !== "movie";
       ed.querySelector("#e_d").hidden = t !== "movie";
       if (t !== startType) ed.querySelector("#e_r").checked = true;   // re-enrich with the right provider
@@ -892,6 +915,7 @@
       if (type === "music") patch.artist = ed.querySelector("#e_artist").value.trim();
       else if (type === "book") { patch.author = ed.querySelector("#e_author").value.trim(); patch.publisher = ed.querySelector("#e_publisher").value.trim(); }
       else if (type === "game") { patch.developer = ed.querySelector("#e_developer").value.trim(); patch.publisher = ed.querySelector("#e_publisher").value.trim(); }
+      else if (type === "audiobook") { patch.author = ed.querySelector("#e_author").value.trim(); patch.narrator = ed.querySelector("#e_narrator").value.trim(); patch.publisher = ed.querySelector("#e_publisher").value.trim(); }
       else { patch.studio = ed.querySelector("#e_s").value.trim(); patch.distributor = ed.querySelector("#e_d").value.trim(); }
       setCorr(m, patch);
       applyCorrection(m); render();
@@ -1164,8 +1188,8 @@
   }
   function exportCatalogCsv() {
     if (!movies.length) { alert("Nothing to export."); return; }
-    const cols = ["media_type", "title", "artist", "author", "developer", "director", "year",
-                  "format", "label", "studio", "publisher", "platforms",
+    const cols = ["media_type", "title", "artist", "author", "narrator", "developer", "director",
+                  "year", "format", "label", "studio", "publisher", "platforms", "duration",
                   "genres", "rating", "my_rating", "tags", "barcode", "intro"];
     const cell = (v) => { v = Array.isArray(v) ? v.join("; ") : String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const rows = [cols.join(",")];

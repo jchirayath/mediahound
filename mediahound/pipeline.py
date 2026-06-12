@@ -12,11 +12,12 @@ from .identify import get_identifier
 from .identify.base import Identification
 from .imaging import make_placeholder_poster, prepared_jpeg, save_thumbnail
 from .intro import make_intro
+from .links import hear_links as _hear_links
 from .links import listen_links as _listen_links
 from .links import play_links as _play_links
 from .links import read_links as _read_links
 from .metadata import get_metadata_provider
-from .metadata.base import BookMeta, GameMeta, MovieMeta, MusicMeta
+from .metadata.base import AudiobookMeta, BookMeta, GameMeta, MovieMeta, MusicMeta
 from .resale import estimate
 from .store import Store, list_media_images, sha256_file
 
@@ -104,7 +105,8 @@ def _find_raw_image(input_dir: Path, name: str) -> Path | None:
 
 
 # RawImages subfolder that holds each media type's source photos.
-_TYPE_FOLDER = {"movie": "video", "music": "audio", "book": "books", "game": "games"}
+_TYPE_FOLDER = {"movie": "video", "music": "audio", "book": "books", "game": "games",
+                "audiobook": "audiobooks"}
 
 
 def _sync_source_folder(cfg: Config, store: Store, m: dict, new_type: str, log) -> None:
@@ -253,6 +255,21 @@ _MOCK_GAMES = [
          intro="Where it all started — the jump-and-stomp that built a console empire."),
 ]
 
+_MOCK_AUDIOBOOKS = [
+    dict(title="Project Hail Mary", author="Andy Weir", narrator="Ray Porter", year=2021,
+         format="Audible", duration=970, publisher="Audible Studios", genres=["Science Fiction"],
+         rating=8.9, color=(20, 36, 52),
+         intro="A lone astronaut, an amnesiac mystery, and a buddy comedy across the stars."),
+    dict(title="Born a Crime", author="Trevor Noah", narrator="Trevor Noah", year=2016,
+         format="Audible", duration=534, publisher="Audible Studios", genres=["Memoir"],
+         rating=9.1, color=(48, 30, 18),
+         intro="Read by the author — funnier and sharper for it; a childhood under apartheid."),
+    dict(title="Becoming", author="Michelle Obama", narrator="Michelle Obama", year=2018,
+         format="CD", duration=1140, publisher="Random House Audio", genres=["Memoir"],
+         rating=8.8, color=(60, 44, 30),
+         intro="The former First Lady reads her own story — intimate, and better for her voice."),
+]
+
 
 class _NullMetadata:
     """Offline stand-in — never touches the network; every title becomes a manual entry."""
@@ -333,9 +350,10 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
     n_audio = sum(1 for _, mt in images if mt == "music")
     n_book = sum(1 for _, mt in images if mt == "book")
     n_game = sum(1 for _, mt in images if mt == "game")
+    n_abook = sum(1 for _, mt in images if mt == "audiobook")
     log(f"Scanning {cfg.input_dir} → {len(images)} image(s) "
-        f"({len(images) - n_audio - n_book - n_game} video, {n_audio} audio, "
-        f"{n_book} books, {n_game} games)")
+        f"({len(images) - n_audio - n_book - n_game - n_abook} video, {n_audio} audio, "
+        f"{n_book} books, {n_game} games, {n_abook} audiobooks)")
 
     providers = None
     if images:
@@ -344,14 +362,17 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
             providers = {"movie": movie_meta,
                          "music": get_metadata_provider(cfg, "music") if n_audio else _NullMetadata(),
                          "book": get_metadata_provider(cfg, "book") if n_book else _NullMetadata(),
-                         "game": get_metadata_provider(cfg, "game") if n_game else _NullMetadata()}
+                         "game": get_metadata_provider(cfg, "game") if n_game else _NullMetadata(),
+                         "audiobook": get_metadata_provider(cfg, "audiobook") if n_abook else _NullMetadata()}
             log(f"Metadata: {movie_meta.name} (movies) + "
                 f"{providers['music'].name if n_audio else 'none'} (music) + "
                 f"{providers['book'].name if n_book else 'none'} (books) + "
-                f"{providers['game'].name if n_game else 'none'} (games), online + cached")
+                f"{providers['game'].name if n_game else 'none'} (games) + "
+                f"{providers['audiobook'].name if n_abook else 'none'} (audiobooks), online + cached")
         else:
             providers = {"movie": _NullMetadata(), "music": _NullMetadata(),
-                         "book": _NullMetadata(), "game": _NullMetadata()}
+                         "book": _NullMetadata(), "game": _NullMetadata(),
+                         "audiobook": _NullMetadata()}
             log("OFFLINE mode — not contacting any online databases (use --online to enable).")
 
     # The identifier is built lazily — only when a NON-queued image actually needs it.
@@ -432,13 +453,15 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
         "music": ("artist", "label", "tracklist", "disc_count", "barcode", "catalog_no", "listen"),
         "book": ("author", "publisher", "page_count", "isbn", "series", "read"),
         "game": ("developer", "publisher", "platforms", "players", "esrb", "play"),
+        "audiobook": ("author", "narrator", "duration", "publisher", "isbn", "listen"),
     }
     # valid formats per type — an incompatible format is normalised when a title switches type.
-    # For games the "format" dimension is the platform.
+    # For games the "format" dimension is the platform; for audiobooks it's the medium.
     _FORMATS = {"movie": ("DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"),
                 "music": ("CD", "Vinyl", "Cassette", "Unknown"),
                 "book": ("Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown"),
-                "game": ("Switch", "PS5", "PS4", "Xbox", "PC", "Retro", "Unknown")}
+                "game": ("Switch", "PS5", "PS4", "Xbox", "PC", "Retro", "Unknown"),
+                "audiobook": ("Audible", "CD", "MP3-CD", "Cassette", "Digital", "Unknown")}
     tld = cfg.resale.get("ebay_tld", "com")
     requery_consumed = False
 
@@ -486,6 +509,8 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             m["publisher"] = c["publisher"] or None
         if "developer" in c:
             m["developer"] = c["developer"] or None
+        if "narrator" in c:
+            m["narrator"] = c["narrator"] or None
         removed = set(c.get("removed_images") or [])
         if removed:
             m["images"] = [im for im in m.get("images", []) if im not in removed]
@@ -518,6 +543,8 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
                     nm = prov.lookup(m["title"], artist=m.get("artist"))
                 elif mt == "book":
                     nm = prov.lookup(m["title"], author=m.get("author"))
+                elif mt == "audiobook":
+                    nm = prov.lookup(m["title"], author=m.get("author"), narrator=m.get("narrator"))
                 elif mt == "game":
                     nm = prov.lookup(m["title"], year=m.get("year"))
                 else:
@@ -527,7 +554,8 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
                 nm = None
             if nm and getattr(nm, "matched", False) and _plausible_title(m["title"], nm.title):
                 {"music": _apply_meta_to_music, "book": _apply_meta_to_book,
-                 "game": _apply_meta_to_game}.get(mt, _apply_meta_to_movie)(cfg, m, nm)
+                 "game": _apply_meta_to_game, "audiobook": _apply_meta_to_audiobook}.get(
+                     mt, _apply_meta_to_movie)(cfg, m, nm)
                 c["requery"] = False  # consumed → don't re-query every build
                 requery_consumed = True
                 log(f"  correction: re-queried {mid} ({mt}) → {nm.title} ({nm.source})")
@@ -607,6 +635,26 @@ def _apply_meta_to_book(cfg: Config, m: dict, meta: BookMeta) -> None:
     m["series"] = meta.series
     m["overview"] = meta.overview
     m["read"] = _read_links(m.get("author") or "", m["title"])
+    m["source"] = {"name": meta.source, "url": meta.source_url}
+    if meta.cover_url:
+        dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
+        if _download_poster(meta.cover_url, dest):
+            m["poster"] = f"posters/{dest.name}"
+
+
+def _apply_meta_to_audiobook(cfg: Config, m: dict, meta: AudiobookMeta) -> None:
+    """Overwrite an audiobook's enrichment fields from a fresh Open Library + LibriVox lookup."""
+    m["title"] = meta.title or m["title"]
+    m["author"] = meta.author or m.get("author")
+    m["narrator"] = meta.narrator or m.get("narrator")
+    m["year"] = meta.year or m.get("year")
+    m["publisher"] = meta.publisher or m.get("publisher")
+    m["genres"] = meta.genres
+    m["rating"] = meta.rating
+    m["isbn"] = meta.isbn or m.get("isbn")
+    m["duration"] = meta.duration or m.get("duration")
+    m["overview"] = meta.overview or m.get("overview")
+    m["listen"] = _hear_links(m.get("author") or "", m["title"])
     m["source"] = {"name": meta.source, "url": meta.source_url}
     if meta.cover_url:
         dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
@@ -757,7 +805,7 @@ def _write_feeds(cfg: Config, site: dict, collection: list, limit: int = 30) -> 
 
     def _line(m: dict) -> str:
         mt = m.get("media_type")
-        who = (m.get("artist") if mt == "music" else m.get("author") if mt == "book"
+        who = (m.get("artist") if mt == "music" else m.get("author") if mt in ("book", "audiobook")
                else m.get("developer") if mt == "game" else m.get("director"))
         bits = [str(m.get("year")) if m.get("year") else None, m.get("format"), who]
         return " · ".join(b for b in bits if b)
@@ -942,6 +990,37 @@ def _process_game(cfg, store, img, h, ident, provider, is_manual) -> bool:
     return _finalize_media(cfg, store, img, h, ident, item, meta.cover_url, is_manual, portrait=True)
 
 
+def _process_audiobook(cfg, store, img, h, ident, provider, is_manual) -> bool:
+    """Enrich an audiobook cover via the audiobook provider (Open Library + LibriVox)."""
+    meta = provider.lookup(ident.title, author=ident.artist)
+    if not getattr(meta, "matched", False) and not is_manual:
+        return _record_unidentified(cfg, store, img, h, ident, reason="no audiobook match")
+    if not getattr(meta, "matched", False):
+        meta = AudiobookMeta(True, source="manual", title=ident.title, author=ident.artist)
+
+    title = meta.title or ident.title
+    author = meta.author
+    mid = _slug(f"{author or ''}-{title}-{meta.year or ident.year or h[:6]}")
+    fmt = ident.format if ident.format and ident.format != "Unknown" else (meta.format or "Audible")
+    year = meta.year or ident.year
+    hrs = f"{meta.duration // 60}h {meta.duration % 60}m" if meta.duration else None
+    intro = (f"An audiobook{f' read by {meta.narrator}' if meta.narrator else ''}"
+             f"{f' — {hrs}' if hrs else ''}." if (meta.narrator or hrs)
+             else (f"{author} — {title}." if author else title))
+
+    item = {
+        "id": mid, "media_type": "audiobook", "title": title, "author": author,
+        "narrator": meta.narrator, "year": year, "format": fmt, "duration": meta.duration,
+        "publisher": meta.publisher, "genres": meta.genres, "rating": meta.rating,
+        "isbn": meta.isbn, "intro": intro, "overview": meta.overview,
+        "listen": _hear_links(author or "", title),
+        "source": {"name": meta.source, "url": meta.source_url},
+        "resale": estimate(f"{author or ''} {title}".strip(), year, fmt, meta.rating,
+                           cfg.resale.get("ebay_tld", "com")),
+    }
+    return _finalize_media(cfg, store, img, h, ident, item, meta.cover_url, is_manual, portrait=True)
+
+
 class _FixedProvider:
     """One-shot provider that returns an already-resolved meta (used when a barcode/ISBN has pinned
     the exact release/edition, so we skip the fuzzy title search entirely)."""
@@ -1005,6 +1084,8 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
         return _process_book(cfg, store, img, h, ident, providers["book"], is_manual)
     if media_type == "game":
         return _process_game(cfg, store, img, h, ident, providers["game"], is_manual)
+    if media_type == "audiobook":
+        return _process_audiobook(cfg, store, img, h, ident, providers["audiobook"], is_manual)
 
     metadata = providers["movie"]
     meta = metadata.lookup(ident.title, ident.year)
@@ -1254,6 +1335,32 @@ def _build_mock(cfg, store, stats, log) -> Stats:
             "resale": estimate(title, year, fmt, mk["rating"], tld),
             "source_image": f"(demo) {title}", "confidence": 0.99,
             "seen": played, "date_seen": ("2024-05-01" if played else None), "added_at": _now(),
+        }
+        store.upsert_movie(item)
+        store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())
+        stats.new += 1
+        stats.identified += 1
+
+    # --- audiobooks ------------------------------------------------------------------
+    for i, mk in enumerate(_MOCK_AUDIOBOOKS):
+        title, author, year, fmt = mk["title"], mk["author"], mk["year"], mk["format"]
+        mid = f"{_slug(author)}-{_slug(title)}-{year}"
+        cover = cfg.posters_dir / f"{mid}.jpg"
+        make_placeholder_poster(f"{title}", cover, color=mk.get("color", (22, 34, 44)),
+                                subtitle=f"🎧 {mk.get('narrator') or author}")
+        images = [f"posters/{cover.name}"]
+        heard = (i % 2 == 0)
+        item = {
+            "id": mid, "media_type": "audiobook", "title": title, "author": author,
+            "narrator": mk.get("narrator"), "year": year, "format": fmt,
+            "duration": mk.get("duration"), "publisher": mk.get("publisher"), "genres": mk["genres"],
+            "rating": mk["rating"], "intro": mk["intro"], "overview": mk["intro"],
+            "poster": images[0], "images": images,
+            "listen": _hear_links(author, title),
+            "source": {"name": "mock", "url": None},
+            "resale": estimate(f"{author} {title}", year, fmt, mk["rating"], tld),
+            "source_image": f"(demo) {title}", "confidence": 0.99,
+            "seen": heard, "date_seen": ("2024-06-01" if heard else None), "added_at": _now(),
         }
         store.upsert_movie(item)
         store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())

@@ -26,14 +26,15 @@ def cmd_init(args) -> int:
     dest.mkdir(parents=True, exist_ok=True)
     # Raw-image folders, split by media type: video → movies, audio → music.
     (dest / "RawImages").mkdir(exist_ok=True)
-    for sub in ("video", "audio", "books", "games"):
+    for sub in ("video", "audio", "books", "games", "audiobooks"):
         (dest / "RawImages" / sub).mkdir(exist_ok=True)
     (dest / "RawImages" / "README.txt").write_text(
         "Put cover photos here, sorted by media type:\n"
-        "  RawImages/video/  → movies (DVD, VHS, Blu-ray, LaserDisc)\n"
-        "  RawImages/audio/  → music  (CD, vinyl, cassette)\n"
-        "  RawImages/books/  → books  (scan the ISBN barcode for an exact match)\n"
-        "  RawImages/games/  → video games (scan the UPC barcode on the box)\n"
+        "  RawImages/video/       → movies (DVD, VHS, Blu-ray, LaserDisc)\n"
+        "  RawImages/audio/       → music  (CD, vinyl, cassette)\n"
+        "  RawImages/books/       → books  (scan the ISBN barcode for an exact match)\n"
+        "  RawImages/games/       → video games (scan the UPC barcode on the box)\n"
+        "  RawImages/audiobooks/  → audiobooks (Audible/CD; narrator & length on the cover)\n"
         "Photos left directly in RawImages/ are treated as video (movies).\n",
         encoding="utf-8")
 

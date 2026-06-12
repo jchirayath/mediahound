@@ -324,8 +324,9 @@ class _Handler(SimpleHTTPRequestHandler):
         if not isinstance(body, dict) or not isinstance(body.get("data"), str):
             return self._send_json({"ok": False, "error": "expected {filename, media_type, data}"}, 400)
         mt_in = body.get("media_type")
-        media_type = mt_in if mt_in in ("music", "book", "game") else "movie"
-        sub = {"music": "audio", "book": "books", "game": "games"}.get(media_type, "video")
+        media_type = mt_in if mt_in in ("music", "book", "game", "audiobook") else "movie"
+        sub = {"music": "audio", "book": "books", "game": "games",
+               "audiobook": "audiobooks"}.get(media_type, "video")
         # sanitise the filename → a safe basename with an image extension
         raw_name = os.path.basename(str(body.get("filename") or "photo.jpg")).strip()
         stem, ext = os.path.splitext(raw_name)

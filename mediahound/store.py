@@ -31,7 +31,8 @@ def list_images(input_dir: Path) -> list[Path]:
 MEDIA_FOLDERS = {"video": "movie", "movies": "movie", "movie": "movie",
                  "audio": "music", "music": "music",
                  "books": "book", "book": "book",
-                 "games": "game", "game": "game"}
+                 "games": "game", "game": "game",
+                 "audiobooks": "audiobook", "audiobook": "audiobook"}
 
 
 def _images_in(folder: Path) -> list[Path]:

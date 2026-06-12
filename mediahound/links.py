@@ -59,6 +59,23 @@ _PLAY_BY_PLATFORM = {
 PLAY_DEFAULT = ("Steam", "MobyGames")
 
 
+HEAR_BASE = {
+    "Audible": "https://www.audible.com/search?keywords=",
+    "Libro.fm": "https://libro.fm/search?q=",
+    "LibriVox": "https://librivox.org/search?q=",
+    "Open Library": "https://openlibrary.org/search?q=",
+}
+HEAR_SERVICES = ("Audible", "Libro.fm", "LibriVox", "Open Library")
+
+
+def hear_links(author: str | None, title: str | None, services=HEAR_SERVICES) -> dict:
+    """Return {checked, providers:[{name, url}]} of where-to-listen (audiobook) search links."""
+    q = urllib.parse.quote(f"{(title or '').strip()} {(author or '').strip()}".strip())
+    return {"checked": True,
+            "providers": [{"name": s, "url": HEAR_BASE[s] + q}
+                          for s in services if s in HEAR_BASE]}
+
+
 def play_links(title: str | None, platform: str | None = None) -> dict:
     """Return {checked, providers:[{name, url}]} of where-to-play/buy search links for a game,
     picking the relevant storefront(s) for the platform (Switch→eShop, PS→PS Store, …)."""

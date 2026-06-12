@@ -79,6 +79,29 @@ class BookMeta:
 
 
 @dataclass
+class AudiobookMeta:
+    """Enrichment result for an audiobook (book metadata + narrator/duration)."""
+    matched: bool
+    media_type: str = "audiobook"
+    source: str = ""                 # "openlibrary" | "librivox" | "openlibrary+librivox"
+    source_id: str = ""
+    title: str | None = None
+    author: str | None = None
+    narrator: str | None = None      # the reader/voice (often only on the cover → OCR/manual/CSV)
+    year: int | None = None
+    genres: list[str] = field(default_factory=list)
+    publisher: str | None = None     # audio publisher (Audible Studios, Brilliance, …)
+    isbn: str | None = None
+    format: str | None = None        # Audible | CD | MP3-CD | Cassette | Digital
+    duration: int | None = None      # total length in minutes
+    rating: float | None = None
+    overview: str | None = None
+    cover_url: str | None = None
+    source_url: str | None = None
+    raw: dict = field(default_factory=dict)
+
+
+@dataclass
 class GameMeta:
     """Enrichment result for a video game (by title, or UPC → product name → title)."""
     matched: bool

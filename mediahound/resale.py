@@ -9,7 +9,9 @@ from urllib.parse import quote_plus
 
 # Rough baseline used value by format (USD), before rarity adjustments.
 _BASE = {"VHS": 8.0, "DVD": 6.0, "Blu-ray": 9.0, "Unknown": 6.0,
-         "Hardcover": 8.0, "Paperback": 4.0, "Mass Market": 3.0, "eBook": 2.0, "Audiobook": 6.0}
+         "Hardcover": 8.0, "Paperback": 4.0, "Mass Market": 3.0, "eBook": 2.0, "Audiobook": 6.0,
+         # audiobook media: physical sets resell modestly; digital downloads aren't resellable
+         "CD": 6.0, "MP3-CD": 7.0, "Cassette": 3.0, "Audible": 0.0, "Digital": 0.0}
 
 
 def estimate(title: str, year: int | None, fmt: str, rating: float | None,

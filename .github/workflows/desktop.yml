@@ -148,6 +148,6 @@ jobs:
 
       - name: Attach to release
         if: github.event_name == 'release'
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3   # v3 runs on Node 24 (v2 was Node 20, now deprecated)
         with:
           files: ${{ matrix.artifact }}.zip
