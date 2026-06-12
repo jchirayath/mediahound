@@ -25,15 +25,14 @@
 
     const pw = document.createElement("div");
     pw.className = "poster-wrap";
+    const fallback = () => { const d = document.createElement("div"); d.className = "poster-fallback"; d.textContent = it.source_image || "cover"; return d; };
     if (it.thumbnail) {
       const img = document.createElement("img");
       img.loading = "lazy"; img.src = it.thumbnail; img.alt = it.source_image;
+      img.onerror = () => img.replaceWith(fallback());   // missing/broken thumbnail → graceful tile, not a blank image
       pw.appendChild(img);
     } else {
-      const d = document.createElement("div");
-      d.className = "poster-fallback";
-      d.textContent = it.source_image || "cover";
-      pw.appendChild(d);
+      pw.appendChild(fallback());
     }
 
     const body = document.createElement("div");

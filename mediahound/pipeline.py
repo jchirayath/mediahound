@@ -995,11 +995,14 @@ def _build_mock(cfg, store, stats, log) -> Stats:
         stats.new += 1
         stats.identified += 1
 
-    # a couple of sample unidentified items so that flow is demoable too
+    # a couple of sample unidentified items so that flow is demoable too — with generated
+    # placeholder thumbnails so they look intentional (not a broken/blank image).
     for n, fmt in [("unreadable cover", "VHS"), ("blank tape", "VHS")]:
+        thumb = cfg.posters_dir / f"unid-mock-{_slug(n)}.jpg"
+        make_placeholder_poster(f"? {n}", thumb, color=(46, 48, 58), subtitle="needs identifying")
         store.add_unidentified({
             "hash": f"mock-unidentified-{_slug(n)}",
-            "source_image": f"(demo) {n}", "thumbnail": None,
+            "source_image": f"(demo) {n}", "thumbnail": f"posters/{thumb.name}",
             "guess_title": None, "guess_year": None, "guess_format": fmt,
             "reason": "low confidence", "added_at": _now(),
         })
