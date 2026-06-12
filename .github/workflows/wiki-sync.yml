@@ -1,0 +1,54 @@
+name: Publish wiki
+
+# Make the in-repo wiki/ the single source of truth: whenever wiki/ changes on
+# main, publish it to the GitHub wiki (the separate mediahound.wiki.git repo).
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'wiki/**' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # lets GITHUB_TOKEN push to the wiki repo
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Publish wiki/ → GitHub wiki
+        env:
+          # Uses the built-in token by default; if your repo blocks GITHUB_TOKEN
+          # from pushing the wiki, add a PAT secret named WIKI_TOKEN (repo scope).
+          GH_TOKEN: ${{ secrets.WIKI_TOKEN || github.token }}
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          git clone --quiet "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.wiki.git" "$tmp" || {
+            echo "::error::Could not clone the wiki repo. If GITHUB_TOKEN can't push the wiki, add a WIKI_TOKEN PAT secret."; exit 1; }
+
+          # Mirror wiki/ → wiki repo (handles edits, adds AND deletes). Skip the
+          # repo-only README.md (it explains the folder; not a wiki page).
+          find "$tmp" -maxdepth 1 -name '*.md' -delete
+          for f in wiki/*.md; do
+            [ "$(basename "$f")" = "README.md" ] && continue
+            cp "$f" "$tmp/"
+          done
+
+          cd "$tmp"
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki already up to date."
+          else
+            git commit -m "Sync wiki from ${{ github.repository }}@${GITHUB_SHA::7}"
+            # GitHub wikis default to the 'master' branch
+            git push origin HEAD:master
+            echo "Wiki published."
+          fi
