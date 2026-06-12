@@ -146,6 +146,15 @@
       <p class="dialog-sub">Edit the library name, description and logo, choose which fields everyone sees, and the default movies-per-row.</p>
 
       <div class="dialog-scroll">
+      <div class="settings-block" id="libraryBlock" hidden>
+        <h3 class="settings-h3">Library &amp; data folder</h3>
+        <p class="dialog-sub">Your catalog, photos and edits live in this <b>library folder</b> (its
+          <code>data/</code> is the data directory). Switch to another library or create a new one.</p>
+        <div class="settings-row" style="align-items:center;gap:10px">
+          <code id="libCurrentPath" class="lib-current">—</code>
+          <button class="btn-mini" id="settingsManageLib" type="button">📚 Switch / open…</button>
+        </div>
+      </div>
       <div class="settings-block">
         <div class="settings-row">
           <label>Library name<input type="text" id="setTitle" placeholder="My Movie Collection" /></label>

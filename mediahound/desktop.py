@@ -37,12 +37,19 @@ def default_library() -> Path:
 
 
 def prepare(directory: str | None = None, log=print):
-    """Ensure a library exists (scaffold + an initial empty build) and return its Config."""
+    """Ensure a library exists (scaffold + an initial empty build) and return its Config.
+
+    With no directory, reopen the most-recently-used library (so switching libraries in the app
+    sets the default for next launch), falling back to ~/MediaHound Library on a first run."""
     import argparse
 
-    from . import pipeline
+    from . import libraries, pipeline
     from .cli import cmd_init
-    site = Path(directory).resolve() if directory else default_library()
+    if directory:
+        site = Path(directory).resolve()
+    else:
+        recent = libraries.list_recent()
+        site = Path(recent[0]["path"]) if recent else default_library()
     config_path = site / "config.toml"
     if not config_path.is_file():
         log(f"Setting up your library at {site} …")

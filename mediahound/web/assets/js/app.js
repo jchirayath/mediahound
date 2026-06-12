@@ -957,7 +957,21 @@
     $("#setPassword").value = "";
     $("#settingsPwNote").hidden = true;
     loadApiKeys();
+    loadLibraryInfo();
     $("#settingsDialog").hidden = false;
+  }
+
+  // ---- library / data folder (in Settings) --------------------------------
+  function loadLibraryInfo() {
+    // only meaningful with the local admin server (no server → no way to switch the data dir)
+    const show = serverAdmin && !phoneMode;
+    const block = $("#libraryBlock"); if (block) block.hidden = !show;
+    if (!show) return;
+    j("api/libraries", null).then((r) => {
+      const cur = (r && r.current) || {};
+      $("#libCurrentPath").textContent = cur.path || "(this library)";
+      $("#libCurrentPath").title = cur.path || "";
+    });
   }
 
   // ---- API keys (stored in the OS keychain by the local app) --------------
@@ -1135,6 +1149,7 @@
     if ($("#scanUpc")) $("#scanUpc").addEventListener("keydown", (e) => { if (e.key === "Enter") submitScan(); });
     if ($("#publishBtn")) $("#publishBtn").onclick = () => doPublish();
     if ($("#libraryBtn")) $("#libraryBtn").onclick = openLibrary;
+    if ($("#settingsManageLib")) $("#settingsManageLib").onclick = () => { $("#settingsDialog").hidden = true; openLibrary(); };
     if ($("#libraryOpen")) $("#libraryOpen").onclick = () => { const p = $("#libraryPath").value.trim(); if (p) switchLibrary(p, false); };
     if ($("#libraryCreate")) $("#libraryCreate").onclick = () => { const p = $("#libraryPath").value.trim(); if (p) switchLibrary(p, true); };
     if ($("#uploadGo")) $("#uploadGo").onclick = doUpload;
