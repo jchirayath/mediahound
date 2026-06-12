@@ -78,6 +78,13 @@ def lookup(cfg: Config, upc: str, media_type: str = "music") -> dict | None:
             return None
         return {"media_type": "music", "upc": upc, "title": meta.title,
                 "artist": meta.artist, "year": meta.year, "meta": meta}
+    # game: UPC → product name → existing identify-by-title path (Wikidata enrich)
+    if media_type == "game":
+        from .metadata.upcitemdb import UPCItemDBProvider
+        title = UPCItemDBProvider().title_for(upc)
+        if not title:
+            return None
+        return {"media_type": "game", "upc": upc, "title": title, "year": None}
     # movie: UPC → product name → existing identify-by-title path
     from .metadata.upcitemdb import UPCItemDBProvider
     title = UPCItemDBProvider().title_for(upc)

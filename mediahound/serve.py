@@ -297,8 +297,8 @@ class _Handler(SimpleHTTPRequestHandler):
         if not isinstance(body, dict) or not isinstance(body.get("data"), str):
             return self._send_json({"ok": False, "error": "expected {filename, media_type, data}"}, 400)
         mt_in = body.get("media_type")
-        media_type = mt_in if mt_in in ("music", "book") else "movie"
-        sub = {"music": "audio", "book": "books"}.get(media_type, "video")
+        media_type = mt_in if mt_in in ("music", "book", "game") else "movie"
+        sub = {"music": "audio", "book": "books", "game": "games"}.get(media_type, "video")
         # sanitise the filename → a safe basename with an image extension
         raw_name = os.path.basename(str(body.get("filename") or "photo.jpg")).strip()
         stem, ext = os.path.splitext(raw_name)
@@ -371,7 +371,7 @@ class _Handler(SimpleHTTPRequestHandler):
         if not upc.isdigit():
             return self._send_json({"ok": False, "error": "expected {upc: <digits>, media_type}"}, 400)
         mt_in = (isinstance(body, dict) and body.get("media_type")) or "movie"
-        media_type = mt_in if mt_in in ("music", "book") else "movie"
+        media_type = mt_in if mt_in in ("music", "book", "game") else "movie"
         tmp = None
         try:
             from . import barcode, pipeline
@@ -394,11 +394,11 @@ class _Handler(SimpleHTTPRequestHandler):
                                         "title": item["title"],
                                         "artist": item.get("artist"), "author": item.get("author"),
                                         "year": item.get("year")})
-            # movie: resolve UPC → product title, then enrich via the normal title path
+            # movie / game: resolve UPC → product title, then enrich via the normal title path
             from .csvio import import_csv
             fd, tmp = tempfile.mkstemp(suffix=".csv")
             with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                fh.write("media_type,title\nmovie," + match["title"].replace(",", " ") + "\n")
+                fh.write("media_type,title\n" + mt + "," + match["title"].replace(",", " ") + "\n")
             import_csv(self.cfg, store, Path(tmp), online=True, log=self.log_fn)
             store.save()
             pipeline._write_site(self.cfg, store)

@@ -30,7 +30,8 @@ def list_images(input_dir: Path) -> list[Path]:
 # are accepted aliases. Photos left in the input root take the default media type.
 MEDIA_FOLDERS = {"video": "movie", "movies": "movie", "movie": "movie",
                  "audio": "music", "music": "music",
-                 "books": "book", "book": "book"}
+                 "books": "book", "book": "book",
+                 "games": "game", "game": "game"}
 
 
 def _images_in(folder: Path) -> list[Path]:

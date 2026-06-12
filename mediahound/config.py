@@ -12,6 +12,7 @@ DEFAULTS = {
     "metadata": {"provider": "wikidata"},          # movie metadata
     "music": {"metadata": {"provider": "musicbrainz"}},  # music metadata (zero-key default)
     "book": {"metadata": {"provider": "openlibrary"}},   # book metadata (zero-key default)
+    "game": {"metadata": {"provider": "wikidata"}},      # video-game metadata (zero-key default)
     "resale": {"ebay_tld": "com"},
     "streaming": {"enabled": True, "country": "US"},
     "feeds": {"enabled": True, "site_url": ""},     # JSON/RSS feeds of recently-added items

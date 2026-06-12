@@ -61,6 +61,14 @@ provider = "musicbrainz"
 provider = "openlibrary"
 
 # ----------------------------------------------------------------------------
+# GAME METADATA — developer/publisher/platform/year/genres for video games.
+#   provider = "wikidata" (default) Wikidata Query Service (CC0), resolves by title. NO key.
+# Game boxes carry a UPC; scan it (UPC → product name → the normal identify-by-title path).
+# ----------------------------------------------------------------------------
+[game.metadata]
+provider = "wikidata"
+
+# ----------------------------------------------------------------------------
 # BARCODE — decode a UPC/EAN to identify the EXACT release (more accurate than OCR).
 # Decoding needs the optional extra:  pip install "mediahound[barcode]"
 # Lookups are online, so they only run with --online (music → MusicBrainz/Discogs,

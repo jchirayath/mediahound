@@ -11,7 +11,7 @@ import re
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .links import listen_links, read_links
+from .links import listen_links, play_links, read_links
 from .resale import estimate
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -42,17 +42,18 @@ def _float(s) -> float | None:
 
 
 # Columns recognised (case-insensitive); any extras are ignored.
-EXPORT_COLUMNS = ["media_type", "title", "artist", "author", "director", "year", "format", "label",
-                  "publisher", "studio", "genres", "rating", "barcode", "isbn", "pages",
-                  "cover_url", "intro"]
+EXPORT_COLUMNS = ["media_type", "title", "artist", "author", "developer", "director", "year",
+                  "format", "label", "publisher", "studio", "platforms", "genres", "rating",
+                  "barcode", "isbn", "pages", "cover_url", "intro"]
 
-_DEFAULT_FMT = {"music": "CD", "book": "Paperback"}
+_DEFAULT_FMT = {"music": "CD", "book": "Paperback", "game": "PC"}
 
 
 def _row_to_item(row: dict) -> dict:
     r = {(k or "").strip().lower(): (v or "").strip() for k, v in row.items()}
-    artist, author = r.get("artist"), r.get("author")
-    mt = (r.get("media_type") or "").lower() or ("book" if author else "music" if artist else "movie")
+    artist, author, developer = r.get("artist"), r.get("author"), r.get("developer")
+    mt = ((r.get("media_type") or "").lower()
+          or ("game" if developer else "book" if author else "music" if artist else "movie"))
     title = r.get("title") or r.get("album") or r.get("name")
     if not title:
         return {}
@@ -82,6 +83,12 @@ def _row_to_item(row: dict) -> dict:
             "publisher": r.get("publisher") or None, "isbn": r.get("isbn") or None,
             "page_count": _int(r.get("pages") or r.get("page_count")),
             "read": read_links(author, title),
+        })
+    elif mt == "game":
+        common.update({
+            "id": _slug(f"{title}-{year}"), "developer": developer or None,
+            "publisher": r.get("publisher") or None, "platforms": _split(r.get("platforms")),
+            "play": play_links(title, fmt),
         })
     else:
         common.update({
@@ -117,6 +124,14 @@ def _enrich(cfg, item: dict, log) -> bool:
             item["publisher"] = item.get("publisher") or meta.publisher
             item["isbn"] = item.get("isbn") or meta.isbn
             item["page_count"] = item.get("page_count") or meta.page_count
+            cover = meta.cover_url
+        elif item["media_type"] == "game":
+            meta = get_metadata_provider(cfg, "game").lookup(item["title"], item.get("year"))
+            if not meta.matched:
+                return False
+            item["developer"] = item.get("developer") or meta.developer
+            item["publisher"] = item.get("publisher") or meta.publisher
+            item["platforms"] = item.get("platforms") or meta.platforms
             cover = meta.cover_url
         else:
             meta = get_metadata_provider(cfg).lookup(item["title"], item.get("year"))
@@ -163,9 +178,11 @@ def export_csv(store, path: Path) -> int:
         for m in store.collection:
             w.writerow({
                 "media_type": m.get("media_type", "movie"), "title": m.get("title"),
-                "artist": m.get("artist"), "author": m.get("author"), "director": m.get("director"),
+                "artist": m.get("artist"), "author": m.get("author"),
+                "developer": m.get("developer"), "director": m.get("director"),
                 "year": m.get("year"), "format": m.get("format"), "label": m.get("label"),
                 "publisher": m.get("publisher"), "studio": m.get("studio"),
+                "platforms": "; ".join(m.get("platforms") or []),
                 "genres": "; ".join(m.get("genres") or []), "rating": m.get("rating"),
                 "barcode": m.get("barcode"), "isbn": m.get("isbn"), "pages": m.get("page_count"),
                 "cover_url": m.get("poster"), "intro": m.get("intro"),

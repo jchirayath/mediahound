@@ -1,7 +1,7 @@
 """Metadata providers: enrich an identified title with cover art + canonical fields."""
 from __future__ import annotations
 
-from .base import BookMeta, MetadataProvider, MovieMeta, MusicMeta
+from .base import BookMeta, GameMeta, MetadataProvider, MovieMeta, MusicMeta
 
 
 def get_metadata_provider(cfg, media_type: str = "movie"):
@@ -24,6 +24,14 @@ def get_metadata_provider(cfg, media_type: str = "movie"):
             return OpenLibraryProvider(bcfg)
         raise ValueError(f"Unknown book metadata provider: {name!r}")
 
+    if media_type == "game":
+        gcfg = (getattr(cfg, "data", {}) or {}).get("game", {}).get("metadata", {})
+        name = (gcfg.get("provider") or "wikidata").lower()
+        if name in ("wikidata", "wikidata-games"):
+            from .games import GameProvider
+            return GameProvider(gcfg)
+        raise ValueError(f"Unknown game metadata provider: {name!r}")
+
     name = cfg.metadata.get("provider", "wikidata").lower()
     if name == "wikidata":
         from .wikidata import WikidataProvider
@@ -37,4 +45,4 @@ def get_metadata_provider(cfg, media_type: str = "movie"):
     raise ValueError(f"Unknown metadata provider: {name!r}")
 
 
-__all__ = ["MovieMeta", "MusicMeta", "BookMeta", "MetadataProvider", "get_metadata_provider"]
+__all__ = ["MovieMeta", "MusicMeta", "BookMeta", "GameMeta", "MetadataProvider", "get_metadata_provider"]

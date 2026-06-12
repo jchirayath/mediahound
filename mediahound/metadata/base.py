@@ -78,6 +78,29 @@ class BookMeta:
     raw: dict = field(default_factory=dict)
 
 
+@dataclass
+class GameMeta:
+    """Enrichment result for a video game (by title, or UPC → product name → title)."""
+    matched: bool
+    media_type: str = "game"
+    source: str = ""                 # "wikidata" | "rawg" | "igdb"
+    source_id: str = ""
+    title: str | None = None
+    developer: str | None = None     # the studio that made it
+    publisher: str | None = None
+    year: int | None = None
+    genres: list[str] = field(default_factory=list)
+    platforms: list[str] = field(default_factory=list)
+    format: str | None = None        # primary platform (Switch | PS5 | Xbox | PC | Retro …)
+    players: str | None = None       # e.g. "1-4"
+    esrb: str | None = None
+    rating: float | None = None      # 0..10 if available
+    overview: str | None = None
+    cover_url: str | None = None
+    source_url: str | None = None    # link to the Wikidata / RAWG page
+    raw: dict = field(default_factory=dict)
+
+
 class MetadataProvider:
     name = "base"
     media_type = "movie"

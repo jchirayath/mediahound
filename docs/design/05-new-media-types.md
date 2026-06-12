@@ -1,12 +1,19 @@
 # 05 — New media types: Books & Video games
 
-**Status:** 📚 Books **shipped** (P1) · 🎮 Games planned · **Effort:** L · **Depends on:** Barcode (01)
+**Status:** 📚 Books **shipped** (P1) · 🎮 Games **shipped** · **Effort:** L · **Depends on:** Barcode (01)
 
-> **P1 shipped.** Books are implemented: Open Library provider (`metadata/openlibrary.py`), ISBN
-> auto-routing (978/979), `📚 Books` tab + card + editor, `RawImages/books/`, CSV import/export, and
-> `_MOCK_BOOKS`. The movie/music field-clearing was generalised to N types. Video games (P3) remain
-> designed below. The full media-type *registry* refactor is deferred — books were added by extending
-> the existing movie/music pattern; the registry is the recommended cleanup before a 5th type.
+> **Books + Games shipped.** Books: Open Library provider (`metadata/openlibrary.py`), ISBN
+> auto-routing (978/979), `📚 Books` tab/card/editor, `RawImages/books/`, CSV, `_MOCK_BOOKS`.
+> Games: zero-key Wikidata SPARQL provider (`metadata/games.py`, P31=Q7889; SPARQL injection guarded),
+> UPC → product-title → enrich routing, **platform as the `format` dimension** (Switch/PS5/PS4/Xbox/PC/Retro),
+> where-to-play links (`links.play_links`, storefront chosen by platform), `🎮 Games` tab/card/editor,
+> `RawImages/games/`, CSV (`developer`/`platforms`), `_MOCK_GAMES`.
+>
+> The **shared media-type registry** recommended below was done: the frontend now has a `TYPES` map
+> (card meta/people/studio/where-to-X rows are data-driven), and the backend shares a `_finalize_media`
+> tail across music/book/game + an N-way field-clearing loop that preserves fields shared by the
+> destination type (e.g. `publisher` on a book↔game move). Adding a 5th type is now mostly one registry
+> entry + a provider. No API keys were added (games stay zero-key by default).
 
 ## Why
 

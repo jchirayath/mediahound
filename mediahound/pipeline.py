@@ -13,9 +13,10 @@ from .identify.base import Identification
 from .imaging import make_placeholder_poster, prepared_jpeg, save_thumbnail
 from .intro import make_intro
 from .links import listen_links as _listen_links
+from .links import play_links as _play_links
 from .links import read_links as _read_links
 from .metadata import get_metadata_provider
-from .metadata.base import BookMeta, MovieMeta, MusicMeta
+from .metadata.base import BookMeta, GameMeta, MovieMeta, MusicMeta
 from .resale import estimate
 from .store import Store, list_media_images, sha256_file
 
@@ -103,7 +104,7 @@ def _find_raw_image(input_dir: Path, name: str) -> Path | None:
 
 
 # RawImages subfolder that holds each media type's source photos.
-_TYPE_FOLDER = {"movie": "video", "music": "audio", "book": "books"}
+_TYPE_FOLDER = {"movie": "video", "music": "audio", "book": "books", "game": "games"}
 
 
 def _sync_source_folder(cfg: Config, store: Store, m: dict, new_type: str, log) -> None:
@@ -237,6 +238,21 @@ _MOCK_BOOKS = [
          intro="Wit, manners and Mr. Darcy — the comedy of misjudgement that never ages."),
 ]
 
+_MOCK_GAMES = [
+    dict(title="The Legend of Zelda: Breath of the Wild", year=2017, format="Switch",
+         developer="Nintendo EPD", publisher="Nintendo", genres=["Action-adventure"],
+         platforms=["Switch"], players="1", esrb="E10+", rating=9.7, color=(26, 52, 46),
+         intro="An open Hyrule you can climb anywhere — the game that reinvented the series."),
+    dict(title="The Witcher 3: Wild Hunt", year=2015, format="PC",
+         developer="CD Projekt Red", publisher="CD Projekt", genres=["RPG"],
+         platforms=["PC", "PS5", "Xbox"], players="1", esrb="M", rating=9.3, color=(40, 20, 18),
+         intro="A vast, story-rich hunt across a war-torn world — choices that actually bite."),
+    dict(title="Super Mario Bros.", year=1985, format="Retro",
+         developer="Nintendo R&D4", publisher="Nintendo", genres=["Platformer"],
+         platforms=["Retro"], players="1-2", esrb="E", rating=9.0, color=(36, 40, 64),
+         intro="Where it all started — the jump-and-stomp that built a console empire."),
+]
+
 
 class _NullMetadata:
     """Offline stand-in — never touches the network; every title becomes a manual entry."""
@@ -313,8 +329,10 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
     stats.scanned = len(images)
     n_audio = sum(1 for _, mt in images if mt == "music")
     n_book = sum(1 for _, mt in images if mt == "book")
+    n_game = sum(1 for _, mt in images if mt == "game")
     log(f"Scanning {cfg.input_dir} → {len(images)} image(s) "
-        f"({len(images) - n_audio - n_book} video, {n_audio} audio, {n_book} books)")
+        f"({len(images) - n_audio - n_book - n_game} video, {n_audio} audio, "
+        f"{n_book} books, {n_game} games)")
 
     providers = None
     if images:
@@ -322,12 +340,15 @@ def build(cfg: Config, mock: bool = False, force: bool = False,
             movie_meta = _CachedMetadata(get_metadata_provider(cfg), cfg.data_dir / ".metadata-cache.json")
             providers = {"movie": movie_meta,
                          "music": get_metadata_provider(cfg, "music") if n_audio else _NullMetadata(),
-                         "book": get_metadata_provider(cfg, "book") if n_book else _NullMetadata()}
+                         "book": get_metadata_provider(cfg, "book") if n_book else _NullMetadata(),
+                         "game": get_metadata_provider(cfg, "game") if n_game else _NullMetadata()}
             log(f"Metadata: {movie_meta.name} (movies) + "
                 f"{providers['music'].name if n_audio else 'none'} (music) + "
-                f"{providers['book'].name if n_book else 'none'} (books), online + cached")
+                f"{providers['book'].name if n_book else 'none'} (books) + "
+                f"{providers['game'].name if n_game else 'none'} (games), online + cached")
         else:
-            providers = {"movie": _NullMetadata(), "music": _NullMetadata(), "book": _NullMetadata()}
+            providers = {"movie": _NullMetadata(), "music": _NullMetadata(),
+                         "book": _NullMetadata(), "game": _NullMetadata()}
             log("OFFLINE mode — not contacting any online databases (use --online to enable).")
 
     # The identifier is built lazily — only when a NON-queued image actually needs it.
@@ -407,11 +428,14 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
                   "spoken_languages", "streaming"),
         "music": ("artist", "label", "tracklist", "disc_count", "barcode", "catalog_no", "listen"),
         "book": ("author", "publisher", "page_count", "isbn", "series", "read"),
+        "game": ("developer", "publisher", "platforms", "players", "esrb", "play"),
     }
-    # valid formats per type — an incompatible format is normalised when a title switches type
+    # valid formats per type — an incompatible format is normalised when a title switches type.
+    # For games the "format" dimension is the platform.
     _FORMATS = {"movie": ("DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"),
                 "music": ("CD", "Vinyl", "Cassette", "Unknown"),
-                "book": ("Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown")}
+                "book": ("Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown"),
+                "game": ("Switch", "PS5", "PS4", "Xbox", "PC", "Retro", "Unknown")}
     tld = cfg.resale.get("ebay_tld", "com")
     requery_consumed = False
 
@@ -435,10 +459,12 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             new = c["media_type"]
             if new != m.get("media_type", "movie"):
                 m["media_type"] = new
+                keep = set(_TYPE_ONLY.get(new, ()))      # fields the new type also uses (e.g. publisher)
                 for t, fields in _TYPE_ONLY.items():
                     if t != new:
                         for f in fields:
-                            m.pop(f, None)
+                            if f not in keep:
+                                m.pop(f, None)
                 log(f"  correction: moved {mid} → {new}")
             # a format that doesn't belong to the new type (e.g. DVD on a book) is normalised
             # (idempotent; runs even if the type already matches, to repair earlier moves)
@@ -454,6 +480,8 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
             m["author"] = c["author"] or None
         if "publisher" in c:
             m["publisher"] = c["publisher"] or None
+        if "developer" in c:
+            m["developer"] = c["developer"] or None
         removed = set(c.get("removed_images") or [])
         if removed:
             m["images"] = [im for im in m.get("images", []) if im not in removed]
@@ -486,14 +514,16 @@ def _apply_corrections(cfg: Config, store: Store, log, online: bool = False) -> 
                     nm = prov.lookup(m["title"], artist=m.get("artist"))
                 elif mt == "book":
                     nm = prov.lookup(m["title"], author=m.get("author"))
+                elif mt == "game":
+                    nm = prov.lookup(m["title"], year=m.get("year"))
                 else:
                     nm = prov.lookup(m["title"], m.get("year"))
             except Exception as exc:
                 log(f"  correction: re-query failed for {mid}: {exc}")
                 nm = None
             if nm and getattr(nm, "matched", False) and _plausible_title(m["title"], nm.title):
-                {"music": _apply_meta_to_music, "book": _apply_meta_to_book}.get(
-                    mt, _apply_meta_to_movie)(cfg, m, nm)
+                {"music": _apply_meta_to_music, "book": _apply_meta_to_book,
+                 "game": _apply_meta_to_game}.get(mt, _apply_meta_to_movie)(cfg, m, nm)
                 c["requery"] = False  # consumed → don't re-query every build
                 requery_consumed = True
                 log(f"  correction: re-queried {mid} ({mt}) → {nm.title} ({nm.source})")
@@ -573,6 +603,26 @@ def _apply_meta_to_book(cfg: Config, m: dict, meta: BookMeta) -> None:
     m["series"] = meta.series
     m["overview"] = meta.overview
     m["read"] = _read_links(m.get("author") or "", m["title"])
+    m["source"] = {"name": meta.source, "url": meta.source_url}
+    if meta.cover_url:
+        dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
+        if _download_poster(meta.cover_url, dest):
+            m["poster"] = f"posters/{dest.name}"
+
+
+def _apply_meta_to_game(cfg: Config, m: dict, meta: GameMeta) -> None:
+    """Overwrite a game's enrichment fields from a fresh Wikidata lookup."""
+    m["title"] = meta.title or m["title"]
+    m["developer"] = meta.developer or m.get("developer")
+    m["publisher"] = meta.publisher or m.get("publisher")
+    m["year"] = meta.year or m.get("year")
+    m["genres"] = meta.genres
+    m["platforms"] = meta.platforms
+    m["players"] = meta.players
+    m["esrb"] = meta.esrb
+    m["rating"] = meta.rating
+    m["overview"] = meta.overview
+    m["play"] = _play_links(m["title"], m.get("format"))
     m["source"] = {"name": meta.source, "url": meta.source_url}
     if meta.cover_url:
         dest = cfg.posters_dir / f"{_slug(m['id'])}.jpg"
@@ -702,7 +752,9 @@ def _write_feeds(cfg: Config, site: dict, collection: list, limit: int = 30) -> 
     title = site.get("title") or "My Media Collection"
 
     def _line(m: dict) -> str:
-        who = m.get("artist") if (m.get("media_type") == "music") else m.get("director")
+        mt = m.get("media_type")
+        who = (m.get("artist") if mt == "music" else m.get("author") if mt == "book"
+               else m.get("developer") if mt == "game" else m.get("director"))
         bits = [str(m.get("year")) if m.get("year") else None, m.get("format"), who]
         return " · ".join(b for b in bits if b)
 
@@ -751,6 +803,47 @@ def _write_feeds(cfg: Config, site: dict, collection: list, limit: int = 30) -> 
     (cfg.data_dir / "feed.xml").write_text(rss, encoding="utf-8")
 
 
+def _finalize_media(cfg, store, img, h, ident, item, cover_url, is_manual, portrait=True) -> bool:
+    """Shared tail for music/book/game records (the same poster/original/upsert/record dance for
+    every non-movie type). Downloads the online cover, else falls back to the cover photo, keeps an
+    orientation-corrected original, attaches the common fields, then upserts + records."""
+    mid = item["id"]
+    poster_rel = None
+    poster_dest = cfg.posters_dir / f"{_slug(mid)}.jpg"
+    if cover_url and _download_poster(cover_url, poster_dest):
+        poster_rel = f"posters/{poster_dest.name}"
+    else:
+        try:
+            save_thumbnail(img, poster_dest, max_edge=600)                  # fall back to the photo
+            poster_rel = f"posters/{poster_dest.name}"
+        except Exception:
+            pass
+
+    original_rel = None
+    original_dest = cfg.output_dir / "originals" / f"{_slug(mid)}-{h[:8]}.jpg"
+    try:
+        save_thumbnail(img, original_dest, max_edge=900, portrait=portrait)
+        original_rel = f"originals/{original_dest.name}"
+    except Exception:
+        pass
+
+    images = [poster_rel] if poster_rel else []
+    if original_rel and original_rel not in images:
+        images.append(original_rel)
+    item["poster"] = poster_rel
+    item["images"] = images
+    item["source_image"] = img.name
+    item["confidence"] = round(ident.confidence, 3)
+    item.setdefault("seen", False)
+    item.setdefault("date_seen", None)
+    item["added_at"] = _now()
+    store.upsert_movie(item)
+    if is_manual:
+        store.remove_unidentified_by_hash(h)
+    store.record(h, img.name, "identified", mid, _now())
+    return True
+
+
 def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
     """Enrich an audio cover (CD/vinyl/cassette) via the music provider and write a music record."""
     meta = provider.lookup(ident.title, artist=ident.artist)
@@ -762,30 +855,7 @@ def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
     title = meta.title or ident.title
     artist = meta.artist
     mid = _slug(f"{artist or ''}-{title}-{meta.year or ident.year or h[:6]}")
-
-    poster_rel = None
-    poster_dest = cfg.posters_dir / f"{mid}.jpg"
-    if meta.cover_url and _download_poster(meta.cover_url, poster_dest):   # Cover Art Archive
-        poster_rel = f"posters/{poster_dest.name}"
-    else:
-        try:
-            save_thumbnail(img, poster_dest, max_edge=600)                 # fall back to the photo
-            poster_rel = f"posters/{poster_dest.name}"
-        except Exception:
-            pass
-
-    original_rel = None
-    original_dest = cfg.output_dir / "originals" / f"{mid}-{h[:8]}.jpg"
-    try:
-        save_thumbnail(img, original_dest, max_edge=900)
-        original_rel = f"originals/{original_dest.name}"
-    except Exception:
-        pass
-
     fmt = ident.format if ident.format and ident.format != "Unknown" else (meta.format or "CD")
-    images = [poster_rel] if poster_rel else []
-    if original_rel and original_rel not in images:
-        images.append(original_rel)
     year = meta.year or ident.year
     genre = meta.genres[0].lower() if meta.genres else None
     intro = (f"A {year // 10 * 10}s {genre} record worth spinning." if (year and genre)
@@ -796,19 +866,13 @@ def _process_music(cfg, store, img, h, ident, provider, is_manual) -> bool:
         "year": year, "format": fmt, "label": meta.label, "genres": meta.genres,
         "rating": meta.rating, "tracklist": meta.tracklist, "disc_count": meta.disc_count,
         "barcode": meta.barcode, "catalog_no": meta.catalog_no, "intro": intro,
-        "overview": meta.overview, "poster": poster_rel, "images": images,
+        "overview": meta.overview,
         "listen": _listen_links(artist or "", title),
         "source": {"name": meta.source, "url": meta.source_url},
         "resale": estimate(f"{artist or ''} {title}".strip(), year, fmt, meta.rating,
                            cfg.resale.get("ebay_tld", "com")),
-        "source_image": img.name, "confidence": round(ident.confidence, 3),
-        "seen": False, "date_seen": None, "added_at": _now(),
     }
-    store.upsert_movie(item)
-    if is_manual:
-        store.remove_unidentified_by_hash(h)
-    store.record(h, img.name, "identified", mid, _now())
-    return True
+    return _finalize_media(cfg, store, img, h, ident, item, meta.cover_url, is_manual, portrait=False)
 
 
 def _process_book(cfg, store, img, h, ident, provider, is_manual) -> bool:
@@ -822,30 +886,7 @@ def _process_book(cfg, store, img, h, ident, provider, is_manual) -> bool:
     title = meta.title or ident.title
     author = meta.author
     mid = _slug(f"{author or ''}-{title}-{meta.year or ident.year or h[:6]}")
-
-    poster_rel = None
-    poster_dest = cfg.posters_dir / f"{mid}.jpg"
-    if meta.cover_url and _download_poster(meta.cover_url, poster_dest):    # Open Library cover
-        poster_rel = f"posters/{poster_dest.name}"
-    else:
-        try:
-            save_thumbnail(img, poster_dest, max_edge=600)                  # fall back to the photo
-            poster_rel = f"posters/{poster_dest.name}"
-        except Exception:
-            pass
-
-    original_rel = None
-    original_dest = cfg.output_dir / "originals" / f"{mid}-{h[:8]}.jpg"
-    try:
-        save_thumbnail(img, original_dest, max_edge=900, portrait=True)
-        original_rel = f"originals/{original_dest.name}"
-    except Exception:
-        pass
-
     fmt = ident.format if ident.format and ident.format != "Unknown" else (meta.format or "Paperback")
-    images = [poster_rel] if poster_rel else []
-    if original_rel and original_rel not in images:
-        images.append(original_rel)
     year = meta.year or ident.year
     genre = meta.genres[0].lower() if meta.genres else None
     intro = (f"A {genre} book worth a read." if genre
@@ -856,19 +897,43 @@ def _process_book(cfg, store, img, h, ident, provider, is_manual) -> bool:
         "year": year, "format": fmt, "publisher": meta.publisher, "genres": meta.genres,
         "rating": meta.rating, "page_count": meta.page_count, "isbn": meta.isbn,
         "series": meta.series, "intro": intro, "overview": meta.overview,
-        "poster": poster_rel, "images": images,
         "read": _read_links(author or "", title),
         "source": {"name": meta.source, "url": meta.source_url},
         "resale": estimate(f"{author or ''} {title}".strip(), year, fmt, meta.rating,
                            cfg.resale.get("ebay_tld", "com")),
-        "source_image": img.name, "confidence": round(ident.confidence, 3),
-        "seen": False, "date_seen": None, "added_at": _now(),
     }
-    store.upsert_movie(item)
-    if is_manual:
-        store.remove_unidentified_by_hash(h)
-    store.record(h, img.name, "identified", mid, _now())
-    return True
+    return _finalize_media(cfg, store, img, h, ident, item, meta.cover_url, is_manual, portrait=True)
+
+
+def _process_game(cfg, store, img, h, ident, provider, is_manual) -> bool:
+    """Enrich a game cover/box via the game provider (Wikidata) and write a game record.
+    Platform is the game's `format` dimension (Switch | PS5 | Xbox | PC | Retro …)."""
+    meta = provider.lookup(ident.title, year=ident.year)
+    if not getattr(meta, "matched", False) and not is_manual:
+        return _record_unidentified(cfg, store, img, h, ident, reason="no game match")
+    if not getattr(meta, "matched", False):
+        meta = GameMeta(True, source="manual", title=ident.title)
+
+    title = meta.title or ident.title
+    mid = _slug(f"{title}-{meta.year or ident.year or h[:6]}")
+    # the box's platform (from OCR) wins; else the provider's primary platform; else PC
+    fmt = ident.format if ident.format and ident.format != "Unknown" else (meta.format or "PC")
+    year = meta.year or ident.year
+    genre = meta.genres[0].lower() if meta.genres else None
+    dev = meta.developer
+    intro = (f"A {genre} game worth a playthrough." if genre
+             else (f"{dev} — {title}." if dev else title))
+
+    item = {
+        "id": mid, "media_type": "game", "title": title, "developer": dev,
+        "publisher": meta.publisher, "year": year, "format": fmt, "genres": meta.genres,
+        "platforms": meta.platforms, "players": meta.players, "esrb": meta.esrb,
+        "rating": meta.rating, "intro": intro, "overview": meta.overview,
+        "play": _play_links(title, fmt),
+        "source": {"name": meta.source, "url": meta.source_url},
+        "resale": estimate(title, year, fmt, meta.rating, cfg.resale.get("ebay_tld", "com")),
+    }
+    return _finalize_media(cfg, store, img, h, ident, item, meta.cover_url, is_manual, portrait=True)
 
 
 class _FixedProvider:
@@ -914,6 +979,10 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
             ident = Identification(True, bm["title"], bm["year"], "Unknown", None, 0.99,
                                    None, bm.get("author"))
             return _process_book(cfg, store, img, h, ident, _FixedProvider(bm["meta"]), True)
+        if bm and bm_type == "game":            # game: trust the UPC product title, then enrich
+            is_manual = True
+            ident = Identification(True, bm["title"], bm.get("year"), "Unknown", None, 0.99)
+            return _process_game(cfg, store, img, h, ident, providers["game"], is_manual)
         if bm:                                  # movie: trust the UPC product title, then enrich
             is_manual = True
             ident = Identification(True, bm["title"], bm.get("year"), "Unknown", None, 0.99)
@@ -928,6 +997,8 @@ def _process_one(cfg, store, img, h, get_ident, providers, threshold, media_type
         return _process_music(cfg, store, img, h, ident, providers["music"], is_manual)
     if media_type == "book":
         return _process_book(cfg, store, img, h, ident, providers["book"], is_manual)
+    if media_type == "game":
+        return _process_game(cfg, store, img, h, ident, providers["game"], is_manual)
 
     metadata = providers["movie"]
     meta = metadata.lookup(ident.title, ident.year)
@@ -1148,6 +1219,33 @@ def _build_mock(cfg, store, stats, log) -> Stats:
             "resale": estimate(f"{author} {title}", year, fmt, mk["rating"], tld),
             "source_image": f"(demo) {author} — {title}", "confidence": 0.99,
             "seen": read, "date_seen": ("2024-04-01" if read else None), "added_at": _now(),
+        }
+        store.upsert_movie(item)
+        store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())
+        stats.new += 1
+        stats.identified += 1
+
+    # --- video games -----------------------------------------------------------------
+    for i, mk in enumerate(_MOCK_GAMES):
+        title, year, fmt = mk["title"], mk["year"], mk["format"]
+        mid = f"{_slug(title)}-{year}"
+        cover = cfg.posters_dir / f"{mid}.jpg"
+        make_placeholder_poster(f"{title}", cover, color=mk.get("color", (24, 28, 40)),
+                                subtitle=fmt)
+        images = [f"posters/{cover.name}"]
+        played = (i % 2 == 0)
+        item = {
+            "id": mid, "media_type": "game", "title": title, "developer": mk.get("developer"),
+            "publisher": mk.get("publisher"), "year": year, "format": fmt, "genres": mk["genres"],
+            "platforms": mk.get("platforms", [fmt]), "players": mk.get("players"),
+            "esrb": mk.get("esrb"), "rating": mk["rating"],
+            "intro": mk["intro"], "overview": mk["intro"],
+            "poster": images[0], "images": images,
+            "play": _play_links(title, fmt),
+            "source": {"name": "mock", "url": None},
+            "resale": estimate(title, year, fmt, mk["rating"], tld),
+            "source_image": f"(demo) {title}", "confidence": 0.99,
+            "seen": played, "date_seen": ("2024-05-01" if played else None), "added_at": _now(),
         }
         store.upsert_movie(item)
         store.record(f"mock-{mid}", item["source_image"], "identified", mid, _now())

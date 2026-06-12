@@ -31,6 +31,50 @@
   const mtype = (m) => m.media_type || "movie";
   const isMusic = (m) => mtype(m) === "music";
   const isBook = (m) => mtype(m) === "book";
+  const isGame = (m) => mtype(m) === "game";
+
+  // Shared per-media-type view registry (card widgets + labels). Adding a new media type is
+  // mostly a matter of adding one entry here instead of threading a branch through every
+  // renderer — the card meta/people/studio/where-to-X rows all read from this.
+  const TYPES = {
+    movie: {
+      emoji: "🎬", label: "Movies",
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language],
+      creator: (m) => (m.director ? { icon: "🎬", name: m.director } : null),
+      cast: (m) => m.actors || [],
+      org: (m) => (m.studio ? { icon: "🏛", value: m.studio } : null),
+      tooltip: (m) => [m.director ? "Dir: " + m.director : null, (m.actors || []).join(", ") || null].filter(Boolean).join("  ·  "),
+      pills: (m) => watchPills(m),
+    },
+    music: {
+      emoji: "🎵", label: "Music",
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, (m.tracklist && m.tracklist.length) ? m.tracklist.length + " tracks" : null],
+      creator: (m) => (m.artist ? { icon: "🎤", name: m.artist } : null),
+      cast: () => [],
+      org: (m) => (m.label ? { icon: "🏷", value: m.label } : null),
+      tooltip: (m) => (m.tracklist && m.tracklist.length ? m.tracklist.join("  ·  ") : ""),
+      pills: (m) => listenPills(m),
+    },
+    book: {
+      emoji: "📚", label: "Books",
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, m.page_count ? m.page_count + " pp" : null, m.language],
+      creator: (m) => (m.author ? { icon: "🖊", name: m.author } : null),
+      cast: () => [],
+      org: (m) => (m.publisher ? { icon: "📖", value: m.publisher } : null),
+      tooltip: () => "",
+      pills: (m) => readPills(m),
+    },
+    game: {
+      emoji: "🎮", label: "Games",
+      metaParts: (m) => [m.rating ? "★ " + m.rating : null, m.format, m.esrb ? "ESRB " + m.esrb : null, m.players ? m.players + " players" : null],
+      creator: (m) => (m.developer ? { icon: "🕹", name: m.developer } : null),
+      cast: () => [],
+      org: (m) => (m.publisher ? { icon: "🏢", value: m.publisher } : null),
+      tooltip: (m) => ((m.platforms || []).length ? "Platforms: " + m.platforms.join(", ") : ""),
+      pills: (m) => playPills(m),
+    },
+  };
+  const typeOf = (m) => TYPES[mtype(m)] || TYPES.movie;
 
   if (new URLSearchParams(location.search).get("embed") === "1") document.body.classList.add("embed");
 
@@ -102,6 +146,7 @@
              if (c.media_type) m.media_type = c.media_type; if ("artist" in c) m.artist = c.artist || null;
              if ("studio" in c) m.studio = c.studio || null; if ("distributor" in c) m.distributor = c.distributor || null;
              if ("author" in c) m.author = c.author || null; if ("publisher" in c) m.publisher = c.publisher || null;
+             if ("developer" in c) m.developer = c.developer || null;
              if (c.default_image) m.poster = c.default_image; m._requery = !!c.requery;
              // personal catalog (admin-only; stripped from the published site)
              m.my_rating = "my_rating" in c ? c.my_rating : null;
@@ -462,7 +507,8 @@
       if (q) { const hay = [m.title, m.intro, m.overview, (m.genres || []).join(" "), m.language,
         String(m.year), m.director, (m.actors || []).join(" "), m.studio, m.distributor,
         m.artist, m.label, (m.tracklist || []).join(" "),
-        m.author, m.publisher, m.isbn, m.series].join(" ").toLowerCase();
+        m.author, m.publisher, m.isbn, m.series,
+        m.developer, (m.platforms || []).join(" ")].join(" ").toLowerCase();
         if (!hay.includes(q)) return false; }
       return true;
     });
@@ -516,13 +562,9 @@
       if (isAdmin) { const s = t.querySelector(".ttl"); s.style.cursor = "pointer"; s.title = "Click to edit"; s.addEventListener("click", () => editCard(m, el)); }
       b.appendChild(t);
     }
+    const T = typeOf(m);
     if (fieldOn("meta")) {
-      const parts = isMusic(m)
-        ? [m.rating ? "★ " + m.rating : null, m.format, (m.tracklist && m.tracklist.length) ? m.tracklist.length + " tracks" : null].filter(Boolean)
-        : isBook(m)
-        ? [m.rating ? "★ " + m.rating : null, m.format, m.page_count ? m.page_count + " pp" : null, m.language].filter(Boolean)
-        : [m.rating ? "★ " + m.rating : null, m.format, m.runtime ? m.runtime + " min" : null, m.language].filter(Boolean);
-      b.appendChild(line("meta", parts.join(" · ")));
+      b.appendChild(line("meta", T.metaParts(m).filter(Boolean).join(" · ")));
     }
     if (fieldOn("genres")) {
       const g = lineEl("genres");
@@ -531,37 +573,27 @@
     }
     if (fieldOn("people")) {
       const p = lineEl("people");
-      if (isMusic(m)) {
-        if (m.artist) p.appendChild(person("🎤 " + m.artist, m.artist));
-        if (m.tracklist && m.tracklist.length) p.title = m.tracklist.join("  ·  ");
-      } else if (isBook(m)) {
-        if (m.author) p.appendChild(person("🖊 " + m.author, m.author));
-      } else {
-        if (m.director) p.appendChild(person("🎬 " + m.director, m.director));
-        (m.actors || []).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
-        const full = [m.director ? "Dir: " + m.director : null, (m.actors || []).join(", ") || null].filter(Boolean).join("  ·  ");
-        if (full) p.title = full;
-      }
+      const c = T.creator(m);
+      if (c) p.appendChild(person(c.icon + " " + c.name, c.name));
+      T.cast(m).slice(0, 4).forEach((a) => p.appendChild(person(a, a)));
+      const tip = T.tooltip(m);
+      if (tip) p.title = tip;
       b.appendChild(p);
     }
     if (fieldOn("studio")) {
       const s = lineEl("studio");
-      if (isMusic(m)) {
-        if (m.label) { const x = person("🏷 " + m.label, null); x.onclick = () => setFilter("#filterStudio", m.label); s.appendChild(x); }
-      } else if (isBook(m)) {
-        if (m.publisher) { const x = person("📖 " + m.publisher, null); x.onclick = () => setFilter("#filterStudio", m.publisher); s.appendChild(x); }
-      } else {
-        if (m.studio) { const x = person("🏛 " + m.studio, null); x.onclick = () => setFilter("#filterStudio", m.studio); s.appendChild(x); }
-        if (m.distributor) s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
-      }
+      const o = T.org(m);
+      if (o) { const x = person(o.icon + " " + o.value, null); x.onclick = () => setFilter("#filterStudio", o.value); s.appendChild(x); }
+      if (mtype(m) === "movie" && m.distributor)
+        s.insertAdjacentHTML("beforeend", `<span class="dist">${m.studio ? " · " : ""}↗ ${esc(m.distributor)}</span>`);
       b.appendChild(s);
     }
     if (fieldOn("intro")) b.appendChild(line("intro", m.intro || "", true));
     if (fieldOn("overview")) b.appendChild(line("overview", m.overview || "", true));
 
-    // foot: where-to-watch (left) + resale (right) on one line
+    // foot: where-to-watch/listen/read/play (left) + resale (right) on one line
     const foot = lineEl("foot");
-    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = isMusic(m) ? listenPills(m) : isBook(m) ? readPills(m) : watchPills(m); foot.appendChild(w); }
+    if (fieldOn("watch")) { const w = document.createElement("span"); w.className = "watch-inline"; w.innerHTML = T.pills(m); foot.appendChild(w); }
     if (fieldOn("resale") && m.resale) {
       foot.insertAdjacentHTML("beforeend",
         `<span class="value">${esc(m.resale.display || "")}` +
@@ -677,6 +709,12 @@
     if (!p.length) return "";
     const short = { "Open Library": "OpenLib", "Goodreads": "Goodreads", "Google Books": "Google" };
     return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Find on ${esc(x.name)}">📖 ${esc(short[x.name] || x.name)}</a>`).join("");
+  }
+  function playPills(m) {
+    const p = (m.play && m.play.providers) || [];
+    if (!p.length) return "";
+    const short = { "PS Store": "PSN", "MobyGames": "Moby" };
+    return p.map((x) => `<a class="watch-pill listen-yes" target="_blank" rel="noopener" href="${esc(safeUrl(x.url))}" title="Get on ${esc(x.name)}">🎮 ${esc(short[x.name] || x.name)}</a>`).join("");
   }
   function seenToggle(m) {
     const d = lineEl("seentoggle");
@@ -795,6 +833,7 @@
     movie: ["DVD", "VHS", "Blu-ray", "VideoCD", "Unknown"],
     music: ["CD", "Vinyl", "Cassette", "Unknown"],
     book: ["Hardcover", "Paperback", "Mass Market", "eBook", "Audiobook", "Unknown"],
+    game: ["Switch", "PS5", "PS4", "Xbox", "PC", "Retro", "Unknown"],
   };
   function fmtOptions(type, current) {
     return (FORMATS_BY_TYPE[type] || FORMATS_BY_TYPE.movie)
@@ -812,13 +851,15 @@
           `<option value="movie" ${startType === "movie" ? "selected" : ""}>🎬 Movie</option>` +
           `<option value="music" ${startType === "music" ? "selected" : ""}>🎵 Music</option>` +
           `<option value="book" ${startType === "book" ? "selected" : ""}>📚 Book</option>` +
+          `<option value="game" ${startType === "game" ? "selected" : ""}>🎮 Game</option>` +
         `</select>` +
         `<input id="e_y" type="number" value="${esc(m.year || "")}" placeholder="Year">` +
         `<select id="e_f">${fmtOptions(startType, m.format)}</select>` +
       `</div>` +
       `<input id="e_artist" type="text" value="${esc(m.artist || "")}" placeholder="Artist (for music)" ${startType === "music" ? "" : "hidden"}>` +
       `<input id="e_author" type="text" value="${esc(m.author || "")}" placeholder="Author (for books)" ${startType === "book" ? "" : "hidden"}>` +
-      `<input id="e_publisher" type="text" value="${esc(m.publisher || "")}" placeholder="Publisher (for books)" ${startType === "book" ? "" : "hidden"}>` +
+      `<input id="e_developer" type="text" value="${esc(m.developer || "")}" placeholder="Developer (for games)" ${startType === "game" ? "" : "hidden"}>` +
+      `<input id="e_publisher" type="text" value="${esc(m.publisher || "")}" placeholder="Publisher (books / games)" ${(startType === "book" || startType === "game") ? "" : "hidden"}>` +
       `<input id="e_s" type="text" value="${esc(m.studio || "")}" placeholder="Studio / company" ${startType === "movie" ? "" : "hidden"}>` +
       `<input id="e_d" type="text" value="${esc(m.distributor || "")}" placeholder="Distributor" ${startType === "movie" ? "" : "hidden"}>` +
       `<label class="ie-check"><input id="e_r" type="checkbox"> Re-query internet on next online rebuild</label>` +
@@ -832,7 +873,8 @@
       ed.querySelector("#e_f").innerHTML = fmtOptions(t, (FORMATS_BY_TYPE[t] || FORMATS_BY_TYPE.movie)[0]);
       ed.querySelector("#e_artist").hidden = t !== "music";
       ed.querySelector("#e_author").hidden = t !== "book";
-      ed.querySelector("#e_publisher").hidden = t !== "book";
+      ed.querySelector("#e_developer").hidden = t !== "game";
+      ed.querySelector("#e_publisher").hidden = !(t === "book" || t === "game");
       ed.querySelector("#e_s").hidden = t !== "movie";
       ed.querySelector("#e_d").hidden = t !== "movie";
       if (t !== startType) ed.querySelector("#e_r").checked = true;   // re-enrich with the right provider
@@ -849,6 +891,7 @@
       };
       if (type === "music") patch.artist = ed.querySelector("#e_artist").value.trim();
       else if (type === "book") { patch.author = ed.querySelector("#e_author").value.trim(); patch.publisher = ed.querySelector("#e_publisher").value.trim(); }
+      else if (type === "game") { patch.developer = ed.querySelector("#e_developer").value.trim(); patch.publisher = ed.querySelector("#e_publisher").value.trim(); }
       else { patch.studio = ed.querySelector("#e_s").value.trim(); patch.distributor = ed.querySelector("#e_d").value.trim(); }
       setCorr(m, patch);
       applyCorrection(m); render();
@@ -1121,7 +1164,8 @@
   }
   function exportCatalogCsv() {
     if (!movies.length) { alert("Nothing to export."); return; }
-    const cols = ["media_type", "title", "artist", "director", "year", "format", "label", "studio",
+    const cols = ["media_type", "title", "artist", "author", "developer", "director", "year",
+                  "format", "label", "studio", "publisher", "platforms",
                   "genres", "rating", "my_rating", "tags", "barcode", "intro"];
     const cell = (v) => { v = Array.isArray(v) ? v.join("; ") : String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
     const rows = [cols.join(",")];
