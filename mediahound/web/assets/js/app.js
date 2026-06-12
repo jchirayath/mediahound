@@ -1222,6 +1222,69 @@
     alert(`Exported ${movies.length} item(s) → catalog.csv.`);
   }
 
+  // 🖨 Printable inventory — build a clean, self-contained print page (grouped by media type,
+  // with per-type + grand-total estimated value) and open the browser's Print → Save as PDF.
+  // Entirely client-side from the loaded catalog; works on a static copy too.
+  function printInventory() {
+    if (!movies.length) { alert("Nothing to print."); return; }
+    const ORDER = ["movie", "music", "book", "game", "audiobook"];
+    const LBL = { movie: "Movies", music: "Music", book: "Books", game: "Video games", audiobook: "Audiobooks" };
+    const CHEAD = { movie: "Director", music: "Artist", book: "Author", game: "Developer", audiobook: "Author / narrator" };
+    const creatorOf = (m) => {
+      const t = m.media_type || "movie";
+      if (t === "music") return m.artist || "";
+      if (t === "book") return m.author || "";
+      if (t === "audiobook") return [m.author, m.narrator].filter(Boolean).join(" / ");
+      if (t === "game") return m.developer || "";
+      return m.director || "";
+    };
+    const val = (m) => { const v = (m.resale || {}).mid; return typeof v === "number" ? v : 0; };
+    let sym = "$";
+    for (const m of movies) { const c = (m.resale || {}).currency; if (c && c !== "local") { sym = c === "USD" ? "$" : c + " "; break; } }
+    const money = (v) => sym + Math.round(v).toLocaleString();
+    const eq = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const groups = {};
+    movies.forEach((m) => { (groups[m.media_type || "movie"] = groups[m.media_type || "movie"] || []).push(m); });
+    const present = ORDER.filter((t) => groups[t]).concat(Object.keys(groups).filter((t) => !ORDER.includes(t)));
+    const counts = present.map((t) => `${groups[t].length} ${(LBL[t] || t).toLowerCase()}`).join(" · ");
+    const totalVal = movies.reduce((s, m) => s + val(m), 0);
+    const sections = present.map((t) => {
+      const items = groups[t].slice().sort((a, b) => String(a.title || "").toLowerCase().localeCompare(String(b.title || "").toLowerCase()));
+      const sub = items.reduce((s, m) => s + val(m), 0);
+      const rows = items.map((m, i) =>
+        `<tr><td class=num>${i + 1}</td><td class=ttl>${eq(m.title || "Untitled")}</td>` +
+        `<td>${eq(creatorOf(m))}</td><td class=num>${eq(m.year || "")}</td>` +
+        `<td>${eq(m.format || "")}</td><td class=num>${eq(m.rating || "")}</td>` +
+        `<td class=num>${val(m) ? money(val(m)) : ""}</td></tr>`).join("");
+      return `<section class=grp><h2>${LBL[t] || t} <span class=grp-meta>${items.length} item(s) · est. ${money(sub)}</span></h2>` +
+        `<table><thead><tr><th class=num>#</th><th>Title</th><th>${eq(CHEAD[t] || "Creator")}</th>` +
+        `<th class=num>Year</th><th>Format</th><th class=num>Rating</th><th class=num>Est. value</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+    }).join("");
+    const title = eq(($("#siteTitle") && $("#siteTitle").textContent) || "My Media Collection");
+    const when = new Date().toISOString().slice(0, 10);
+    const css = `*{box-sizing:border-box}body{font:14px/1.45 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#16232a;margin:0;padding:28px 32px;background:#fff}` +
+      `.bar{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}` +
+      `.bar button{font:600 13px/1 inherit;padding:9px 16px;border-radius:8px;cursor:pointer;border:1px solid #e97b0c;background:#e97b0c;color:#fff}` +
+      `h1{font-size:22px;margin:0 0 2px}.sub{color:#5b6b73;font-size:12.5px}` +
+      `.totals{margin:10px 0 20px;padding:12px 16px;border:1px solid #d7dde0;border-radius:10px;background:#fafbfb}.totals .big{font-size:18px;font-weight:700}` +
+      `.grp{margin:0 0 22px;break-inside:avoid}h2{font-size:15px;margin:0 0 8px;padding-bottom:5px;border-bottom:2px solid #16232a;display:flex;justify-content:space-between;align-items:baseline}` +
+      `.grp-meta{font-size:12px;font-weight:500;color:#5b6b73}table{width:100%;border-collapse:collapse;font-size:12.5px}` +
+      `th,td{text-align:left;padding:5px 8px;border-bottom:1px solid #d7dde0;vertical-align:top}` +
+      `th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:#5b6b73;border-bottom:1px solid #16232a}` +
+      `td.num,th.num{text-align:right;white-space:nowrap}td.ttl{font-weight:600}tr{break-inside:avoid}` +
+      `.foot{margin-top:22px;color:#5b6b73;font-size:11px;border-top:1px solid #d7dde0;padding-top:10px}` +
+      `@media print{body{padding:0}.no-print{display:none!important}thead{display:table-header-group}@page{margin:14mm}}`;
+    const docHtml = `<!DOCTYPE html><html lang=en><head><meta charset=utf-8><title>${title} — Inventory</title><style>${css}</style></head>` +
+      `<body><div class=bar><div><h1>${title}</h1><div class=sub>Collection inventory · generated ${when}</div></div>` +
+      `<button class=no-print onclick="window.print()">🖨 Print / Save as PDF</button></div>` +
+      `<div class=totals><div class=big>${movies.length} item(s) · estimated value ${money(totalVal)}</div><div class=sub>${counts}</div></div>` +
+      `${sections}<div class=foot>Estimated values are heuristic resale guesses, for reference only. Generated by MediaHound.</div></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { alert("Pop-up blocked — allow pop-ups for this site to print the inventory."); return; }
+    w.document.write(docHtml); w.document.close(); w.focus();
+    w.onload = () => setTimeout(() => w.print(), 150);
+  }
+
   // ---- consolidated action menus (Add / Connect / Export / Backup) --------
   function openMenu(title, items) {
     $("#menuTitle").textContent = title;
@@ -1255,6 +1318,7 @@
   }
   function openExportMenu() {
     openMenu("⤓ Export", [
+      { icon: "🖨", label: "Printable inventory (PDF)", desc: "A print-ready list, grouped + valued → Save as PDF", run: printInventory },
       { icon: "📄", label: "Catalog (CSV)", desc: "Every title as a spreadsheet", run: exportCatalogCsv },
       { icon: "{ }", label: "Catalog (JSON)", desc: "The full catalog as JSON", run: exportCatalogJson },
       { icon: "✎", label: "Export changes", desc: "Your edits (corrections.json) for a rebuild", run: exportCorrections },

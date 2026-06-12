@@ -113,7 +113,8 @@ def cmd_export(args) -> int:
     cfg = _load_or_die(args.config)
     store = Store(cfg.data_dir)
     fmt = args.format
-    default_out = {"csv": "catalog.csv", "letterboxd": "letterboxd.csv", "json": "catalog.json"}[fmt]
+    default_out = {"csv": "catalog.csv", "letterboxd": "letterboxd.csv", "json": "catalog.json",
+                   "inventory": "inventory.html"}[fmt]
     out = Path(args.output or default_out).resolve()
     if fmt == "csv":
         from .csvio import export_csv
@@ -121,10 +122,17 @@ def cmd_export(args) -> int:
     elif fmt == "letterboxd":
         from .exporters import export_letterboxd
         n = export_letterboxd(store, out)
+    elif fmt == "inventory":
+        from .inventory import render_inventory
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(render_inventory(store.collection, cfg.site), encoding="utf-8")
+        n = len(store.collection)
     else:
         from .exporters import export_json
         n = export_json(store, out)
     print(f"Exported {n} item(s) ({fmt}) → {out}")
+    if fmt == "inventory":
+        print("Open it in a browser and Print → Save as PDF for a printable inventory.")
     return 0
 
 
@@ -268,10 +276,11 @@ def main(argv=None) -> int:
                     help="enrich each row (cover art + missing fields) via the metadata providers")
     pm.set_defaults(func=cmd_import)
 
-    pe = sub.add_parser("export", help="write the catalog to CSV / Letterboxd CSV / JSON.")
+    pe = sub.add_parser("export", help="write the catalog to CSV / Letterboxd CSV / JSON / printable inventory.")
     pe.add_argument("--config", default="config.toml", help="path to config.toml")
-    pe.add_argument("--format", choices=("csv", "letterboxd", "json"), default="csv",
-                    help="csv (full catalog), letterboxd (movies → Letterboxd import CSV), or json")
+    pe.add_argument("--format", choices=("csv", "letterboxd", "json", "inventory"), default="csv",
+                    help="csv (full catalog), letterboxd (movies → Letterboxd import CSV), json, "
+                         "or inventory (print-ready HTML → Save as PDF)")
     pe.add_argument("-o", "--output", default=None,
                     help="output path (default depends on --format)")
     pe.set_defaults(func=cmd_export)
