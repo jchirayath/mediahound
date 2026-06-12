@@ -1,6 +1,12 @@
-# 05 — New media types: Books & Video games
+# 05 — New media types: Books, Video games & Audiobooks
 
-**Status:** 📚 Books **shipped** (P1) · 🎮 Games **shipped** · **Effort:** L · **Depends on:** Barcode (01)
+**Status:** 📚 Books **shipped** · 🎮 Games **shipped** · 🎧 Audiobooks **shipped** · **Effort:** L · **Depends on:** Barcode (01)
+
+> Audiobooks (post-Games) reuse the registry: a zero-key provider (`metadata/audiobook.py`) merges
+> Open Library (author/cover/publisher/ISBN) with the LibriVox catalogue (duration/overview); narrator
+> comes from the cover/CSV/manual. `🎧 Audiobooks` tab/card (duration, narrator chip)/editor,
+> `RawImages/audiobooks/`, CSV, where-to-listen links, and the Audible/CD/MP3-CD/Cassette/Digital
+> medium dimension. Confirms the registry claim — a 5th type was ~one entry + a provider.
 
 > **Books + Games shipped.** Books: Open Library provider (`metadata/openlibrary.py`), ISBN
 > auto-routing (978/979), `📚 Books` tab/card/editor, `RawImages/books/`, CSV, `_MOCK_BOOKS`.
