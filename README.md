@@ -302,14 +302,16 @@ When the site is served as plain files (no admin server), edits live in your bro
 Most collection tools are **single-category** (often movies-only — and CLZ even charges *per*
 category), add items by **barcode scan or manual entry**, and keep your catalog in **their cloud** or a
 dated desktop app. MediaHound puts **all five media types in one catalog** — 🎬 movies, 🎵 music,
-📚 books, 🎮 games, 🎧 audiobooks — identifies titles from **photos of the covers**, and generates a
-**modern static website you own and host for free**, offline-first and open-source. It also handles
-**VHS** (which usually has no scannable barcode in the disc databases others rely on).
+📚 books, 🎮 games, 🎧 audiobooks — identifies titles from **photos of the covers** (and **scans
+barcodes** — UPC/EAN/ISBN — and imports CSVs too), and generates a **modern static website you own and
+host for free**, offline-first and open-source. So it does everything the barcode apps do *plus*
+photo-identification — the only practical path for **bulk-photographing a shelf** and for **VHS**,
+which usually has no scannable barcode in the disc databases others rely on.
 
 | | MediaHound | CLZ / Libib | Tellico / GCstar | Plex / Jellyfin |
 |---|---|---|---|---|
 | **Movies + music + books + games + audiobooks** | ✅ all five, one catalog | ◻︎ per-category (CLZ) / multi (Libib) | ✅ many types | ❌ video files only |
-| Add by **photo of cover** | ✅ OCR/AI | ❌ barcode/manual | ❌ search/manual | ❌ scans video files |
+| Add by **photo of cover** | ✅ OCR/AI (+ barcode & CSV) | ❌ barcode/manual | ❌ search/manual | ❌ scans video files |
 | Modern **website you host free** | ✅ | ❌ their cloud | ◻︎ dated HTML export | ❌ private server |
 | Open-source / offline / no account | ✅ | ❌ | ✅ desktop | ✅ (Jellyfin) |
 | For a **physical** shelf | ✅ | ✅ | ✅ | ❌ digital files |

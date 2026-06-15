@@ -8,15 +8,16 @@ pricing and project status change — corrections welcome via PR.*
 
 Almost every existing tool adds items by **barcode scan, online title search, or manual entry**, and
 keeps your catalog in **their cloud app** or a **dated desktop database**. MediaHound takes a different
-path: it identifies titles from **photos of the covers** (OCR / optional AI vision) and generates a
-**modern static website you own and host for free** — offline-first and open-source. It catalogs five
-media types in one place: 🎬 movies, 🎵 music, 📚 books, 🎮 video games, and 🎧 audiobooks.
+path: it identifies titles from **photos of the covers** (OCR / optional AI vision) — *and* also takes
+**barcodes (UPC/EAN/ISBN)**, **CSV import**, and manual entry — then generates a **modern static
+website you own and host for free**, offline-first and open-source. It catalogs five media types in one
+place: 🎬 movies, 🎵 music, 📚 books, 🎮 video games, and 🎧 audiobooks.
 
 ## Comparison
 
 | Tool | Type / Platform | Open source | Price | Add items by | Catalog lives in | Self-host / own data |
 |---|---|---|---|---|---|---|
-| **MediaHound** | CLI → static website (any OS); movies, music, books, games & audiobooks | ✅ MIT | Free | **Photo of cover (OCR/AI)**, or manual | A static site you host (or open `index.html`) | ✅ Fully — plain files, host anywhere |
+| **MediaHound** | CLI → static website (any OS); movies, music, books, games & audiobooks | ✅ MIT | Free | **Photo of cover (OCR/AI)**, **barcode (UPC/EAN/ISBN)**, CSV, or manual | A static site you host (or open `index.html`) | ✅ Fully — plain files, host anywhere |
 | CLZ Movies | Web + iOS/Android (cloud); **separate paid app per category** | ❌ | ~$20–40/yr (per category) | Barcode, title search | CLZ Cloud + share page | ❌ (CSV export only) |
 | Libib | Web + iOS/Android (cloud); multi-category (books/movies/music/games) | ❌ | Free ≤5k items; Pro $99/yr | Barcode, title search | Libib Cloud + public OPAC (Pro) | ❌ (CSV export only) |
 | My Movies | Windows desktop + mobile/web; **movies only** | ❌ | Free basic; ~$100 one-time | Barcode, title search, folder import | Local Windows DB + online view | ◻︎ Local DB, but cloud for online/sync |
@@ -30,10 +31,11 @@ media types in one place: 🎬 movies, 🎵 music, 📚 books, 🎮 video games,
 
 ## What's genuinely different about MediaHound
 
-1. **Identify from photos, not barcodes.** Every other tool needs a UPC/EAN or that you type the
-   title. MediaHound reads the cover photo (Tesseract OCR by default, or Claude vision). This is the
-   only practical path for **bulk-photographing a shelf** and for **VHS**, which mostly has no usable
-   barcode/UPC in the disc databases the others depend on.
+1. **Identify from photos — *as well as* barcodes.** Other tools can *only* add by UPC/EAN or by typing
+   the title. MediaHound does both: scan a **barcode** (UPC/EAN/ISBN) for an exact release *and* read
+   the **cover photo** (Tesseract OCR by default, or Claude vision) — it'll even prefer a barcode it
+   finds inside a cover photo. Photo-ID is the only practical path for **bulk-photographing a shelf**
+   and for **VHS**, which mostly has no usable barcode/UPC in the disc databases the others depend on.
 2. **You get a real, modern website — that you own.** The open-source desktop tools (GCstar, Tellico,
    Griffith) can export *static HTML*, but it's template-driven and dated; Data Crow serves a *live
    Java web app*. MediaHound outputs a polished, responsive, searchable site you can host **free** on
