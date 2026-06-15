@@ -38,7 +38,7 @@ Captured for later. Roughly highest-value first.
 
 | Idea | What it is | Why | Effort |
 |---|---|---|---|
-| **Collection insights / value dashboard** | Stats page: total resale value, counts by format/genre/decade, "480 hours of movies," most-valuable items | Leans into the resale identity; we already compute per-item value | M |
+| **Collection insights / value dashboard** | Stats page: total resale value, counts by media type/format/genre/decade, "480 hours of movies · 1,200 albums," most-valuable items | Leans into the resale identity; we already compute per-item value | M |
 | **"For sale" mode** | Select items → generate ready-to-paste eBay/Marketplace listings (title, photos, condition, suggested price) | Turns the catalog into a selling tool | M |
 | **Duplicate detection** | Flag same title across formats / accidental double-catalogs (by barcode, title+year) | Cleanup; pairs with barcode + Discogs | S |
 | **Condition & purchase tracking** | Per-item condition, purchase price/date → appreciation + insurance export | Collectors & insurance | S |

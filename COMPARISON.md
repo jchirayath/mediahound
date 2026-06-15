@@ -17,10 +17,10 @@ media types in one place: 🎬 movies, 🎵 music, 📚 books, 🎮 video games,
 | Tool | Type / Platform | Open source | Price | Add items by | Catalog lives in | Self-host / own data |
 |---|---|---|---|---|---|---|
 | **MediaHound** | CLI → static website (any OS); movies, music, books, games & audiobooks | ✅ MIT | Free | **Photo of cover (OCR/AI)**, or manual | A static site you host (or open `index.html`) | ✅ Fully — plain files, host anywhere |
-| CLZ Movies | Web + iOS/Android (cloud) | ❌ | ~$20–40/yr (per category) | Barcode, title search | CLZ Cloud + share page | ❌ (CSV export only) |
-| Libib | Web + iOS/Android (cloud) | ❌ | Free ≤5k items; Pro $99/yr | Barcode, title search | Libib Cloud + public OPAC (Pro) | ❌ (CSV export only) |
-| My Movies | Windows desktop + mobile/web | ❌ | Free basic; ~$100 one-time | Barcode, title search, folder import | Local Windows DB + online view | ◻︎ Local DB, but cloud for online/sync |
-| DVD Profiler | Windows desktop + mobile | ❌ | Freemium (one-time premium) | Barcode, title search | Local DB + Invelos online | ❌ — **dead/EOL in 2026** |
+| CLZ Movies | Web + iOS/Android (cloud); **separate paid app per category** | ❌ | ~$20–40/yr (per category) | Barcode, title search | CLZ Cloud + share page | ❌ (CSV export only) |
+| Libib | Web + iOS/Android (cloud); multi-category (books/movies/music/games) | ❌ | Free ≤5k items; Pro $99/yr | Barcode, title search | Libib Cloud + public OPAC (Pro) | ❌ (CSV export only) |
+| My Movies | Windows desktop + mobile/web; **movies only** | ❌ | Free basic; ~$100 one-time | Barcode, title search, folder import | Local Windows DB + online view | ◻︎ Local DB, but cloud for online/sync |
+| DVD Profiler | Windows desktop + mobile; **movies only** | ❌ | Freemium (one-time premium) | Barcode, title search | Local DB + Invelos online | ❌ — **dead/EOL in 2026** |
 | GCstar | Desktop (Lin/Win/Mac) | ✅ GPL-2 | Free | Title search, manual, barcode add-on | Local DB; dated **static HTML export** | ✅ — but last release ~2023 (dormant) |
 | Tellico | Desktop (Linux/KDE) | ✅ GPL | Free | Title search, manual, barcode | Local DB; templated **static HTML export** | ✅ — actively maintained (best of the OSS desktop apps) |
 | Griffith | Desktop (Lin/Win/Mac) | ✅ GPL-2 | Free | Title search | Local DB; basic HTML export | ✅ — but **abandoned** (archived 2017) |
