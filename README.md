@@ -92,15 +92,18 @@ mediahound app          # sets up a library and opens the editor in your browser
 **➕ Add photos** to **drag-and-drop** your cover pics — they're saved and identified automatically.
 No config files, no separate build/serve commands. Everything stays on your computer.
 
-**Snap covers on your phone:**
+**Snap covers _or barcodes_ on your phone:**
 
 ```bash
 mediahound app --phone   # opens to your Wi-Fi and prints a QR code
 ```
 
-Scan the QR with your phone (on the same Wi-Fi), tap **➕ Add photos → Take Photo**, and they upload
-straight into your catalog. Uploads are **token-protected** (only the phone that scanned the code can
-add photos) and nothing leaves your network — use it on a network you trust.
+Scan the QR with your phone (on the same Wi-Fi), tap **➕ Add by photo → Take Photo**, and snap the
+**cover** — or the **barcode** (UPC/EAN/ISBN) for an exact-release match. MediaHound decodes the
+barcode **server-side** from the photo, so it works on any phone over plain Wi-Fi — no browser camera
+permission or HTTPS needed (handy, since the live in-browser scanner needs HTTPS and isn't supported
+on iOS). Uploads are **token-protected** (only the phone that scanned the code can add) and nothing
+leaves your network — use it on a network you trust.
 
 ### Desktop app (no Python, no terminal)
 
@@ -219,10 +222,14 @@ rebuilt in place.
   get a PriceCharting** price-check link with platform-aware baselines (retro and Switch hold value).
 
 ### 📷 Barcode scanning (exact, not fuzzy)
-- Identify the **exact release** from the UPC/EAN barcode instead of fuzzy OCR. In the admin view,
-  **📷 Scan barcode** opens your camera (or type the digits); on `mediahound build --online` a barcode
-  found in a cover photo is preferred over OCR. Music → MusicBrainz/Discogs; movies → UPCItemDB →
-  the normal identify-by-title path. Local decode needs the optional extra: `pip install "mediahound[barcode]"`.
+- Identify the **exact release** from the UPC/EAN/ISBN barcode instead of fuzzy OCR. Three ways:
+  **(1) photograph the barcode** — drop/snap a photo of it via **➕ Add by photo** (works from a phone
+  over plain Wi-Fi; the barcode is decoded **server-side**); **(2) type the digits** in **📷 Scan
+  barcode**; **(3)** any barcode found in a photo on `mediahound build --online` is preferred over OCR.
+  Music → MusicBrainz/Discogs; books → Open Library (ISBN); games/movies → UPCItemDB → the normal
+  identify-by-title path. The decoder (`zxing-cpp`) **ships in the core install** — no extra needed.
+  (A *live* in-browser camera scanner also exists, but it requires HTTPS and isn't supported on iOS —
+  photographing the barcode is the portable path.)
 
 ### 💿 Discogs (records & CDs)
 - **Import an existing Discogs collection** in one step: `mediahound import-discogs <username>` (or the
@@ -392,6 +399,14 @@ and S3 instructions. The live demo above is itself hosted free on GitHub Pages v
 
 It even works by **double-clicking `index.html`** — the build embeds the catalog in `data/bundle.js`
 so it loads without a web server.
+
+### 🏠 Self-host a live, editable server (NAS / Docker)
+
+Want the **editable master on your home network** — view + admin editing + phone uploads at
+`http://<nas-ip>:8080` — instead of (or alongside) the published static copy? Run MediaHound's
+server on an always-on box. See **[docs/self-host.md](docs/self-host.md)** for Docker, plus a
+**native QNAP recipe (no Container Station)**: a relocatable Python + `pip install mediahound` + a
+watchdog cron for reboot/crash persistence, with `MEDIAHOUND_TOKEN` for a stable phone-pairing URL.
 
 ### 📱 Install it on your phone (PWA)
 

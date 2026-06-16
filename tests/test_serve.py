@@ -250,6 +250,77 @@ def test_phone_mode_prints_qr_and_token_gates_writes(tmp_path):
     assert upload(token) == 200         # correct token → accepted
 
 
+def test_phone_mode_uses_fixed_token_from_env(tmp_path, monkeypatch):
+    import re
+    monkeypatch.setenv("MEDIAHOUND_TOKEN", "fixed-secret-abc123")
+    site = tmp_path / "site"
+    assert cli.main(["init", str(site)]) == 0
+    assert cli.main(["build", "--config", str(site / "config.toml"), "--mock"]) == 0
+    cfg = load_config(site / "config.toml")
+    port = _free_port()
+    lines = []
+    threading.Thread(
+        target=serve.serve,
+        kwargs=dict(cfg=cfg, host="127.0.0.1", port=port, admin=True,
+                    open_browser=False, log=lines.append, phone=True),
+        daemon=True,
+    ).start()
+    base = f"http://127.0.0.1:{port}"
+    for _ in range(60):
+        try:
+            urllib.request.urlopen(base + "/api/ping", timeout=1).read()
+            break
+        except OSError:
+            time.sleep(0.05)
+    txt = "\n".join(lines)
+    m = re.search(r"\?t=([A-Za-z0-9_-]+)", txt)
+    assert m and m.group(1) == "fixed-secret-abc123"   # the env token, not a random one
+
+    # and that fixed token actually gates writes
+    req = urllib.request.Request(
+        base + "/api/upload",
+        data=json.dumps({"filename": "a.png", "media_type": "movie", "data": _png_b64()}).encode(),
+        method="POST", headers={"Content-Type": "application/json", "Origin": base,
+                                "X-MediaHound-Token": "fixed-secret-abc123"})
+    with urllib.request.urlopen(req, timeout=3) as r:
+        assert r.status == 200
+
+
+def test_rebuild_passes_online_flag(served_site, monkeypatch):
+    # The photo-upload flow asks for an ONLINE rebuild so a barcode in the just-added photo gets
+    # decoded + resolved; a bare rebuild stays offline. Verify the flag is threaded through to build().
+    base, _cfg = served_site
+    from mediahound import pipeline
+    calls = []
+    monkeypatch.setattr(pipeline, "build", lambda cfg, online=False, log=None: calls.append(online))
+    s, r = _post(base + "/api/rebuild", {"online": True}, origin=base)
+    assert s == 200 and r.get("ok") and r.get("online") is True
+    s, r = _post(base + "/api/rebuild", {}, origin=base)
+    assert s == 200 and r.get("online") is False
+    assert calls == [True, False]
+
+
+def test_try_barcode_resolves_decoded_code(tmp_path, monkeypatch):
+    # "Snap the barcode" path: a code decoded from the photo is resolved via barcode.lookup.
+    from mediahound import barcode, pipeline
+    from mediahound.config import load_config
+    site = tmp_path / "site"
+    assert cli.main(["init", str(site)]) == 0
+    cfg = load_config(site / "config.toml")
+    seen = {}
+    monkeypatch.setattr(barcode, "decode_image", lambda p: ["0602557876543"])
+
+    def fake_lookup(c, upc, mt):
+        seen.update(upc=upc, mt=mt)
+        return {"media_type": "music", "upc": upc, "title": "Test Album",
+                "artist": "X", "year": 2020, "meta": None}
+    monkeypatch.setattr(barcode, "lookup", fake_lookup)
+
+    out = pipeline._try_barcode(cfg, site / "RawImages" / "audio" / "x.jpg", "music")
+    assert out and out["title"] == "Test Album"
+    assert seen == {"upc": "0602557876543", "mt": "music"}
+
+
 def test_serve_without_admin_has_no_write_api(tmp_path):
     site = tmp_path / "site"
     assert cli.main(["init", str(site)]) == 0

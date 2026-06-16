@@ -286,8 +286,12 @@
           <details class="help-sec">
             <summary>➕ Adding things</summary>
             <ul>
-              <li><b>➕ Add photos</b> — drag in cover photos (or choose files); they're catalogued automatically.</li>
-              <li><b>📷 Scan barcode</b> — point your camera at a barcode (or type the UPC/EAN) to identify the <i>exact</i> release — no photo needed.</li>
+              <li><b>➕ Add by photo</b> — snap or drag in a photo of the <b>cover</b>, or the <b>barcode</b>
+                (UPC/EAN/ISBN) for an exact-release match — decoded on the server, so it works from any phone
+                over Wi-Fi. On a phone, choose <b>Take Photo</b>.</li>
+              <li><b>📷 Scan barcode</b> — type the UPC/EAN/ISBN to identify the <i>exact</i> release. (A live
+                in-browser camera scanner also exists, but it needs HTTPS and isn't supported on iOS —
+                photographing the barcode above is the portable way.)</li>
               <li><b>⬆ Import list</b> — paste or upload a CSV of titles (optionally enrich online for art + details).</li>
               <li><b>💿 Discogs</b> — import an entire Discogs collection by username.</li>
             </ul>
@@ -350,13 +354,14 @@
     </div>
   </div>
 
-  <!-- Add cover photos (needs `mediahound serve --admin`) -->
+  <!-- Add by photo: cover or barcode (needs `mediahound serve --admin` / `app`) -->
   <div class="dialog" id="uploadDialog" hidden>
     <div class="dialog-backdrop" data-close></div>
     <div class="dialog-card dialog-wide">
-      <h2>Add cover photos</h2>
-      <p class="dialog-sub">Drop in photos of your covers (or choose files). They're added to your
-        collection and identified automatically.</p>
+      <h2>Add by photo</h2>
+      <p class="dialog-sub">Snap or drop in a photo — the <b>cover</b>, or the <b>barcode</b> (UPC/EAN/ISBN)
+        for an exact match. On a phone, tap below and choose <b>Take Photo</b>. They're added and
+        identified automatically.</p>
       <div class="settings-row" style="align-items:center;gap:18px">
         <span>These are:</span>
         <label class="ie-check"><input type="radio" name="upType" value="movie" checked /> 🎬 Movies (DVD/VHS/Blu-ray)</label>

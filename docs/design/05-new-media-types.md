@@ -172,7 +172,7 @@ catalogs (fully backward-compatible).
 - Books: none beyond `requests` (Open Library is keyless). Optional `GOOGLE_BOOKS_KEY`.
 - Games: none for the Wikidata default; optional `IGDB`/`RAWG`/`PRICECHARTING` keys via the keychain
   (`keystore.py` allow-list + Settings → API keys).
-- ISBN decoding reuses the existing `mediahound[barcode]` extra (EAN-13 already supported).
+- ISBN decoding reuses the core `zxing-cpp` decoder (EAN-13 already supported; an ISBN is a 978/979 EAN-13).
 
 ## Privacy / offline
 

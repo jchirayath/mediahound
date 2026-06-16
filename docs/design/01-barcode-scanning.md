@@ -61,8 +61,9 @@ Add `upc` to each item (in `collection.json`, settable via `corrections.json`). 
 ## Dependencies
 
 - **Server decode:** prefer **`zxing-cpp`** (pip wheel, no system lib → bundles cleanly in the
-  PyInstaller desktop app) over `pyzbar` (needs the `libzbar` system library). Make it an optional
-  extra: `mediahound[barcode]`.
+  PyInstaller desktop app) over `pyzbar` (needs the `libzbar` system library). Shipped as a **core
+  dependency** (so "photograph the barcode" works everywhere out of the box); `mediahound[barcode]`
+  remains as a back-compat alias. `barcode.decode_image()` degrades to `[]` if the wheel is missing.
 - **Client scan:** native `BarcodeDetector` (Chrome/Android) + `@zxing/browser` fallback (vendored, no
   build step — matches the no-framework frontend).
 

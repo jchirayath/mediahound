@@ -6,6 +6,32 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-06-15
+
+### Added
+- **📷 Add by photographing the barcode** — snap the **UPC/EAN/ISBN** (or the cover) via **➕ Add by
+  photo → Take Photo** and MediaHound decodes the barcode **server-side** and resolves the exact
+  release. Works from any phone over plain Wi-Fi — no browser-camera permission or HTTPS needed
+  (the live in-browser scanner requires HTTPS and isn't supported on iOS). The decoder (`zxing-cpp`)
+  now **ships in the core install** — no optional extra required (`[barcode]` kept as a back-compat
+  alias).
+- **Stable phone-pairing token** — set `MEDIAHOUND_TOKEN` and the `…/?t=<token>` editor/upload URL
+  stays constant across restarts (handy for an always-on NAS behind a watchdog). Unset → a fresh
+  random token each run, as before.
+- **Self-hosting on a NAS without Docker** — `docs/self-host.md` gains a native-QNAP recipe
+  (relocatable Python + watchdog cron) alongside the Container Station / Docker path.
+
+### Changed
+- The phone photo-upload flow now triggers an **online** rebuild so freshly-added photos are
+  identified immediately (barcode decode + posters/metadata); `POST /api/rebuild` accepts
+  `{"online": true}`. A plain rebuild stays offline.
+
+### Fixed
+- **Admin unlock over plain-HTTP LAN.** The password hash used `crypto.subtle`, which browsers
+  expose only in a secure context (HTTPS or `localhost`) — so on a self-hosted server reached at
+  `http://<ip>:<port>` the **Unlock** button silently did nothing (desktop and mobile). Added a
+  pure-JS SHA-256 fallback (verified against FIPS test vectors) so admin login works over plain HTTP.
+
 ## [0.7.0] — 2026-06-12
 
 ### Added

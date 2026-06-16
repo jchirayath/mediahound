@@ -4,6 +4,8 @@
 FROM python:3.12-slim
 
 # Tesseract lets MediaHound OCR-identify newly added cover photos (the [ocr] extra).
+# Barcode decoding (snap the UPC/EAN/ISBN to add an exact release) ships in the core install
+# via the zxing-cpp wheel — no system package needed.
 RUN apt-get update && apt-get install -y --no-install-recommends tesseract-ocr \
  && rm -rf /var/lib/apt/lists/*
 

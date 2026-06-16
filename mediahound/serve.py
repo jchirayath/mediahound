@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import hmac
 import json
+import os
 import threading
 import webbrowser
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -272,10 +273,16 @@ class _Handler(SimpleHTTPRequestHandler):
         return self._send_json({"ok": True, "total": len(body)})
 
     def _rebuild(self):
+        # `online=True` (sent by the photo-upload flow) lets the pipeline decode a barcode from each
+        # freshly-added photo and resolve it to an exact release, plus enrich with posters/metadata —
+        # so "snap the barcode" identifies the item. build() only touches NEW images, so an online
+        # rebuild after an upload makes network calls just for what was added. Defaults off.
+        body = self._read_json_body()
+        online = bool(isinstance(body, dict) and body.get("online"))
         try:
             from . import pipeline
-            pipeline.build(self.cfg, online=False, log=lambda m: self.log_fn(m))
-            return self._send_json({"ok": True, "rebuilt": True})
+            pipeline.build(self.cfg, online=online, log=lambda m: self.log_fn(m))
+            return self._send_json({"ok": True, "rebuilt": True, "online": online})
         except Exception as exc:                       # noqa: BLE001 - report to client
             self.log_fn(f"  rebuild failed: {exc}")
             return self._send_json({"ok": False, "error": str(exc)}, 500)
@@ -568,9 +575,14 @@ def serve(cfg: Config, host: str = "127.0.0.1", port: int = 8765, admin: bool = 
     token = None
     lan = _lan_ip()
     if phone:
-        import secrets
         host = "0.0.0.0"                       # noqa: S104 - intentional LAN bind for phone mode
-        token = secrets.token_urlsafe(16)
+        # A fixed token (env MEDIAHOUND_TOKEN) keeps the phone-pairing URL stable across restarts —
+        # handy for always-on servers (NAS) where the process may be restarted by a watchdog/reboot.
+        # Unset → a fresh random token each run (the safer default for ad-hoc desktop sessions).
+        token = (os.environ.get("MEDIAHOUND_TOKEN") or "").strip()
+        if not token:
+            import secrets
+            token = secrets.token_urlsafe(16)
 
     origins = {f"http://{host}:{port}", f"http://localhost:{port}", f"http://127.0.0.1:{port}",
                f"http://{lan}:{port}"}

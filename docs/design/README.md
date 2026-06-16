@@ -16,7 +16,7 @@ Integrations (all now shipped), designed against MediaHound's existing architect
 > media types: 📚 books (Open Library), 🎮 video games (Wikidata, platform-aware PriceCharting resale)
 > and 🎧 audiobooks (Open Library + LibriVox), added through a shared media-type registry
 > (`TYPES` map + `_finalize_media`). Delivered: barcode decode (`mediahound/barcode.py`,
-> optional `mediahound[barcode]`) + music UPC→MusicBrainz/Discogs + movie UPC→UPCItemDB + a `📷 Scan barcode`
+> core `zxing-cpp` — photograph the barcode to add) + music UPC→MusicBrainz/Discogs + movie UPC→UPCItemDB + a `📷 Scan barcode`
 > UI; the Discogs provider (`metadata/discogs.py`), `import-discogs` CLI/API, and price suggestions;
 > `backup`/`restore` (`backup.py`), Letterboxd/JSON exporters (`exporters.py`), JSON+RSS feeds, and a `⬇ Backup`
 > button; and personal ratings/notes/tags + lending + 🎲 Surprise-me, with all personal data stripped from the

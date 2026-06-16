@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mediahound"
-version = "0.7.0"
+version = "0.8.0"
 description = "Turn photos of your media collection — movies, music, books, video games & audiobooks — into a sleek, searchable web catalog."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,11 +27,13 @@ dependencies = [
     "Pillow>=9.0",
     "qrcode>=7.0",          # `mediahound app --phone` prints a scannable QR for phone uploads
     "keyring>=24.0",        # store provider API keys in the OS keychain (admin console)
+    "zxing-cpp>=2.2",       # decode UPC/EAN/ISBN barcodes from a photo — snap the barcode to add an
+                            # exact release (pure pip wheel, no system lib). Degrades gracefully if absent.
 ]
 
 [project.optional-dependencies]
 ocr = ["pytesseract>=0.3.10"]   # zero-key default identifier
-barcode = ["zxing-cpp>=2.2"]    # decode UPC/EAN barcodes from cover photos (pip wheel, no system lib)
+barcode = ["zxing-cpp>=2.2"]    # back-compat alias — the decoder now ships in the core install
 desktop = ["pywebview>=4.0"]    # native window for `mediahound gui` / the bundled app
 build = ["pyinstaller>=6.0"]    # package the desktop app into a .app / .exe
 dev = ["pytest>=7.0", "pytest-cov>=4.0", "ruff>=0.4"]

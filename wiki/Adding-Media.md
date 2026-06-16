@@ -28,7 +28,9 @@ Click **➕ Add → 📷 Scan barcode**. Point your phone/laptop camera at the U
 case (or type the digits) and the **exact release** is identified — no cover photo, no OCR guesswork.
 Music resolves via MusicBrainz/Discogs; **books** by **ISBN** (a 978/979 barcode) via **Open Library**
 (auto-detected — no need to pick the type); movies via a product-name lookup, then the normal title path.
-Local decoding in a build needs the optional extra: `pip install "mediahound[barcode]"`.
+You can also just **photograph the barcode** via **➕ Add by photo** (from a phone, **Take Photo**) —
+it's decoded **server-side**, so no browser camera or HTTPS is needed. The decoder (`zxing-cpp`) ships
+in the **core install** — nothing extra to add. (On a very old-glibc NAS, pin `zxing-cpp==2.2.0`.)
 
 ## 💿 Import a Discogs collection
 
