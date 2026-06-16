@@ -12,6 +12,8 @@ services:
       # ← change the left side to your library path on the NAS
       # (the folder that holds config.toml, data/, RawImages/, posters/, originals/)
       - ./library:/library
-    # Default command (from the Dockerfile) serves the catalog + admin console.
-    # To add cover photos from your phone over the LAN instead, uncomment:
-    # command: ["mediahound", "app", "--phone", "--host", "0.0.0.0", "--port", "8765", "--config", "/library/config.toml"]
+    # The image default runs combined mode: `app --phone` = view + admin editing +
+    # phone uploads, all on the LAN. Grab the phone-pairing QR/URL from the logs:
+    #   docker compose logs mediahound   (or Container Station's log viewer)
+    # Want view-only (no phone, no admin write)? Override:
+    # command: ["mediahound", "serve", "--host", "0.0.0.0", "--port", "8765", "--no-open", "--config", "/library/config.toml"]

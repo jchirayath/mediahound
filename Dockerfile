@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir ".[ocr]"
 VOLUME ["/library"]
 EXPOSE 8765
 
-# Serve the catalog on the LAN with the admin console enabled. The write API stays
-# origin/token-gated (see docs/self-host.md); for adding photos over the network use
-# phone mode.  ⚠ LAN-only — do NOT expose to the public internet without a reverse
-# proxy + real auth in front of it.
-CMD ["mediahound", "serve", "--host", "0.0.0.0", "--port", "8765", "--admin", "--config", "/library/config.toml"]
+# Default = combined mode: `app --phone` serves the catalog (view) + admin console
+# (regular editing) + phone uploads (token-gated QR) in one process, bound to the LAN.
+# Get the phone-pairing QR/URL from the container logs (it rotates on restart).
+# ⚠ LAN-only — do NOT expose to the public internet without a reverse proxy + real auth.
+CMD ["mediahound", "app", "--phone", "--host", "0.0.0.0", "--port", "8765", "--no-open", "/library"]

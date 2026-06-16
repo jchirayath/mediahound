@@ -38,14 +38,24 @@ CLI equivalent on any Docker host:
 docker compose up -d        # uses the Dockerfile + docker-compose.yml in this repo
 ```
 
-## The two run modes
+## Run modes
 
-- **`serve` (default in the Dockerfile)** — serves the catalog + admin console on the LAN.
-- **`app --phone`** — also prints a QR + sets a write token so you can **add cover photos
-  from your phone** over the LAN. Override the container command to use it:
-  ```yaml
-  command: ["mediahound", "app", "--phone", "--host", "0.0.0.0", "--port", "8765", "--config", "/library/config.toml"]
-  ```
+**The image default is combined mode** — `mediahound app --phone` runs everything in
+one process:
+- **view** the catalog at `http://<nas-ip>:8765`,
+- **admin console** for editing (regular mode), and
+- **phone uploads** — a token-gated QR so you can add cover photos from your phone.
+
+**Get the phone-pairing QR / URL from the container logs** (Container Station → the
+container → Logs, or `docker compose logs mediahound`). The URL looks like
+`http://<nas-ip>:8765/?t=<token>` — open it (or scan the QR) to get write access from a
+phone/browser. **The token rotates each time the container restarts**, so re-grab it from
+the logs after a restart.
+
+Prefer a **view-only** server (no admin writes, no phone)? Override the command:
+```yaml
+command: ["mediahound", "serve", "--host", "0.0.0.0", "--port", "8765", "--no-open", "--config", "/library/config.toml"]
+```
 
 ## Security model (read this before exposing it)
 
