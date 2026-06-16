@@ -1,0 +1,17 @@
+# Self-host MediaHound (QNAP Container Station, Synology, any Docker host).
+# 1) Put your library on the NAS and point the volume below at it.
+# 2) `docker compose up -d`  →  open http://<nas-ip>:8765
+services:
+  mediahound:
+    build: .
+    container_name: mediahound
+    restart: unless-stopped
+    ports:
+      - "8765:8765"
+    volumes:
+      # ← change the left side to your library path on the NAS
+      # (the folder that holds config.toml, data/, RawImages/, posters/, originals/)
+      - ./library:/library
+    # Default command (from the Dockerfile) serves the catalog + admin console.
+    # To add cover photos from your phone over the LAN instead, uncomment:
+    # command: ["mediahound", "app", "--phone", "--host", "0.0.0.0", "--port", "8765", "--config", "/library/config.toml"]

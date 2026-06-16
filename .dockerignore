@@ -1,0 +1,12 @@
+.git
+.github
+build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+.venv/
+venv/
+docs/brand/demo.gif
+wiki/
+library/
