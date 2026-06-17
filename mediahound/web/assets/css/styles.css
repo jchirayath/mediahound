@@ -564,7 +564,11 @@ body.server-admin #exportChanges, body.server-admin #exportSeen { opacity: .6; }
   background:#f7f9fc; color:#5a6675; cursor:pointer; text-align:center; transition:.15s; }
 .dropzone:hover, .dropzone.drag { border-color:#3a86ff; background:#eef4ff; color:#26425f; }
 .dropzone .dz-text { font-size:.95rem; }
+.dropzone .dz-sub { font-size:.78rem; opacity:.75; }
 .dropzone .dz-list { font-size:.82rem; color:#3a86ff; min-height:1em; }
+/* "or scan / type the barcode" divider in the Add-by-photo dialog */
+.or-divider { display:flex; align-items:center; gap:10px; margin:14px 0 8px; color:var(--muted); font-size:12px; }
+.or-divider::before, .or-divider::after { content:""; flex:1; height:1px; background:var(--line); }
 
 /* First-run welcome */
 .welcome { display:flex; justify-content:center; padding:36px 16px; }

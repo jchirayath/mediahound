@@ -329,7 +329,11 @@
       return;
     }
     uploadFiles = []; renderUploadList();
-    $("#uploadNote").hidden = true; $("#uploadDialog").hidden = false;
+    $("#uploadNote").hidden = true; $("#upUpc").value = "";
+    // Live camera scanning only where the browser supports it (Chrome/Android/desktop in a secure
+    // context); absent on iOS Safari → the button stays hidden and you photograph the barcode instead.
+    if ($("#upScanLive")) $("#upScanLive").hidden = !liveScanSupported();
+    $("#uploadDialog").hidden = false;
   }
   function addUploadFiles(list) {
     for (const f of list) if (f.type.startsWith("image/")) uploadFiles.push(f);
@@ -368,54 +372,45 @@
       .catch(() => location.reload());
   }
 
-  // ---- Barcode scan / type → identify the exact release -------------------
+  // ---- Barcode entry inside the single Add-by-photo dialog → identify the exact release -----
+  // Three paths, one dialog: photograph the barcode (decoded server-side, works everywhere incl.
+  // iOS), type the digits, or — where the browser supports it — live-scan with the camera.
   let scanStream = null, scanTimer = null, scanDetector = null;
-  function openScan() {
-    if (!serverAdmin) {
-      alert("Scanning needs the local app.\n\nRun:  mediahound app\n(or  mediahound serve --admin)");
-      return;
-    }
-    $("#scanNote").hidden = true; $("#scanUpc").value = "";
-    $("#scanVideo").hidden = true; $("#scanDialog").hidden = false;
-    setTimeout(() => $("#scanUpc").focus(), 30);
-  }
-  async function startCamera() {
-    if (!("BarcodeDetector" in window)) {
-      $("#scanNote").hidden = false;
-      $("#scanNote").textContent = "Live scanning isn't supported in this browser — type the digits instead.";
-      return;
-    }
+  function liveScanSupported() { return "BarcodeDetector" in window; }
+  async function startLiveScan() {
+    if (!liveScanSupported()) return;
+    const note = $("#uploadNote"); note.hidden = false;
     try {
       scanDetector = scanDetector || new window.BarcodeDetector({ formats: ["ean_13", "upc_a", "ean_8", "upc_e"] });
       scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      const v = $("#scanVideo"); v.hidden = false; v.srcObject = scanStream; await v.play();
-      $("#scanNote").hidden = false; $("#scanNote").textContent = "Point the camera at the barcode…";
+      const v = $("#upVideo"); v.hidden = false; v.srcObject = scanStream; await v.play();
+      note.textContent = "Point the camera at the barcode…";
       scanTimer = setInterval(async () => {
         try {
           const codes = await scanDetector.detect(v);
           const hit = codes.find((c) => /^\d{8,14}$/.test(c.rawValue || ""));
-          if (hit) { $("#scanUpc").value = hit.rawValue; stopCamera(); submitScan(); }
+          if (hit) { $("#upUpc").value = hit.rawValue; stopLiveScan(); submitUpc(); }
         } catch (e) { /* keep trying */ }
       }, 400);
     } catch (e) {
-      $("#scanNote").hidden = false; $("#scanNote").textContent = "Couldn't open the camera — type the digits instead.";
+      note.textContent = "Couldn't open the camera — type the digits, or photograph the barcode above.";
     }
   }
-  function stopCamera() {
+  function stopLiveScan() {
     if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
     if (scanStream) { scanStream.getTracks().forEach((t) => t.stop()); scanStream = null; }
-    const v = $("#scanVideo"); if (v) { v.srcObject = null; v.hidden = true; }
+    const v = $("#upVideo"); if (v) { v.srcObject = null; v.hidden = true; }
   }
-  function submitScan() {
-    const upc = ($("#scanUpc").value || "").replace(/\D/g, "");
-    const note = $("#scanNote"); note.hidden = false;
-    if (!/^\d{8,14}$/.test(upc)) { note.textContent = "Enter a valid UPC/EAN (8–14 digits)."; return; }
-    const type = (document.querySelector('input[name="scanType"]:checked') || {}).value || "music";
+  function submitUpc() {
+    const upc = ($("#upUpc").value || "").replace(/\D/g, "");
+    const note = $("#uploadNote"); note.hidden = false;
+    if (!/^\d{8,14}$/.test(upc)) { note.textContent = "Enter a valid UPC / EAN / ISBN (8–14 digits)."; return; }
+    const type = (document.querySelector('input[name="upType"]:checked') || {}).value || "movie";
     note.textContent = "Looking up " + upc + "…";
     fetch("api/identify-barcode", { method: "POST", headers: authHeaders(), body: JSON.stringify({ upc, media_type: type }) })
       .then((r) => r.json()).then((r) => {
-        if (r && r.ok && r.matched) { const who = r.artist || r.author; note.textContent = `✓ ${r.title}${who ? " — " + who : ""} — reloading`; stopCamera(); location.reload(); }
-        else if (r && r.ok) { note.textContent = "No match for that barcode. Try the other media type, or add it by photo."; }
+        if (r && r.ok && r.matched) { const who = r.artist || r.author; note.textContent = `✓ ${r.title}${who ? " — " + who : ""} — reloading`; location.reload(); }
+        else if (r && r.ok) { note.textContent = "No match for that barcode. Try the matching media type above, or just photograph the cover."; }
         else { note.textContent = "Lookup failed: " + ((r && r.error) || "unknown"); }
       }).catch((e) => { note.textContent = "Lookup failed: " + e; });
   }
@@ -1466,8 +1461,7 @@
   function openImportMenu() {
     if (!serverAdmin) { alert("Adding to your catalog needs the local app.\n\nRun:  mediahound app"); return; }
     openMenu("➕ Add to your catalog", [
-      { icon: "📸", label: "Add photos", desc: "Drag in cover photos to catalog automatically", run: openUpload },
-      { icon: "📷", label: "Scan barcode", desc: "Identify the exact release by UPC/EAN — no photo", run: openScan },
+      { icon: "📷", label: "Add by photo or barcode", desc: "Snap the cover or the barcode (or type the digits) — identified automatically", run: openUpload },
       { icon: "⬆", label: "Import from a CSV list", desc: "Bulk-add titles from a spreadsheet", run: openImport },
     ]);
   }
@@ -1571,9 +1565,9 @@
       const rd = new FileReader(); rd.onload = () => { $("#importCsv").value = rd.result; }; rd.readAsText(f);
     });
     // Scan dialog controls (the dialog is opened from the ➕ Add menu)
-    if ($("#scanCamera")) $("#scanCamera").onclick = startCamera;
-    if ($("#scanGo")) $("#scanGo").onclick = submitScan;
-    if ($("#scanUpc")) $("#scanUpc").addEventListener("keydown", (e) => { if (e.key === "Enter") submitScan(); });
+    if ($("#upUpcGo")) $("#upUpcGo").onclick = submitUpc;
+    if ($("#upScanLive")) $("#upScanLive").onclick = startLiveScan;
+    if ($("#upUpc")) $("#upUpc").addEventListener("keydown", (e) => { if (e.key === "Enter") submitUpc(); });
     if ($("#libraryBtn")) $("#libraryBtn").onclick = openLibrary;
     if ($("#settingsManageLib")) $("#settingsManageLib").onclick = () => { $("#settingsDialog").hidden = true; openLibrary(); };
     if ($("#libraryOpen")) $("#libraryOpen").onclick = () => { const p = $("#libraryPath").value.trim(); if (p) switchLibrary(p, false); };
@@ -1591,9 +1585,9 @@
     $("#lbPrev").onclick = () => zoomStep(-1);
     $("#lbNext").onclick = () => zoomStep(1);
     // dialog + lightbox close
-    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; $("#menuDialog").hidden = true; }));
+    $$("[data-close]").forEach((e) => e.addEventListener("click", () => { closeZoom(); stopLiveScan(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; $("#menuDialog").hidden = true; }));
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") { closeZoom(); stopCamera(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#scanDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; $("#menuDialog").hidden = true; }
+      if (e.key === "Escape") { closeZoom(); stopLiveScan(); $("#loginDialog").hidden = true; $("#settingsDialog").hidden = true; $("#importDialog").hidden = true; $("#uploadDialog").hidden = true; $("#libraryDialog").hidden = true; $("#helpDialog").hidden = true; $("#menuDialog").hidden = true; }
       if (zoomState && e.key === "ArrowLeft") zoomStep(-1);
       if (zoomState && e.key === "ArrowRight") zoomStep(1);
     });

@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-06-17
+
+### Changed
+- **One "Add by photo or barcode" dialog.** Merged the separate "Scan a barcode" dialog into the
+  Add-by-photo flow — since both use the camera, there's now a single place to add things, with three
+  paths: photograph the **cover *or* the barcode** (decoded server-side, works on any phone incl.
+  iOS), **type** a UPC/EAN/ISBN, or **📷 Scan live** with the camera. The live scanner is
+  **feature-detected** (`BarcodeDetector`) so it appears on Chrome/Android/desktop and hides on iOS
+  Safari automatically — no user-agent sniffing. The **➕ Add** menu drops from two entries to one.
+
 ## [0.8.0] — 2026-06-15
 
 ### Added

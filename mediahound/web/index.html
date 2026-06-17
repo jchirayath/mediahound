@@ -106,7 +106,7 @@
           <button id="colPlus" class="cols-btn" type="button" aria-label="more columns">+</button>
         </span>
         <a id="unidentifiedLink" href="identify.html" class="pill pill-warn admin-only" hidden></a>
-        <button id="importMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Add photos, scan a barcode, or import a list">➕ Add ▾</button>
+        <button id="importMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Add by photo or barcode, or import a list">➕ Add ▾</button>
         <button id="moreMenuBtn" class="btn-ghost admin-only" type="button" hidden title="Connect, export, back up, or rebuild">⋯ More ▾</button>
       </span>
     </div>
@@ -286,12 +286,11 @@
           <details class="help-sec">
             <summary>➕ Adding things</summary>
             <ul>
-              <li><b>➕ Add by photo</b> — snap or drag in a photo of the <b>cover</b>, or the <b>barcode</b>
-                (UPC/EAN/ISBN) for an exact-release match — decoded on the server, so it works from any phone
-                over Wi-Fi. On a phone, choose <b>Take Photo</b>.</li>
-              <li><b>📷 Scan barcode</b> — type the UPC/EAN/ISBN to identify the <i>exact</i> release. (A live
-                in-browser camera scanner also exists, but it needs HTTPS and isn't supported on iOS —
-                photographing the barcode above is the portable way.)</li>
+              <li><b>📷 Add by photo or barcode</b> — one place to add things. Snap or drag a photo of the
+                <b>cover</b> <i>or</i> the <b>barcode</b> (UPC/EAN/ISBN) — decoded on the server, so it works
+                from any phone over Wi-Fi (on a phone, choose <b>Take Photo</b>). In the same dialog you can
+                also <b>type the digits</b>, or <b>📷 Scan live</b> with the camera where the browser supports
+                it (Chrome/Android/desktop; hidden on iOS, where you photograph the barcode instead).</li>
               <li><b>⬆ Import list</b> — paste or upload a CSV of titles (optionally enrich online for art + details).</li>
               <li><b>💿 Discogs</b> — import an entire Discogs collection by username.</li>
             </ul>
@@ -358,10 +357,10 @@
   <div class="dialog" id="uploadDialog" hidden>
     <div class="dialog-backdrop" data-close></div>
     <div class="dialog-card dialog-wide">
-      <h2>Add by photo</h2>
+      <h2>Add by photo or barcode</h2>
       <p class="dialog-sub">Snap or drop in a photo — the <b>cover</b>, or the <b>barcode</b> (UPC/EAN/ISBN)
         for an exact match. On a phone, tap below and choose <b>Take Photo</b>. They're added and
-        identified automatically.</p>
+        identified automatically — or scan / type the barcode below.</p>
       <div class="settings-row" style="align-items:center;gap:18px">
         <span>These are:</span>
         <label class="ie-check"><input type="radio" name="upType" value="movie" checked /> 🎬 Movies (DVD/VHS/Blu-ray)</label>
@@ -372,9 +371,17 @@
       </div>
       <label id="dropZone" class="dropzone">
         <input type="file" id="uploadFiles" accept="image/*" multiple hidden />
-        <span class="dz-text">📸 Drag photos here, or <u>click to choose</u></span>
+        <span class="dz-text">📸 Take a photo or drop one here, or <u>click to choose</u></span>
+        <span class="dz-sub">the cover <b>or</b> the barcode — we read whichever it is</span>
         <span class="dz-list" id="uploadList"></span>
       </label>
+      <div class="or-divider"><span>or scan / type the barcode</span></div>
+      <div class="settings-row" style="align-items:center;gap:8px">
+        <input type="text" id="upUpc" inputmode="numeric" autocomplete="off" placeholder="UPC / EAN / ISBN digits" />
+        <button class="btn-mini" id="upUpcGo" type="button">Look up</button>
+        <button class="btn-mini" id="upScanLive" type="button" hidden title="Scan with the camera (supported browsers)">📷 Scan live</button>
+      </div>
+      <video id="upVideo" class="scan-video" playsinline muted hidden></video>
       <p class="dialog-sub" id="uploadNote" hidden></p>
       <div class="dialog-actions">
         <button class="btn btn-primary" id="uploadGo" disabled>Add to catalog</button>
@@ -402,32 +409,6 @@
     </div>
   </div>
 
-  <!-- Scan / type a barcode (needs `mediahound serve --admin`) -->
-  <div class="dialog" id="scanDialog" hidden>
-    <div class="dialog-backdrop" data-close></div>
-    <div class="dialog-card">
-      <h2>Scan a barcode</h2>
-      <p class="dialog-sub">Point your camera at the barcode on the back of a case, or type the
-        UPC/EAN digits. The exact release is identified and added — no cover photo needed.</p>
-      <div class="settings-row" style="align-items:center;gap:18px">
-        <span>This is:</span>
-        <label class="ie-check"><input type="radio" name="scanType" value="music" checked /> 🎵 Music (CD/vinyl)</label>
-        <label class="ie-check"><input type="radio" name="scanType" value="movie" /> 🎬 Movie (DVD/Blu-ray)</label>
-        <label class="ie-check"><input type="radio" name="scanType" value="book" /> 📚 Book (ISBN)</label>
-        <label class="ie-check"><input type="radio" name="scanType" value="game" /> 🎮 Game (UPC)</label>
-      </div>
-      <video id="scanVideo" class="scan-video" playsinline muted hidden></video>
-      <div class="settings-row" style="align-items:center">
-        <input type="text" id="scanUpc" inputmode="numeric" autocomplete="off" placeholder="UPC / EAN digits" />
-        <button class="btn-mini" id="scanCamera" type="button">📷 Use camera</button>
-      </div>
-      <p class="dialog-sub" id="scanNote" hidden></p>
-      <div class="dialog-actions">
-        <button class="btn btn-primary" id="scanGo">Identify &amp; add</button>
-        <button class="btn" data-close>Cancel</button>
-      </div>
-    </div>
-  </div>
 
   <script src="data/bundle.js"></script>
   <script src="assets/js/app.js"></script>
