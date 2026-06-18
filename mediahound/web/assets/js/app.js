@@ -6,8 +6,13 @@
   const SEEN_KEY = "mediahound:seen";
   const CORR_KEY = "mediahound:corrections";
   const LOANS_KEY = "mediahound:loans";
+  const LISTS_KEY = "mediahound:lists";
   const COLS_KEY = "mediahound:columns";
   const ADMIN_KEY = "mediahound:admin";
+  // Per-type curated list, named for how you consume that medium.
+  const LIST_LABEL = { movie: "Watchlist", music: "Listenlist", book: "Readlist",
+                       game: "Playlist", audiobook: "Listenlist" };
+  const listLabel = (t) => (t === "all" ? "My List" : (LIST_LABEL[t] || "My List"));
   const $ = (s) => document.querySelector(s);
   const $$ = (s) => [...document.querySelectorAll(s)];
 
@@ -25,6 +30,8 @@
 
   let movies = [], site = {}, view = { columns: 4, fields: { ...DEFAULT_FIELDS } };
   let seen = load(SEEN_KEY, {}), corrections = load(CORR_KEY, {}), loans = load(LOANS_KEY, {});
+  let lists = load(LISTS_KEY, null);     // {media_type: [id,…]} in display order; null until seeded
+  let listMode = false;                  // "My List" view: only listed items, in order, reorderable
   let isAdmin = sessionStorage.getItem(ADMIN_KEY) === "1";
   let mediaType = "all";                 // "all" | "movie" | "music"
   const imgIndex = new Map();
@@ -130,6 +137,7 @@
     movies = (d.collection || [])
       .filter((m) => !(corrections[m.id] && corrections[m.id].delete))
       .map(applyCorrection).map(mergeSeen);
+    seedLists();
     applyLibrary();
     $("#loading").hidden = true;
     setupUnidentified(d.unidentified || []);
@@ -177,6 +185,49 @@
   // Lending: an open loan (not yet returned) marks an item "on loan". Admin-only.
   function applyLoan(m) { const l = loans[m.id]; m.loan = (l && !l.returned) ? l : null; return m; }
   function allTags() { return [...new Set(movies.flatMap((m) => m.tags || []))].sort((a, b) => a.localeCompare(b)); }
+
+  // ---- curated lists (Watchlist / Listenlist / Readlist / Playlist) -------
+  // Seed the in-browser lists from the baked `list_pos` the first time (so a fresh browser — and
+  // any public visitor — sees the owner's curated order). After that localStorage is authoritative.
+  function seedLists() {
+    if (lists !== null) return;
+    lists = {};
+    const acc = {};
+    movies.forEach((m) => { if (m.list_pos != null) (acc[mtype(m)] = acc[mtype(m)] || []).push(m); });
+    for (const t in acc) lists[t] = acc[t].sort((a, b) => a.list_pos - b.list_pos).map((m) => m.id);
+  }
+  function listOf(t) { return (lists[t] = lists[t] || []); }
+  function onList(m) { return listOf(mtype(m)).includes(m.id); }
+  function listIdx(m) { return listOf(mtype(m)).indexOf(m.id); }
+  function saveLists() { save(LISTS_KEY, lists); persist("api/lists", lists); }
+  function toggleList(m) {
+    const a = listOf(mtype(m)), i = a.indexOf(m.id);
+    if (i >= 0) a.splice(i, 1); else a.push(m.id);
+    saveLists(); render();
+  }
+  function moveList(m, dir) {                       // dir = -1 (up) / +1 (down)
+    const a = listOf(mtype(m)), i = a.indexOf(m.id), j = i + dir;
+    if (i < 0 || j < 0 || j >= a.length) return;
+    [a[i], a[j]] = [a[j], a[i]]; saveLists(); render();
+  }
+  function reorderList(t, fromId, toId) {           // drag fromId to toId's slot
+    const a = listOf(t), fi = a.indexOf(fromId), ti = a.indexOf(toId);
+    if (fi < 0 || ti < 0 || fi === ti) return;
+    a.splice(ti, 0, a.splice(fi, 1)[0]); saveLists(); render();
+  }
+  const MT_ORDER = { movie: 0, music: 1, book: 2, game: 3, audiobook: 4 };
+  function toggleListMode() { listMode = !listMode; render(); scrollTop(); }
+  function updateListToggle() {
+    const btn = $("#listToggle"); if (!btn) return;
+    const n = mediaType === "all"
+      ? Object.values(lists).reduce((s, a) => s + (a ? a.length : 0), 0)
+      : listOf(mediaType).length;
+    btn.classList.toggle("is-on", listMode);
+    btn.setAttribute("aria-pressed", listMode ? "true" : "false");
+    btn.title = listMode ? "Back to the full catalog" : `Show your ${listLabel(mediaType)}`;
+    btn.innerHTML = `${listMode ? "✕" : "★"} ${esc(listLabel(mediaType))}` +
+      (n ? ` <span class="ft-count">${n}</span>` : "");
+  }
   function saveCorrections() { save(CORR_KEY, corrections); persist("api/corrections", corrections); }
   function setCorr(m, patch) { corrections[m.id] = Object.assign({}, corrections[m.id], patch); saveCorrections(); }
   // Loans live in their own file (replace-on-write, like seen-overrides) so they stay separate
@@ -545,6 +596,12 @@
       "rating-desc": (a, b) => (b.rating || 0) - (a.rating || 0),
       "myrating-desc": (a, b) => (b.my_rating || 0) - (a.my_rating || 0),
     }[$("#sort").value];
+    // "My List" view: only listed items, ordered by the curated per-type order (the sort/A–Z
+    // controls don't apply here — the whole point is the order you arranged).
+    if (listMode) {
+      return v.filter(onList).sort((a, b) =>
+        (MT_ORDER[mtype(a)] - MT_ORDER[mtype(b)]) || (listIdx(a) - listIdx(b)));
+    }
     return v.sort(cmp);
   }
 
@@ -588,7 +645,7 @@
   }
   function buildAzIndex() {
     let rail = $("#azIndex");
-    const show = $("#sort").value === "title" && _viewList.length >= AZ_MIN;
+    const show = !listMode && $("#sort").value === "title" && _viewList.length >= AZ_MIN;
     if (!show) { if (rail) rail.hidden = true; document.body.classList.remove("az-on"); return; }
     if (!rail) { rail = document.createElement("nav"); rail.id = "azIndex"; rail.className = "az-index";
       rail.setAttribute("aria-label", "Jump to letter"); document.body.appendChild(rail); }
@@ -613,11 +670,18 @@
     const grid = $("#grid");
     grid.innerHTML = "";
     grid.classList.toggle("admin", isAdmin);
+    document.body.classList.toggle("list-mode", listMode);
     $("#empty").hidden = v.length !== 0;
+    if (v.length === 0) {
+      $("#empty").querySelector("p").textContent = listMode
+        ? `Your ${listLabel(mediaType)} is empty — open an item and tap “＋ ${listLabel(mediaType)}”.`
+        : "No titles match your filters.";
+    }
     // apply field-visibility flags as body classes (drives alignment via CSS)
     ALL_FIELDS.forEach(([k]) => document.body.classList.toggle(`hide-${k}`, !view.fields[k]));
 
-    // virtualized paint: reset the window and render the first chunk; the observer fills the rest
+    // virtualized paint: reset the window and render the first chunk; the observer fills the rest.
+    // The My-List view renders everything up front (lists are small + drag-reorder needs every card).
     _viewList = v; _viewShown = 0;
     if (!_viewSentinel) { _viewSentinel = document.createElement("div"); _viewSentinel.className = "grid-sentinel"; grid.after(_viewSentinel); }
     _viewSentinel.hidden = false;
@@ -627,11 +691,15 @@
     if (_viewIO) _viewIO.disconnect();
     applyCols();                         // set --cols before first paint so card widths are correct
     renderMoreCards();
-    if (_viewIO && _viewShown < _viewList.length) _viewIO.observe(_viewSentinel);
+    if (listMode) { while (_viewShown < _viewList.length) renderMoreCards(); _viewSentinel.hidden = true; }
+    else if (_viewIO && _viewShown < _viewList.length) _viewIO.observe(_viewSentinel);
     else if (!_viewIO) { while (_viewShown < _viewList.length) renderMoreCards(); }   // no IO support → render all
     buildAzIndex();
+    updateListToggle();
 
-    $("#resultCount").textContent = `${v.length} of ${movies.length} titles · ${movies.filter((m) => m.seen).length} seen`;
+    $("#resultCount").textContent = listMode
+      ? `★ ${listLabel(mediaType)} · ${v.length} item${v.length === 1 ? "" : "s"}`
+      : `${v.length} of ${movies.length} titles · ${movies.filter((m) => m.seen).length} seen`;
     const tot = movies.reduce((s, m) => s + (m.resale?.mid || 0), 0);
     $("#headerStats").innerHTML = `${movies.length} titles<br>est. value ~$${Math.round(tot).toLocaleString()}`;
   }
@@ -643,10 +711,20 @@
     const el = document.createElement("article");
     el.className = "card t-" + mtype(m);     // type class scopes per-type layout (e.g. people-row height)
 
+    // My-List view (admin): cards are drag-to-reorder within their media type.
+    if (listMode && isAdmin) {
+      el.draggable = true; el.classList.add("list-draggable");
+      el.addEventListener("dragstart", (e) => { e.dataTransfer.setData("text/plain", m.id); e.dataTransfer.effectAllowed = "move"; el.classList.add("dragging"); });
+      el.addEventListener("dragend", () => el.classList.remove("dragging"));
+      el.addEventListener("dragover", (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; });
+      el.addEventListener("drop", (e) => { e.preventDefault(); const from = e.dataTransfer.getData("text/plain"); if (from && from !== m.id) reorderList(mtype(m), from, m.id); });
+    }
+
     if (fieldOn("poster")) el.appendChild(posterEl(m));
 
     const b = document.createElement("div");
     b.className = "card-body";
+    if (listMode && isAdmin) b.appendChild(listReorder(m));
 
     if (fieldOn("title")) {
       const t = lineEl("title");
@@ -726,7 +804,7 @@
     }
     b.appendChild(foot);
 
-    if (isAdmin) { b.appendChild(personalEl(m)); b.appendChild(seenToggle(m)); b.appendChild(adminBar(m, el)); }
+    if (isAdmin) { b.appendChild(personalEl(m)); b.appendChild(seenToggle(m)); b.appendChild(listToggle(m)); b.appendChild(adminBar(m, el)); }
     el.appendChild(b);
     return el;
   }
@@ -875,6 +953,35 @@
     d.appendChild(btn);
     return d;
   }
+  // Admin: add/remove this item from its type's curated list (Watchlist / Listenlist / …).
+  function listToggle(m) {
+    const d = lineEl("listtoggle");
+    const on = onList(m);
+    const btn = document.createElement("button");
+    btn.className = "btn-list" + (on ? " is-on" : "");
+    btn.textContent = (on ? "★ On " : "＋ ") + listLabel(mtype(m));
+    btn.title = on ? "Remove from your " + listLabel(mtype(m)) : "Add to your " + listLabel(mtype(m));
+    btn.onclick = () => toggleList(m);
+    d.appendChild(btn);
+    return d;
+  }
+  // Admin, in My-List view: precise reorder (drag is the primary gesture; these are the a11y path).
+  function listReorder(m) {
+    const d = lineEl("listreorder");
+    const i = listIdx(m), n = listOf(mtype(m)).length;
+    const mk = (txt, title, disabled, fn) => {
+      const b = document.createElement("button"); b.className = "list-move"; b.textContent = txt;
+      b.title = title; b.disabled = disabled; b.onclick = (e) => { e.stopPropagation(); fn(); }; return b;
+    };
+    const handle = document.createElement("span"); handle.className = "list-drag"; handle.textContent = "⠿";
+    handle.title = "Drag to reorder";
+    const pos = document.createElement("span"); pos.className = "list-pos"; pos.textContent = `${i + 1}/${n}`;
+    d.appendChild(handle);
+    d.appendChild(mk("↑", "Move up", i <= 0, () => moveList(m, -1)));
+    d.appendChild(pos);
+    d.appendChild(mk("↓", "Move down", i >= n - 1, () => moveList(m, 1)));
+    return d;
+  }
   function setFilter(sel, val) { $("#search").value = ""; $(sel).value = val; render(); scrollTop(); }
   function scrollTop() { window.scrollTo({ top: 0, behavior: "smooth" }); }
 
@@ -914,6 +1021,7 @@
     const watchUrl = provs[0] ? provs[0].url : (m.streaming && m.streaming.justwatch_url);
     pw.insertAdjacentHTML("beforeend",
       `<span class="badge-format">${esc(m.format || "—")}</span>` +
+      (onList(m) ? `<span class="badge-list" title="On your ${esc(listLabel(mtype(m)))}">★</span>` : "") +
       (m.seen ? `<span class="badge-seen">✓</span>` : "") +
       (isAdmin && m.loan ? `<span class="badge-loan" title="On loan to ${esc(m.loan.to || "someone")}">📤</span>` : "") +
       (provs.length ? `<a class="badge-stream" href="${esc(safeUrl(watchUrl))}" target="_blank" rel="noopener" title="Watch on ${esc(provs.map((p) => p.name).join(", "))}" onclick="event.stopPropagation()">▶</a>` : "") +
@@ -1521,6 +1629,7 @@
     ["#search", "#sort", "#filterFormat", "#filterGenre", "#filterStudio", "#filterStream", "#filterLanguage", "#filterCategory", "#filterSeen", "#filterTag", "#filterLoan"]
       .forEach((s) => { const el = $(s); if (el) el.addEventListener("input", render); });
     if ($("#surpriseBtn")) $("#surpriseBtn").onclick = surpriseMe;
+    if ($("#listToggle")) $("#listToggle").onclick = toggleListMode;
     $$("#mediaTabs .mt-btn").forEach((btn) => btn.addEventListener("click", () => {
       mediaType = btn.dataset.mt;
       $$("#mediaTabs .mt-btn").forEach((b) => b.classList.toggle("is-on", b === btn));

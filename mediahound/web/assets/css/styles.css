@@ -163,6 +163,31 @@ select {
 .btn-seen.is-seen { background: rgba(46, 160, 67, 0.18); border-color: rgba(46,160,67,0.5); color: #9be9a8; }
 .btn-seen:hover { border-color: var(--accent-2); }
 
+/* ---- curated lists (Watchlist / Listenlist / Readlist / Playlist) ---- */
+/* gold ★ badge on cards that are on a list (everyone sees it) */
+.badge-list { position: absolute; bottom: 10px; left: 10px; width: 24px; height: 24px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #1a1205;
+  background: rgba(242,193,78,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+/* admin add/remove toggle on the card */
+.btn-list { padding: 7px 10px; border-radius: 9px; border: 1px solid var(--line); background: transparent;
+  color: var(--muted); cursor: pointer; font-size: 12px; }
+.btn-list:hover { border-color: var(--accent-2); }
+.btn-list.is-on { background: rgba(242,193,78,0.16); border-color: rgba(242,193,78,0.55); color: var(--gold); }
+.f-listtoggle .btn-list { width: 100%; margin-top: 6px; padding: 5px; }
+/* the "★ My List" control button, active state */
+#listToggle.is-on { background: rgba(242,193,78,0.16); border-color: rgba(242,193,78,0.55); color: var(--gold); }
+/* reorder row shown on each card in the My-List view */
+.f-listreorder { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: var(--muted); }
+.list-drag { cursor: grab; font-size: 15px; opacity: .7; }
+.list-pos { font-size: 11px; font-weight: 600; min-width: 34px; text-align: center; }
+.list-move { width: 24px; height: 24px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--bg-soft); color: var(--text); cursor: pointer; font-size: 12px; line-height: 1; }
+.list-move:hover:not(:disabled) { border-color: var(--accent-2); }
+.list-move:disabled { opacity: .3; cursor: default; }
+/* drag affordance in My-List view */
+body.list-mode .card.list-draggable { cursor: grab; }
+.card.list-draggable.dragging { opacity: .4; outline: 2px dashed var(--accent-2); }
+
 /* Dense card extras */
 .card-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
 .card-title { margin: 0; font-size: 15px; font-weight: 650; line-height: 1.2; cursor: pointer; }

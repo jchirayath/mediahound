@@ -85,6 +85,7 @@ class Store:
         self.identify_queue_path = data_dir / "identify-queue.json"
         self.corrections_path = data_dir / "corrections.json"
         self.loans_path = data_dir / "loans.json"
+        self.lists_path = data_dir / "lists.json"
 
         self.manifest: dict = _read_json(self.manifest_path, {})
         self.collection: list = _read_json(self.collection_path, [])
@@ -94,6 +95,8 @@ class Store:
         self.corrections: dict = _read_json(self.corrections_path, {})
         # Personal lending tracker (id → {to, since, returned}) — admin-only, never published.
         self.loans: dict = _read_json(self.loans_path, {})
+        # Curated per-type lists (Watchlist/Listenlist/…): {media_type: [id, …]} in display order.
+        self.lists: dict = _read_json(self.lists_path, {})
 
         self._collection_by_id = {m["id"]: m for m in self.collection}
 
@@ -171,9 +174,17 @@ class Store:
                 m["seen"] = ov.get("seen", m.get("seen", False))
                 m["date_seen"] = ov.get("date_seen", m.get("date_seen"))
 
+    def apply_lists(self):
+        """Bake each item's position in its type's curated list (Watchlist/Listenlist/…) onto
+        `list_pos` (0-based) so the published site can show & order the list without lists.json."""
+        for m in self.collection:
+            ids = self.lists.get(m.get("media_type") or "movie", [])
+            m["list_pos"] = ids.index(m["id"]) if m["id"] in ids else None
+
     # -- flush -------------------------------------------------------------
     def save(self):
         self.apply_seen_overrides()
+        self.apply_lists()
         self.collection.sort(key=lambda m: (m.get("title") or "").lower())
         _write_json(self.manifest_path, self.manifest)
         _write_json(self.collection_path, self.collection)
@@ -184,3 +195,5 @@ class Store:
                   self.corrections_path, self.loans_path):
             if not p.is_file():
                 _write_json(p, {})
+        if not self.lists_path.is_file():
+            _write_json(self.lists_path, {})

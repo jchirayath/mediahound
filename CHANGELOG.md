@@ -6,6 +6,20 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-06-17
+
+### Added — ★ Curated lists (Watchlist / Listenlist / Readlist / Playlist)
+- Build an ordered, per-media-type list of what you want to get to next — named for how you consume
+  each medium: **Watchlist** (movies), **Listenlist** (music + audiobooks), **Readlist** (books),
+  **Playlist** (games). In admin, each card gets a **＋ Watchlist / ★ On Watchlist** toggle; a ★ badge
+  marks listed items for everyone.
+- **★ My List** view (a control next to Search) shows just your listed items in your saved order.
+  **Reorder** by dragging a card, or with the ↑ / ↓ buttons — the order persists.
+- Stored in a new round-trip `data/lists.json` (`{media_type: [id, …]}`), saved live via `/api/lists`
+  and baked onto each item's `list_pos` at build (`store.apply_lists`) so the **order shows on the
+  published site** too. Editing/reordering is admin-only; viewing is public — a curated, shareable
+  "what's next." New `mediahound/store.py` list handling + `serve.py` `/api/lists` endpoint.
+
 ## [0.8.1] — 2026-06-17
 
 ### Changed

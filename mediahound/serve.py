@@ -194,6 +194,8 @@ class _Handler(SimpleHTTPRequestHandler):
             return self._replace_file("loans.json", "loans")
         if route == "/api/seen":
             return self._replace_file("seen-overrides.json", "seen overrides")
+        if route == "/api/lists":
+            return self._replace_file("lists.json", "lists")
         if route == "/api/identify":
             return self._merge_file("identify-queue.json", "identify queue")
         if route == "/api/rebuild":

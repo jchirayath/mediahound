@@ -20,6 +20,27 @@ def test_seen_overrides_survive_rebuild(tmp_path):
     assert s.find_movie("m1")["date_seen"] == "2020-01-01"
 
 
+def test_apply_lists_bakes_per_type_position(tmp_path):
+    s = Store(tmp_path / "data")
+    s.upsert_movie({"id": "a", "title": "A", "media_type": "movie", "images": []})
+    s.upsert_movie({"id": "b", "title": "B", "media_type": "movie", "images": []})
+    s.upsert_movie({"id": "c", "title": "C", "media_type": "music", "images": []})
+    s.lists = {"movie": ["b", "a"], "music": ["c"]}   # curated order: b before a
+    s.apply_lists()
+    assert s.find_movie("b")["list_pos"] == 0
+    assert s.find_movie("a")["list_pos"] == 1
+    assert s.find_movie("c")["list_pos"] == 0
+    # an item not on any list gets a null position (not "on the list")
+    s.upsert_movie({"id": "d", "title": "D", "media_type": "movie", "images": []})
+    s.apply_lists()
+    assert s.find_movie("d")["list_pos"] is None
+    # save() persists list_pos into collection.json and creates an empty lists.json on first run
+    s.save()
+    coll = json.loads((tmp_path / "data" / "collection.json").read_text())
+    assert {m["id"]: m["list_pos"] for m in coll} == {"a": 1, "b": 0, "c": 0, "d": None}
+    assert (tmp_path / "data" / "lists.json").is_file()
+
+
 def test_delete_movie_marks_manifest_so_it_is_not_readded(tmp_path):
     s = Store(tmp_path / "data")
     s.record("h1", "f.jpg", "ok", "m1", "2020")
