@@ -697,11 +697,15 @@
     buildAzIndex();
     updateListToggle();
 
+    // Count + estimated value are scoped to the active media tab (All → everything, Movies → only
+    // movies, …) so the totals match what the tab represents.
+    const scope = mediaType === "all" ? movies : movies.filter((m) => mtype(m) === mediaType);
+    const scopeTot = scope.reduce((s, m) => s + (m.resale?.mid || 0), 0);
     $("#resultCount").textContent = listMode
       ? `★ ${listLabel(mediaType)} · ${v.length} item${v.length === 1 ? "" : "s"}`
-      : `${v.length} of ${movies.length} titles · ${movies.filter((m) => m.seen).length} seen`;
-    const tot = movies.reduce((s, m) => s + (m.resale?.mid || 0), 0);
-    $("#headerStats").innerHTML = `${movies.length} titles<br>est. value ~$${Math.round(tot).toLocaleString()}`;
+      : `${v.length} of ${scope.length} titles · ${scope.filter((m) => m.seen).length} seen`;
+    const scopeLabel = mediaType === "all" ? "titles" : ((typeOf(scope[0] || {}).label || "titles").toLowerCase());
+    $("#headerStats").innerHTML = `${scope.length} ${scopeLabel}<br>est. value ~$${Math.round(scopeTot).toLocaleString()}`;
   }
 
   // ---- card (all fields, aligned) ----------------------------------------
