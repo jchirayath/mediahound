@@ -1,13 +1,21 @@
 # Code-signing the desktop app
 
-The desktop builds (`.github/workflows/desktop.yml`) work **unsigned out of the box** — they just
-show a one-time Gatekeeper (macOS) / SmartScreen (Windows) prompt the first time a user opens them.
+> **Status (this project's official builds):**
+> - 🍎 **macOS — signed & notarized.** The Developer ID secrets are configured, so released
+>   `MediaHound-macOS.zip` builds are codesigned (`Developer ID Application: Jacob Chirayath
+>   (VKUYJ3BS76)`) and **notarized by Apple** — they open with **no Gatekeeper warning**
+>   (`spctl` → *accepted / Notarized Developer ID*).
+> - 🪟 **Windows — not signed yet.** No Authenticode cert is configured, so `MediaHound-Windows.zip`
+>   is **unsigned**: Windows SmartScreen shows a one-time *"Unknown publisher"* prompt
+>   (**More info → Run anyway**). Setting up SignPath (below) removes it.
 
-To ship builds that open with **no warning**, add the signing secrets below to the GitHub repo
-(**Settings → Secrets and variables → Actions**). The workflow signs automatically when they're
-present and silently skips signing when they're not — so nothing breaks if you only set up one OS.
+The desktop builds (`.github/workflows/desktop.yml`) also work **unsigned out of the box** for
+anyone forking the project — they just show a one-time Gatekeeper (macOS) / SmartScreen (Windows)
+prompt. To ship builds that open with **no warning**, add the signing secrets below to the GitHub
+repo (**Settings → Secrets and variables → Actions**). The workflow signs automatically when they're
+present and silently skips when they're not — so nothing breaks if you only set up one OS.
 
-## macOS (Developer ID + notarization, via Fastlane)
+## macOS (Developer ID + notarization, via Fastlane) — ✅ configured
 
 > MediaHound's desktop app is a **macOS** app (no iOS target). It's distributed **outside the App
 > Store**, so it needs a **Developer ID Application** certificate (not an App Store / iOS cert) — no
@@ -46,7 +54,7 @@ base64 secret `ASC_KEY_P8_BASE64` (plus `ASC_KEY_ID`/`ASC_ISSUER_ID`) and the wo
 Already keep a **Fastlane `match`** repo? Set `MATCH_GIT_URL` and the lane fetches the Developer ID
 cert with `match(type: "developer_id")` instead of needing it pre-installed in the keychain.
 
-## Windows (Authenticode)
+## Windows (Authenticode) — ⬜ not configured yet
 
 There's no free *trusted* CA for Windows (no "Let's Encrypt" equivalent). Two supported paths:
 

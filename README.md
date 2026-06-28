@@ -35,7 +35,9 @@ throughout. Adding a new media type is one entry in a **shared registry** — no
 **🖥️ Download the desktop app — no Python, no terminal:**
 &nbsp; **[⬇ macOS](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-macOS.zip)**
 &nbsp; **[⬇ Windows](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-Windows.zip)**
-&nbsp; — unzip and open. *(Or `pip install mediahound` — see below.)*
+&nbsp; — unzip and open. The **macOS** build is **signed & notarized** (opens with no warning); the
+**Windows** build is **not signed yet**, so SmartScreen shows a one-time *Unknown publisher* prompt —
+**More info → Run anyway**. *(Or `pip install mediahound` — see below.)*
 
 <p align="center">
   <a href="https://jchirayath.github.io/mediahound/">
@@ -112,9 +114,10 @@ Prefer to double-click an icon? A native app opens the editor in its own window:
 - **Download:** **[⬇ macOS (.app)](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-macOS.zip)**
   · **[⬇ Windows (.exe)](https://github.com/jchirayath/mediahound/releases/latest/download/MediaHound-Windows.zip)**
   — or pick a specific version on the [Releases](https://github.com/jchirayath/mediahound/releases)
-  page. Unzip, and open. *(Unsigned builds show a Gatekeeper/SmartScreen prompt the first time —
-  right-click → **Open** on macOS, or **More info → Run anyway** on Windows.)* To ship builds that
-  open with no warning, see [SIGNING.md](SIGNING.md).
+  page. Unzip, and open. The **macOS** build is **signed & notarized** by Apple, so it opens with
+  **no warning**. The **Windows** build is **not signed yet**, so SmartScreen shows a one-time
+  *Unknown publisher* prompt — click **More info → Run anyway**. *(Wiring Windows signing via SignPath
+  — see [SIGNING.md](SIGNING.md) — removes that prompt too.)*
 - **Or, if you've got Python:** `pip install "mediahound[desktop]"` then `mediahound gui` opens the
   same native window. (Without the `[desktop]` extra it falls back to opening your browser.)
 - **Build it yourself:** `bash packaging/build-desktop.sh` (uses PyInstaller; build on the OS you

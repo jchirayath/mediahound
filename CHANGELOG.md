@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Changed
+- **macOS desktop builds are now signed & notarized** (Developer ID Application + Apple notarization,
+  via the configured CI secrets), so downloads open with **no Gatekeeper warning**. Windows builds
+  stay **unsigned** for now (SmartScreen *Unknown publisher* → *More info → Run anyway*) — see
+  [SIGNING.md](SIGNING.md). Also fixed a `fastlane/Fastfile` bug where an empty `ASC_KEY_ID` secret
+  (truthy in Ruby) wrongly forced the App Store Connect API-key path instead of the app-password one.
+
 ## [0.9.1] — 2026-06-27
 
 ### Changed
