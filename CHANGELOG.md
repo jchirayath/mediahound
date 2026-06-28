@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.9.1] — 2026-06-27
+
+### Changed
+- The header **title count + estimated value** (and the result-count denominator) now reflect the
+  **active media tab** — *All* shows the whole catalog, *Movies* only movies, *Music* only music, etc.
+  — and the header label adapts per type (movies / music / books / …). Client-side only.
+
 ## [0.9.0] — 2026-06-17
 
 ### Added — ★ Curated lists (Watchlist / Listenlist / Readlist / Playlist)
