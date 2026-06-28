@@ -1,0 +1,156 @@
+{
+  "app": "MediaHound",
+  "accent": "#DC2626",
+  "brand_label": "MediaHound",
+  "url": "https://mediahound.io",
+  "scenes": [
+    {
+      "image": "catalog.png",
+      "title": "Your Entertainment, One Place",
+      "subtitle": "Universal Watchlist",
+      "bullets": [
+        {
+          "text": "Scattered across streaming apps?",
+          "voice": "You've got movies on Netflix, shows on Prime, a reading list somewhere else. Keeping track of it all is a mess.",
+          "highlight": [
+            0.06,
+            0.12,
+            0.94,
+            0.45
+          ]
+        },
+        {
+          "text": "One unified watchlist",
+          "voice": "MediaHound brings movies, shows, books, and games into a single organized catalog. One list to rule them all.",
+          "highlight": [
+            0.06,
+            0.45,
+            0.94,
+            0.85
+          ]
+        },
+        {
+          "text": "Browse all your media",
+          "voice": "Scroll through everything you're tracking, sorted by priority, genre, or platform.",
+          "highlight": [
+            0.06,
+            0.85,
+            0.94,
+            1.0
+          ]
+        }
+      ]
+    },
+    {
+      "image": "filters.png",
+      "title": "Find Exactly What You Want",
+      "subtitle": "Smart Search & Filters",
+      "bullets": [
+        {
+          "text": "Filter by type and platform",
+          "voice": "Narrow down your list instantly. Filter by movies, shows, books, or games, and see where each one is streaming.",
+          "highlight": [
+            0.06,
+            0.12,
+            0.94,
+            0.35
+          ]
+        },
+        {
+          "text": "Sort by priority or date",
+          "voice": "Set priorities so you always know what to watch next, and never forget a release date again.",
+          "highlight": [
+            0.06,
+            0.35,
+            0.94,
+            0.6
+          ]
+        },
+        {
+          "text": "Cross-platform tracking",
+          "voice": "Whether it's on Netflix, Hulu, or your local library, MediaHound tracks it all in one place.",
+          "highlight": [
+            0.06,
+            0.6,
+            0.94,
+            0.85
+          ]
+        }
+      ]
+    },
+    {
+      "image": "detail.png",
+      "title": "Everything You Need to Know",
+      "subtitle": "Content Details & Ratings",
+      "bullets": [
+        {
+          "text": "Ratings and reviews at a glance",
+          "voice": "See aggregated ratings, trailers, and detailed descriptions before you commit to watching.",
+          "highlight": [
+            0.06,
+            0.12,
+            0.94,
+            0.4
+          ]
+        },
+        {
+          "text": "Where to watch it",
+          "voice": "Instantly see which platforms have the content available, so you're never searching across apps.",
+          "highlight": [
+            0.06,
+            0.4,
+            0.94,
+            0.65
+          ]
+        },
+        {
+          "text": "Add to your watchlist",
+          "voice": "One tap to add it to your list with a priority level and a reminder for release day.",
+          "highlight": [
+            0.06,
+            0.65,
+            0.94,
+            0.85
+          ]
+        }
+      ]
+    },
+    {
+      "image": "identify.png",
+      "title": "Discover What You'll Love",
+      "subtitle": "AI-Powered Recommendations",
+      "bullets": [
+        {
+          "text": "AI learns your taste",
+          "voice": "MediaHound's AI studies what you watch and love, then surfaces content you'll actually enjoy.",
+          "highlight": [
+            0.06,
+            0.12,
+            0.94,
+            0.4
+          ]
+        },
+        {
+          "text": "NEW: Social Feed",
+          "voice": "See what your friends are watching and reading, with their honest reviews. Recommendations from people you trust.",
+          "highlight": [
+            0.06,
+            0.4,
+            0.94,
+            0.7
+          ]
+        },
+        {
+          "text": "Start tracking at mediahound.io",
+          "voice": "Stop losing track of great entertainment. Head to mediahound.io or download MediaHound on iOS and Android, and start tracking today.",
+          "highlight": [
+            0.06,
+            0.7,
+            0.94,
+            0.92
+          ]
+        }
+      ]
+    }
+  ]
+}
