@@ -39,7 +39,7 @@ platform :mac do
        "--sign #{identity.shellescape} #{app.shellescape}")
 
     UI.message("Notarizing (this can take a few minutes) …")
-    if ENV["ASC_KEY_ID"] && ENV["ASC_ISSUER_ID"]
+    if !ENV["ASC_KEY_ID"].to_s.empty? && !ENV["ASC_ISSUER_ID"].to_s.empty?
       # App Store Connect API key (recommended — no app-specific password needed)
       api_key = app_store_connect_api_key(
         key_id: ENV["ASC_KEY_ID"],
