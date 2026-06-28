@@ -116,8 +116,9 @@ Prefer to double-click an icon? A native app opens the editor in its own window:
   — or pick a specific version on the [Releases](https://github.com/jchirayath/mediahound/releases)
   page. Unzip, and open. The **macOS** build is **signed & notarized** by Apple, so it opens with
   **no warning**. The **Windows** build is **not signed yet**, so SmartScreen shows a one-time
-  *Unknown publisher* prompt — click **More info → Run anyway**. *(Wiring Windows signing via SignPath
-  — see [SIGNING.md](SIGNING.md) — removes that prompt too.)*
+  *Unknown publisher* prompt — click **More info → Run anyway**. *(Windows signing isn't set up yet —
+  the free SignPath OSS plan declined the project as too new; see [SIGNING.md](SIGNING.md) for paid
+  options and a later re-application.)*
 - **Or, if you've got Python:** `pip install "mediahound[desktop]"` then `mediahound gui` opens the
   same native window. (Without the `[desktop]` extra it falls back to opening your browser.)
 - **Build it yourself:** `bash packaging/build-desktop.sh` (uses PyInstaller; build on the OS you

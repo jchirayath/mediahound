@@ -7,7 +7,8 @@
 >   (`spctl` → *accepted / Notarized Developer ID*).
 > - 🪟 **Windows — not signed yet.** No Authenticode cert is configured, so `MediaHound-Windows.zip`
 >   is **unsigned**: Windows SmartScreen shows a one-time *"Unknown publisher"* prompt
->   (**More info → Run anyway**). Setting up SignPath (below) removes it.
+>   (**More info → Run anyway**). The free SignPath OSS plan **declined** us (project too new); a paid
+>   cert or a later SignPath re-application would remove it — see the Windows section below.
 
 The desktop builds (`.github/workflows/desktop.yml`) also work **unsigned out of the box** for
 anyone forking the project — they just show a one-time Gatekeeper (macOS) / SmartScreen (Windows)
@@ -56,14 +57,19 @@ cert with `match(type: "developer_id")` instead of needing it pre-installed in t
 
 ## Windows (Authenticode) — ⬜ not configured yet
 
-There's no free *trusted* CA for Windows (no "Let's Encrypt" equivalent). Two supported paths:
+There's no free *trusted* CA for Windows (no "Let's Encrypt" equivalent). The build ships **unsigned**
+today, so SmartScreen shows a one-time *"Unknown publisher"* prompt (**More info → Run anyway**).
+Three paths to remove it — none is wired up yet:
 
-### Option 1 — SignPath Foundation (free, for open-source) ⭐ recommended
+> **Status:** SignPath Foundation (the free OSS option) **declined** this project — its free plan
+> requires an established project (sufficient repo history / stars / downloads). Re-apply once
+> MediaHound has more traction; until then, either pay for a cert (Options 2–3) or leave it unsigned.
+
+### Option 1 — SignPath Foundation (free, for open-source) — *not eligible yet*
 
 [SignPath Foundation](https://signpath.org/) provides **free code signing for qualifying open-source
-projects**. The workflow's SignPath steps **self-skip** until you configure it.
-
-One-time setup:
+projects**, but it requires a project with enough history/users (we don't qualify yet — reapply
+later). The workflow's SignPath steps **self-skip** until you configure it. When eligible:
 
 1. Apply for the **Foundation (OSS) plan** at <https://signpath.org/> with this repo.
 2. In SignPath, create:
@@ -84,19 +90,33 @@ use a `test-signing` policy for fully automatic signing while you set things up.
 > *download* reputation can still take a little while to fully clear, but a genuine signature builds it
 > far faster (and per-publisher).
 
-### Option 2 — Your own certificate (`signtool`)
+### Option 2 — Azure Trusted Signing (~$10/mo) — ⭐ best paid CI path
 
-If you buy a cert from a CA (OV ~$200-400/yr, or **Azure Trusted Signing** ~$10/mo):
+Microsoft's managed signing service: no hardware token, signs straight from CI. **Caveat:** like
+SignPath, public-trust certs need a verifiable identity — an **organization with ≥3 years of history**,
+or individual validation — so a brand-new identity may hit the same wall. If eligible, add the
+`sign` action / `signtool` against the Trusted Signing account in `desktop.yml` (no `.pfx` to manage).
+EV-equivalent trust → SmartScreen clears quickly.
+
+### Option 3 — Buy your own OV/EV certificate (`signtool`)
+
+If you buy a cert from a CA (OV ~$200-400/yr; EV more). The workflow already has a `signtool` step
+keyed on these secrets:
 
 | Secret | What it is |
 | --- | --- |
 | `WINDOWS_CERT_PFX` | Your code-signing cert exported as `.pfx`, **base64-encoded**. |
 | `WINDOWS_CERT_PASSWORD` | The `.pfx` password. |
 
-The workflow signs `MediaHound.exe` with `signtool` (SHA-256, RFC-3161 timestamp). An **EV** cert (or
-Azure Trusted Signing) clears SmartScreen immediately; a new OV cert accrues reputation over time.
-*(EV certs now require a hardware token / cloud HSM, which doesn't fit the `.pfx`-in-CI flow — prefer
-SignPath or Azure Trusted Signing for hands-off CI.)*
+It signs `MediaHound.exe` with `signtool` (SHA-256, RFC-3161 timestamp). **Note:** since 2023, OV/EV
+keys must live on a hardware token / cloud HSM, so the plain `.pfx`-in-CI flow only works with a
+provider that offers a cloud-key option (e.g. SSL.com eSigner, DigiCert KeyLocker). A new OV cert
+builds SmartScreen reputation over time; EV clears it immediately.
+
+### For now
+
+Windows stays **unsigned** — users click **More info → Run anyway** once. This is fine for an early
+OSS tool; revisit when SignPath approves (free) or when paid signing is worth it.
 
 ## Verifying
 
