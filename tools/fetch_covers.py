@@ -88,7 +88,7 @@ def _candidates_discogs(term: str) -> list[dict]:
     return out
 
 
-# iTunes/Deezer first (fast, no key); Discogs last — deepest catalogue for obscure releases.
+# iTunes/Deezer first (fast, no key); Discogs last — deepest catalog for obscure releases.
 PROVIDERS = [_candidates_itunes, _candidates_deezer, _candidates_discogs]
 
 
