@@ -362,7 +362,7 @@ body.az-on main.wrap { padding-right: 28px; }   /* keep cards clear of the rail 
 .f-studio .dist { color: var(--muted); font-size: 11px; font-weight: 400; }
 .f-intro { font-size: 11.5px; font-style: italic; color: #c4c8d4; line-height: 1.3; margin-top: 1px; }
 .f-overview { font-size: 11px; color: #b3b8c5; line-height: 1.3; }
-/* foot: two stacked, labelled rows (where-to-X · resale) so pills + price never overlap */
+/* foot: two stacked, labeled rows (where-to-X · resale) so pills + price never overlap */
 .f-foot { margin-top: 8px; padding-top: 6px; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; }
 
 /* An optional field that came back empty must NOT reserve space — this was the ~30px

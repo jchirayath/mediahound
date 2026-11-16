@@ -2,7 +2,7 @@
 
 An audiobook is a book you listen to, so its core metadata (title, author, year, publisher, ISBN,
 cover) comes from **Open Library** — exactly like a printed book. The audiobook-specific bits —
-**total duration** and an audio **overview** — come from the **LibriVox** public catalogue when the
+**total duration** and an audio **overview** — come from the **LibriVox** public catalog when the
 title is a public-domain recording (best-effort; many commercial titles aren't in any free DB, so
 `narrator`/`duration` then stay empty and are filled from the cover/CSV/manual edit). Both APIs are
 keyless. Failures degrade to AudiobookMeta(False); a partial match (book but no LibriVox) still wins.
@@ -57,7 +57,7 @@ class AudiobookProvider:
         )
 
     def _librivox(self, title: str) -> dict | None:
-        """Best-effort: the LibriVox catalogue (public-domain audiobooks) → duration + overview."""
+        """Best-effort: the LibriVox catalog (public-domain audiobooks) → duration + overview."""
         try:
             r = self.session.get(_LIBRIVOX, params={"title": title, "format": "json"}, timeout=20)
             if r.status_code == 404:                            # LibriVox 404s on "no results"

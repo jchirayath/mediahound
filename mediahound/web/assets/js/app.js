@@ -177,7 +177,7 @@
              m.tags = Array.isArray(c.tags) ? c.tags : []; }
     else { m.my_rating = null; m.my_note = null; m.tags = []; }
     applyLoan(m);
-    // a movie-only format on a music item (or vice-versa) is wrong — normalise to the type's default
+    // a movie-only format on a music item (or vice-versa) is wrong — normalize to the type's default
     const valid = FORMATS_BY_TYPE[m.media_type || "movie"];
     if (valid && m.format && !valid.includes(m.format)) m.format = valid[0];
     return m;
@@ -787,7 +787,7 @@
     if (fieldOn("intro")) b.appendChild(line("intro", m.intro || "", true));
     if (fieldOn("overview")) b.appendChild(line("overview", m.overview || "", true));
 
-    // foot (bottom-anchored): where-to-watch/listen/find/buy on its own labelled row, resale on its
+    // foot (bottom-anchored): where-to-watch/listen/find/buy on its own labeled row, resale on its
     // own — keeps the streaming pills and the price from crowding each other on one line.
     const foot = lineEl("foot");
     if (fieldOn("watch")) {
@@ -895,7 +895,7 @@
   }
   function chip(text, on) { const c = document.createElement("button"); c.className = "chip chip-btn"; c.textContent = text; c.onclick = on; return c; }
   // A small inline-SVG icon set — replaces per-card color emoji (🎤🏷…) which render
-  // differently across OSes/browsers. Stroke uses currentColor so they inherit link colour.
+  // differently across OSes/browsers. Stroke uses currentColor so they inherit link color.
   function svgIcon(name) {
     const P = {
       film: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/>',
